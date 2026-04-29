@@ -18,6 +18,8 @@ shared knowledge, and human-in-the-loop approvals.
 
 [Documentation](#documentation) · [Quick start](#quick-start) · [Architecture](#architecture) · [Roadmap](#roadmap) · [Contributing](#contributing)
 
+**English** · [简体中文](README.zh-CN.md)
+
 </div>
 
 ---
