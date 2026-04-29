@@ -29,13 +29,23 @@ toolchain:
   docker:
     cli_available: true
     cli_version: "29.2.1"
-    verified_by: "docker --version"
-    daemon_status: "not_running"  # 2026-04-29 verified
-    daemon_verified_by: "docker compose up failed:
-                         'open //./pipe/dockerDesktopLinuxEngine: The
-                         system cannot find the file specified'"
-    daemon_recovery: "user must start Docker Desktop GUI; AI tried
-                      launching via PowerShell Start-Process"
+    verified_by: "docker --version (works)"
+    daemon_status: "crashed_after_5min_wait"  # 2026-04-29 13:45 verified
+    daemon_verified_by: |
+      docker version → client OK, server: 500 Internal Server Error
+        for API route http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/
+        v1.53/version, check if the server supports the requested API
+        version
+      Persisted 5+ minutes after Start-Process launch → Docker Desktop
+      Linux engine likely crashed during boot.
+    daemon_recovery: |
+      User action required (one of):
+      (a) Right-click Docker Desktop tray icon → Restart Docker Desktop
+      (b) Quit Docker Desktop fully + Restart Windows + relaunch DD
+      (c) wsl --shutdown then restart Docker Desktop
+      (d) Provide external Postgres via DATABASE_URL in .env.local
+          (Neon free tier / Supabase / local postgres install — must
+          have pgvector extension)
     required_by:
       - "M0-5 docker compose up"
       - "M1-1 drizzle-kit migrate against postgres container"
