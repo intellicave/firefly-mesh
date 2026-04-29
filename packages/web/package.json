@@ -10,9 +10,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.12.27",
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.100.6",
+    "@xyflow/react": "^12.10.2",
+    "dagre": "^0.8.5",
+    "lucide-react": "^1.12.0",
     "next": "16.2.4",
+    "next-intl": "^4.11.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.74.0",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

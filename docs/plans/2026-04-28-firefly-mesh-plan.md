@@ -200,7 +200,7 @@ status: pending
 # packages/core
 pnpm --filter core add drizzle-orm@latest pg@latest better-auth@latest \
   ai@latest @ai-sdk/anthropic@latest @ai-sdk/google@latest @ai-sdk/openai@latest \
-  zod@latest a2a-protocol-sdk@latest
+  zod@latest @a2a-js/sdk@latest
 pnpm --filter core add -D @types/pg@latest vitest@latest tsx@latest
 
 # packages/web
