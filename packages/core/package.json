@@ -14,6 +14,7 @@
     "./audit/log": "./src/audit/log.ts",
     "./boundary/catalog": "./src/boundary/catalog.ts",
     "./events/bus": "./src/events/bus.ts",
+    "./hitl/engine": "./src/hitl/engine.ts",
     "./llm/helper": "./src/llm/helper.ts"
   },
   "scripts": {
