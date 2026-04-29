@@ -1,0 +1,176 @@
+# firefly-mesh — Environment Capabilities Probe
+#
+# Purpose: per CLAUDE.md global rule "环境断言必须先验证 (反自导自演降阶)",
+# any sleep / autonomous / ralph-loop run must first persist env probe here.
+# Any "task X cannot run because Y is missing" claim must reference a row in
+# this file (verified=false rows + verified_by command output).
+#
+# Updated: 2026-04-29
+# Probe by: AI main session, autodev pipeline post-M0
+
+env:
+  os:
+    platform: win32
+    version: "Windows 11 Home China 10.0.26200"
+
+toolchain:
+  node:
+    available: true
+    version: "v24.13.0"
+    verified_by: "node --version"
+    required_by: ["all packages"]
+
+  pnpm:
+    available: true
+    version: "10.30.3"
+    verified_by: "pnpm --version"
+    required_by: ["monorepo install / build / typecheck"]
+
+  docker:
+    cli_available: true
+    cli_version: "29.2.1"
+    verified_by: "docker --version"
+    daemon_status: "not_running"  # 2026-04-29 verified
+    daemon_verified_by: "docker compose up failed:
+                         'open //./pipe/dockerDesktopLinuxEngine: The
+                         system cannot find the file specified'"
+    daemon_recovery: "user must start Docker Desktop GUI; AI tried
+                      launching via PowerShell Start-Process"
+    required_by:
+      - "M0-5 docker compose up"
+      - "M1-1 drizzle-kit migrate against postgres container"
+      - "M5 W1 demo end-to-end"
+      - "M10 Cyberautonomy dogfooding"
+    impact_when_down:
+      - "schema generation OK (drizzle-kit generate produces SQL files
+         without DB connection)"
+      - "migrate verification BLOCKED until daemon starts"
+
+  git:
+    available: true
+    version: "2.52.0.windows.1"
+    user: "Leo-Cyberautonomy"
+    verified_by: "git --version"
+
+agent_runtimes:
+  openclaw:
+    installed: true
+    version: "2026.4.15"
+    install_path: "D:\\App\\Dev\\nvm\\v24.13.0\\openclaw"
+    verified_by: "openclaw --version"
+    enables: ["M9-2 skill compat smoke (1 of 3 runtimes)"]
+
+  hermes_agent:
+    installed: false
+    verified_by: "where hermes (not found)"
+    blocks: ["M9-2 skill compat smoke for Hermes (1 of 3 runtimes)"]
+    workaround: "OpenClaw smoke gives partial signal; full matrix
+                 requires dev team install Hermes locally"
+
+  claude_code:
+    installed: "host_only"   # we ARE running inside Claude Code, but no
+                              # programmatic skill install API in main session
+    blocks: ["M9-2 skill compat smoke for Claude Code"]
+    workaround: "dev team install firefly skill via /firefly:install
+                 manually after npm publish"
+
+mcp_clients:
+  cursor:
+    installed: false
+    verified_by: "where cursor (not found in PATH)"
+    blocks: ["M9-4 MCP smoke for Cursor (1 of 2 clients)"]
+
+  claude_desktop:
+    installed: "unknown"
+    blocks: ["M9-4 MCP smoke for Claude Desktop (1 of 2 clients)"]
+
+external_services:
+  ai_gateway:
+    api_key_set: false
+    env_var: "AI_GATEWAY_API_KEY"
+    verified_by: "echo $AI_GATEWAY_API_KEY (empty)"
+    blocks:
+      - "M1-7 LLM helper integration test (generateText real call)"
+      - "M5-1 task dispatch LLM decomposition (real call)"
+      - "M5-5 W1 end-to-end demo (no LLM = no decomposition)"
+      - "M7-3 KB embed pipeline (voyage-3-large via gateway)"
+      - "M7-5 RAG search (query embedding)"
+    note: "user must provide via .env / docker-compose env;
+           code can still be written + unit-tested without key"
+
+  better_auth_secret:
+    available: false
+    severity: "trivial"
+    workaround: "auto-generate via node -e crypto.randomBytes(32);
+                 user only needs to run once"
+    blocks: []
+
+  postgres_runtime:
+    container_running: false
+    note: "docker-compose.yml schema valid (M0-5); first up + migrate
+           pending. M1-1 schema + drizzle-kit migrate require this."
+    blocks_until_started:
+      - "M1-1 drizzle-kit generate + migrate verification"
+      - "All later M with DB writes (M1-7+)"
+
+# === Decision support: which M tasks are unblocked vs blocked ===
+m_task_blocking_summary:
+  fully_unblocked:
+    - "M1-1 schema generation (DB up still needed for migrate test, but
+       can be written + drizzle-kit generate produces SQL; verification
+       runs after docker compose up)"
+    - "M1-3 middleware (pure code, unit-testable in-memory)"
+    - "M1-4 audit_log + DB RULE (SQL written to migration file)"
+    - "M1-5 SSE event bus (code, unit test)"
+    - "M1-6 boundary scope catalog (code)"
+    - "M2-1 employees/dept/projects API (code; unit test with mocked db
+       layer or real testcontainer Postgres)"
+    - "M2-2 token management (code; bcrypt-style hash test)"
+    - "M2-4 boundary endpoints (code)"
+    - "M3-1 HITL state machine (pure logic + unit test)"
+    - "M3-2 a2a/{id}/approve|reject|accept|reject-receive (code)"
+    - "M3-5 task review endpoints (code)"
+    - "M4-1 A2A wire schema + signature (code; ed25519 signed test
+       vectors don't need network)"
+    - "M4-2 A2A broker (code)"
+    - "M4-3 a2a inbox + detail endpoints (code)"
+    - "M4-5 well-known agent-card.json route (code)"
+    - "M6-1 audit/threads endpoints (code)"
+    - "M6-2 audit UI (code; visual test by humans)"
+    - "M8-2 skill CRUD endpoints (code)"
+    - "M8-3 skill loaded merge SQL (code; testable with seed)"
+    - "M9-1 @firefly-mesh/skill npm package (code; build + unit)"
+    - "M9-3 MCP server implementation (code; can self-test stdio)"
+
+  blocked_by_missing_ai_gateway_key:
+    - "M1-7 LLM helper INTEGRATION test (code is fine; integration test
+       returns SKIPPED until key set)"
+    - "M5-1 task dispatch LLM decomposition (real call needed for E2E
+       demo; can ship as 'requires AI_GATEWAY_API_KEY in .env' note)"
+    - "M5-5 W1 demo full chain (cannot demo without LLM call)"
+    - "M7-3 embed pipeline integration test (voyage-3-large needs key)"
+    - "M7-7 firefly.kb.search integration smoke"
+
+  blocked_by_missing_runtimes:
+    - "M9-2 Hermes Agent smoke (1/3 runtimes)"
+    - "M9-2 Claude Code skill smoke (1/3 runtimes — host has Claude
+       Code but no programmatic install API in this session)"
+    - "M9-4 Cursor MCP smoke (1/2 MCP clients)"
+    - "M9-4 Claude Desktop MCP smoke (1/2 MCP clients)"
+
+  blocked_by_db_not_running:
+    - "M1-1 drizzle migrate verification (code generates SQL fine;
+       running migration needs container)"
+    - "All later M relying on DB writes (after M1)"
+
+# === Sleep-mode policy (from CLAUDE.md) ===
+sleep_mode_policy:
+  rule: "Per CLAUDE.md, do not silently downgrade when blocked. Either:
+         (a) reference a verified=false row above and stop, OR
+         (b) write code + skip integration test with explicit STUB marker
+         in test name + audit_log line."
+
+  acceptable_skip_format:
+    - "test name MUST include '.skipped_until_env'"
+    - "test body MUST throw with reference to this yaml row, e.g.:
+       throw new Error('skipped: env-capabilities.yaml#ai_gateway')"
