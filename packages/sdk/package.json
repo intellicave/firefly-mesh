@@ -6,9 +6,19 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./schema/task": "./src/schema/task.ts",
+    "./schema/a2a": "./src/schema/a2a.ts",
+    "./schema/skill": "./src/schema/skill.ts",
+    "./schema/audit": "./src/schema/audit.ts",
+    "./schema/knowledge": "./src/schema/knowledge.ts",
+    "./client/http": "./src/client/http.ts",
+    "./client/sse": "./src/client/sse.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
   }
 }

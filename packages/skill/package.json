@@ -6,12 +6,24 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tools": "./src/tools/index.ts",
+    "./client": "./src/client/index.ts"
   },
+  "files": [
+    "SKILL.md",
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@firefly-mesh/sdk": "workspace:*",
+    "zod": "^4.3.6"
+  },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "tsup": "^8.5.1"
   }
 }
