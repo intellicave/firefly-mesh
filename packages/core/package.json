@@ -10,6 +10,7 @@
     "./db": "./src/db/index.ts",
     "./db/schema": "./src/db/schema/index.ts",
     "./auth/better-auth": "./src/auth/better-auth.ts",
+    "./auth/jwt": "./src/auth/jwt.ts",
     "./audit/log": "./src/audit/log.ts",
     "./boundary/catalog": "./src/boundary/catalog.ts",
     "./events/bus": "./src/events/bus.ts",
