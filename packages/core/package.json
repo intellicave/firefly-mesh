@@ -15,6 +15,9 @@
     "./boundary/catalog": "./src/boundary/catalog.ts",
     "./events/bus": "./src/events/bus.ts",
     "./hitl/engine": "./src/hitl/engine.ts",
+    "./a2a/broker": "./src/a2a/broker.ts",
+    "./a2a/protocol": "./src/a2a/protocol.ts",
+    "./a2a/signing": "./src/a2a/signing.ts",
     "./llm/helper": "./src/llm/helper.ts"
   },
   "scripts": {
