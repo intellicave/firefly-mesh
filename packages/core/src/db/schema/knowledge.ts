@@ -87,8 +87,10 @@ export const knowledgeChunks = pgTable(
     chunkIndex: text("chunk_index").notNull(),
     content: text("content").notNull(),
 
-    // pgvector — voyage-3-large dimension is 2048
-    embedding: vector("embedding", { dimensions: 2048 }),
+    // pgvector — 1024 dim (HNSW index limit is 2000 dims).
+    // voyage-3-large w/ output_dimension=1024 OR OpenAI text-embedding-3-small.
+    // Migrating to higher dim later requires reindexing all chunks.
+    embedding: vector("embedding", { dimensions: 1024 }),
 
     // Markdown-aware semantic chunking metadata
     startOffset: text("start_offset"),

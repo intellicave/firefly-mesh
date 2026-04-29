@@ -231,7 +231,7 @@ CREATE TABLE "knowledge_chunks" (
 	"owner_employee_id" uuid,
 	"chunk_index" text NOT NULL,
 	"content" text NOT NULL,
-	"embedding" vector(2048),
+	"embedding" vector(1024),
 	"start_offset" text,
 	"end_offset" text,
 	"heading_path" jsonb,

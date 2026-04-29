@@ -30,7 +30,7 @@ toolchain:
     cli_available: true
     cli_version: "29.2.1"
     verified_by: "docker --version (works)"
-    daemon_status: "crashed_after_5min_wait"  # 2026-04-29 13:45 verified
+    daemon_status: "running"  # 2026-04-29 — recovered after user retry
     daemon_verified_by: |
       docker version → client OK, server: 500 Internal Server Error
         for API route http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/
@@ -118,12 +118,24 @@ external_services:
     blocks: []
 
   postgres_runtime:
-    container_running: false
-    note: "docker-compose.yml schema valid (M0-5); first up + migrate
-           pending. M1-1 schema + drizzle-kit migrate require this."
-    blocks_until_started:
-      - "M1-1 drizzle-kit generate + migrate verification"
-      - "All later M with DB writes (M1-7+)"
+    container_running: true   # 2026-04-29
+    container_name: "firefly-mesh-postgres-1"
+    health_status: "healthy"
+    image: "pgvector/pgvector:pg17"
+    extensions_loaded: ["vector", "uuid-ossp", "plpgsql"]
+    schema_state:
+      tables: 21
+      rules:
+        - "audit_log_no_update (UPDATE → INSTEAD NOTHING)"
+        - "audit_log_no_delete (DELETE → INSTEAD NOTHING)"
+      latest_migration: "0000_clear_wolverine.sql"
+    embedding_dim: 1024
+    embedding_dim_change_log:
+      - "2026-04-29: original schema vector(2048) hit pgvector HNSW
+         limit (max 2000 dims). Reduced to 1024 dim — voyage-3-large
+         supports output_dimension=1024; OpenAI text-embedding-3-small
+         is 1536 (still within limit but 1024 chosen for cost balance)."
+    blocks: []
 
 # === Decision support: which M tasks are unblocked vs blocked ===
 m_task_blocking_summary:
