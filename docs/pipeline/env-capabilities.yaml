@@ -86,17 +86,19 @@ mcp_clients:
 
 external_services:
   ai_gateway:
-    api_key_set: false
+    api_key_set: true
     env_var: "AI_GATEWAY_API_KEY"
-    verified_by: "echo $AI_GATEWAY_API_KEY (empty)"
-    blocks:
-      - "M1-7 LLM helper integration test (generateText real call)"
-      - "M5-1 task dispatch LLM decomposition (real call)"
-      - "M5-5 W1 end-to-end demo (no LLM = no decomposition)"
-      - "M7-3 KB embed pipeline (voyage-3-large via gateway)"
-      - "M7-5 RAG search (query embedding)"
-    note: "user must provide via .env / docker-compose env;
-           code can still be written + unit-tested without key"
+    verified_at: "2026-04-29"
+    verified_by: "pnpm --filter @firefly-mesh/core run smoke:llm
+                  → SUCCESS (anthropic/claude-sonnet-4-6,
+                  in 15 / out 10 tokens, finish=stop, geo=global)"
+    blocks: []
+    unblocks:
+      - "M1-7 LLM helper integration test ✓"
+      - "M5-1 task dispatch LLM decomposition (when M5 written)"
+      - "M5-5 W1 demo (when M5 written)"
+      - "M7-3 KB embed pipeline (untested for embed model specifically)"
+      - "M7-5 RAG search"
 
   better_auth_secret:
     available: false

@@ -6,10 +6,19 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./db": "./src/db/index.ts",
+    "./db/schema": "./src/db/schema/index.ts",
+    "./auth/better-auth": "./src/auth/better-auth.ts",
+    "./audit/log": "./src/audit/log.ts",
+    "./boundary/catalog": "./src/boundary/catalog.ts",
+    "./events/bus": "./src/events/bus.ts",
+    "./llm/helper": "./src/llm/helper.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate": "drizzle-kit migrate && tsx src/db/post-migrate.ts",
+    "smoke:llm": "tsx src/llm/smoke.ts"
   },
   "dependencies": {
     "@a2a-js/sdk": "^0.3.13",
