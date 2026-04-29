@@ -18,7 +18,8 @@
     "./a2a/broker": "./src/a2a/broker.ts",
     "./a2a/protocol": "./src/a2a/protocol.ts",
     "./a2a/signing": "./src/a2a/signing.ts",
-    "./llm/helper": "./src/llm/helper.ts"
+    "./llm/helper": "./src/llm/helper.ts",
+    "./task/dispatcher": "./src/task/dispatcher.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
