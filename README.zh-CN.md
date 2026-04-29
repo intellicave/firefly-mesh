@@ -76,7 +76,7 @@
 ### 1. Docker Compose 自托管（5 分钟）
 
 ```bash
-git clone https://github.com/cyberautonomy/firefly-mesh.git
+git clone https://github.com/intellicave/firefly-mesh.git
 cd firefly-mesh/deploy/docker-compose
 
 cp .env.example .env
@@ -275,7 +275,7 @@ pnpm typecheck                              # 5 个包全过
 
 ## 贡献
 
-我们正处于 pre-1.0 阶段，主动接受外部贡献者。Good first issue 在 [issue tracker](https://github.com/cyberautonomy/firefly-mesh/issues) 上有标签。
+我们正处于 pre-1.0 阶段，主动接受外部贡献者。Good first issue 在 [issue tracker](https://github.com/intellicave/firefly-mesh/issues) 上有标签。
 
 提 PR 之前请：
 
@@ -300,7 +300,7 @@ pnpm --filter @firefly-mesh/core migrate   # 对一个干净的 Postgres
 
 ## 社区
 
-- **GitHub Discussions** —— github.com/cyberautonomy/firefly-mesh/discussions（v0.1 release 后开放）
+- **GitHub Discussions** —— github.com/intellicave/firefly-mesh/discussions（v0.1 release 后开放）
 - **Discord** —— 邀请链接将在置顶 issue 发布
 - **Twitter/X** —— [@cyberautonomy](https://x.com/cyberautonomy)
 - **安全披露** —— security@cyberautonomy.io（请勿在公开 issue 报告漏洞）

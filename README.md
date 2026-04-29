@@ -77,7 +77,7 @@ You bring the agent. We bring the org.
 ### 1. Self-host with Docker Compose (5 minutes)
 
 ```bash
-git clone https://github.com/cyberautonomy/firefly-mesh.git
+git clone https://github.com/intellicave/firefly-mesh.git
 cd firefly-mesh/deploy/docker-compose
 
 cp .env.example .env
@@ -276,7 +276,7 @@ A standalone documentation site is on the M10 roadmap; for now, the design docs 
 
 ## Contributing
 
-We are pre-1.0 and actively accepting external contributors. Good first issues are tagged on the [issue tracker](https://github.com/cyberautonomy/firefly-mesh/issues).
+We are pre-1.0 and actively accepting external contributors. Good first issues are tagged on the [issue tracker](https://github.com/intellicave/firefly-mesh/issues).
 
 Before opening a PR:
 
@@ -301,7 +301,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide *(coming in M10)*.
 
 ## Community
 
-- **GitHub Discussions** — github.com/cyberautonomy/firefly-mesh/discussions *(open at v0.1 release)*
+- **GitHub Discussions** — github.com/intellicave/firefly-mesh/discussions *(open at v0.1 release)*
 - **Discord** — invite link in pinned issue once released
 - **Twitter/X** — [@cyberautonomy](https://x.com/cyberautonomy)
 - **Security disclosures** — security@cyberautonomy.io (please don't open public issues for vulnerabilities)

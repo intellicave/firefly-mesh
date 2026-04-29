@@ -1,6 +1,6 @@
 # `@firefly-mesh/skill`
 
-> [agentskills.io v1](https://agentskills.io)-compatible skill package — install in OpenClaw, Hermes Agent, Claude Code, or any compliant runtime to plug your agent into a [firefly-mesh](https://github.com/cyberautonomy/firefly-mesh) organization.
+> [agentskills.io v1](https://agentskills.io)-compatible skill package — install in OpenClaw, Hermes Agent, Claude Code, or any compliant runtime to plug your agent into a [firefly-mesh](https://github.com/intellicave/firefly-mesh) organization.
 
 ```bash
 # OpenClaw
@@ -81,7 +81,7 @@ const signature = signPayload(body, myEd25519PrivateKeyDer);
 
 ## Spec compliance
 
-100% [agentskills.io v1](https://agentskills.io) compatible. The CI matrix on the [main repo](https://github.com/cyberautonomy/firefly-mesh) runs the official lint from [anthropics/skills](https://github.com/anthropics/skills) plus runtime smoke tests against OpenClaw / Hermes / Claude Code (lands with M10).
+100% [agentskills.io v1](https://agentskills.io) compatible. The CI matrix on the [main repo](https://github.com/intellicave/firefly-mesh) runs the official lint from [anthropics/skills](https://github.com/anthropics/skills) plus runtime smoke tests against OpenClaw / Hermes / Claude Code (lands with M10).
 
 ## License
 

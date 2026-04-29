@@ -1,6 +1,6 @@
 # `@firefly-mesh/mcp`
 
-> [Model Context Protocol](https://modelcontextprotocol.io) server exposing [firefly-mesh](https://github.com/cyberautonomy/firefly-mesh) tools to any MCP-ready agent — Cursor, Claude Desktop, Claude Code, custom MCP clients.
+> [Model Context Protocol](https://modelcontextprotocol.io) server exposing [firefly-mesh](https://github.com/intellicave/firefly-mesh) tools to any MCP-ready agent — Cursor, Claude Desktop, Claude Code, custom MCP clients.
 
 > If your runtime supports [agentskills.io v1](https://agentskills.io) (OpenClaw, Hermes, Claude Code), prefer [`@firefly-mesh/skill`](../skill) — single npm install, tighter tool descriptions, manifest-driven runtime negotiation. This MCP server exists for the rest.
 

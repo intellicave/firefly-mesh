@@ -1,6 +1,6 @@
 # `@firefly-mesh/core`
 
-> Server-side business logic for [firefly-mesh](https://github.com/cyberautonomy/firefly-mesh). No HTTP, no UI — pure TypeScript modules consumed by `@firefly-mesh/web`.
+> Server-side business logic for [firefly-mesh](https://github.com/intellicave/firefly-mesh). No HTTP, no UI — pure TypeScript modules consumed by `@firefly-mesh/web`.
 
 This package owns:
 

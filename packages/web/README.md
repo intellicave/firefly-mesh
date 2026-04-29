@@ -1,6 +1,6 @@
 # `@firefly-mesh/web`
 
-> Next.js 16 App Router server + dashboard UI for [firefly-mesh](https://github.com/cyberautonomy/firefly-mesh). This is the deployable.
+> Next.js 16 App Router server + dashboard UI for [firefly-mesh](https://github.com/intellicave/firefly-mesh). This is the deployable.
 
 If you want to run firefly-mesh, the friendly path is the docker-compose recipe in [`deploy/docker-compose/`](../../deploy/docker-compose) — it bundles this + Postgres + pgvector. This README documents what's *inside* the box.
 

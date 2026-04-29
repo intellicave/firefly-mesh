@@ -8,7 +8,7 @@ description: |
   send A2A messages to colleagues, load org skills/knowledge, and participate
   in HITL approval flows.
 author: Cyberautonomy
-homepage: https://github.com/cyberautonomy/firefly-mesh
+homepage: https://github.com/intellicave/firefly-mesh
 license: Apache-2.0
 tags:
   - multi-agent

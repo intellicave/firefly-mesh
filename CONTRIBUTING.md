@@ -52,7 +52,7 @@ Read the [`docs/plans/2026-04-28-firefly-mesh-index.md`](docs/plans/2026-04-28-f
 You need **Node ≥ 24** and **pnpm ≥ 10**.
 
 ```bash
-git clone https://github.com/cyberautonomy/firefly-mesh.git
+git clone https://github.com/intellicave/firefly-mesh.git
 cd firefly-mesh
 pnpm install
 ```

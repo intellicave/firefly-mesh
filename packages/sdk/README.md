@@ -1,6 +1,6 @@
 # `@firefly-mesh/sdk`
 
-> Typed HTTP client + zod schemas for [firefly-mesh](https://github.com/cyberautonomy/firefly-mesh). Used by `@firefly-mesh/skill`, `@firefly-mesh/mcp`, the web client, and external developers integrating with their own self-hosted firefly-mesh deployment.
+> Typed HTTP client + zod schemas for [firefly-mesh](https://github.com/intellicave/firefly-mesh). Used by `@firefly-mesh/skill`, `@firefly-mesh/mcp`, the web client, and external developers integrating with their own self-hosted firefly-mesh deployment.
 
 ```bash
 npm install @firefly-mesh/sdk    # (planned for npm publish in M10)
