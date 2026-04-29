@@ -1,0 +1,49 @@
+# firefly-mesh — self-host MVP via Docker Compose
+# Usage:
+#   1. cp .env.example .env  (and fill in BETTER_AUTH_SECRET + AI_GATEWAY_API_KEY)
+#   2. docker compose up -d
+#   3. visit http://localhost:3000
+
+name: firefly-mesh
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-firefly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required - set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-firefly_mesh}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-firefly} -d ${POSTGRES_DB:-firefly_mesh}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  firefly-mesh:
+    image: firefly-mesh:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-firefly}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-firefly_mesh}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required - generate via node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:?required - get from vercel.com/dashboard/ai/gateway}
+      NEXT_PUBLIC_APP_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+volumes:
+  pgdata:
