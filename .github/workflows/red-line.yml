@@ -1,0 +1,49 @@
+name: Red-line
+
+# Enforces firefly-mesh quality red-lines (rules.md §1 + §2).
+# Any hit fails the PR — no exceptions, no "for now".
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  red-line:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: R1+R3 Forbidden tokens (TODO/FIXME/mock/placeholder)
+        run: |
+          ! grep -rn -E '(TODO|FIXME|HACK|XXX|placeholder|stub)' \
+            packages/ --include='*.ts' --include='*.tsx' \
+            | grep -v -E '(\.test\.|__tests__|\.spec\.)'
+
+      - name: R3 Downgrade signal words
+        run: |
+          ! grep -rn -E '(for now|暂时|先用|简单起见|to be replaced|will integrate later|简化版|简易版)' \
+            packages/ --include='*.ts' --include='*.tsx' --include='*.md'
+
+      - name: R7 Ban ToolLoopAgent (BYO-agent enforcement)
+        run: |
+          ! grep -rn 'ToolLoopAgent' packages/core/
+
+      - name: R6 Ban hardcoded hex colors in components
+        run: |
+          ! grep -rn -E '#[0-9a-fA-F]{6}' \
+            packages/web/components/ --include='*.tsx' \
+            | grep -v -E '(\.test\.|__tests__)' \
+            | grep -v 'globals\.css'
+
+      - name: R6 Ban emoji in JSX text nodes
+        # Detects emoji unicode in TSX (excluding strings inside backticks for
+        # documentation / i18n JSON / comments).
+        run: |
+          if grep -rn -P '>(?:[^<]*[\x{1F000}-\x{1FFFF}\x{2600}-\x{27BF}])' \
+              packages/web/ --include='*.tsx' 2>/dev/null; then
+            echo "::error::Emoji found in JSX text nodes. Use lucide-react icons."
+            exit 1
+          fi
