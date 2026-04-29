@@ -1,0 +1,14 @@
+{
+  "name": "@firefly-mesh/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "firefly-mesh server-side business logic library (no HTTP server).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

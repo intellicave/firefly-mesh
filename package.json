@@ -1,0 +1,24 @@
+{
+  "name": "firefly-mesh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bring your own agent. We bring the org. — open-source agent mesh substrate for any agent runtime.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --filter \"@firefly-mesh/*\" build",
+    "dev": "pnpm --filter @firefly-mesh/web dev",
+    "lint": "pnpm -r --filter \"@firefly-mesh/*\" lint",
+    "typecheck": "pnpm -r --filter \"@firefly-mesh/*\" typecheck",
+    "test": "pnpm -r --filter \"@firefly-mesh/*\" test",
+    "clean": "pnpm -r --filter \"@firefly-mesh/*\" clean"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@firefly-mesh/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server exposing firefly-mesh tools for any MCP-ready agent (Cursor / Claude Desktop / etc).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

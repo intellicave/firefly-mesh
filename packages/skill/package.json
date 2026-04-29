@@ -1,0 +1,14 @@
+{
+  "name": "@firefly-mesh/skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "agentskills.io-compatible skill package — install in OpenClaw / Hermes Agent / Claude Code to join a firefly-mesh organization.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
