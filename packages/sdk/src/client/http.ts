@@ -290,7 +290,7 @@ export class FireflyMeshClient {
       return request(
         this.opts,
         "GET",
-        `/api/audit/list${qs ? "?" + qs : ""}`,
+        `/api/audit/log${qs ? "?" + qs : ""}`,
         undefined,
         AuditListResponse,
       );
