@@ -1,0 +1,254 @@
+# firefly-mesh /scene — Production List v1.0
+#
+# Source-of-truth catalogue for every visual asset in the V1 scope.
+# Schema is validated by scripts/scene/validate-production-list.mjs.
+#
+# Status enum: queued | producing | qa-failed | qa-passed | shipped | retired
+# All entries below start at "queued" — production starts after the master
+# style-reference.png is committed.
+
+version: "1.0.0"
+art_bible: "docs/art/firefly-mesh-art-bible.md"     # contract; bumping art bible major = re-roll all
+palette: "docs/art/palette.png"
+style_reference: "docs/art/style-reference.png"
+
+# -----------------------------------------------------------------
+# 1 — STYLE FOUNDATION (block 0; must ship before anything else)
+# -----------------------------------------------------------------
+foundation:
+
+  - id: "foundation/palette-png"
+    type: "palette"
+    description: "32-color master palette, 32x1 px PNG, indexed mode"
+    generator: "scripts/scene/build-palette-png.mjs"
+    output: "docs/art/palette.png"
+    status: "queued"
+
+  - id: "foundation/style-reference"
+    type: "reference"
+    description: "Master style reference image; all PixelLab calls cite this"
+    generator: "scripts/scene/build-style-reference.mjs"
+    depends_on: ["foundation/palette-png"]
+    output: "docs/art/style-reference.png"
+    size: { w: 512, h: 384 }
+    status: "queued"
+
+# -----------------------------------------------------------------
+# 2 — CHARACTERS (4 archetypes × 5 directions × 4 anims)
+#     Total V1 character frames = 4 × (5×(4+8) + 6 + 4) = 4 × 70 = 280
+#     +mirrored 4 × 3 dirs × (4 idle + 8 walk) = 144 mirror frames at runtime
+# -----------------------------------------------------------------
+characters:
+
+  - id: "char/ceo-default"
+    type: "character"
+    description: "Dark navy suit, brown short hair, neutral skin, age ~40, slight beard"
+    archetype_template: "ceo"
+    role_mapping: ["owner"]                    # which firefly-mesh roles use this sprite
+    size: { w: 16, h: 24 }
+    pivot: { x: 8, y: 24 }
+    animations: [idle, walk, work, talk]
+    directions: [N, NE, E, SE, S]
+    seed: null                                 # auto-derived from sha256(id) at production time
+    status: "queued"
+
+  - id: "char/manager-default"
+    type: "character"
+    description: "Smart casual button-up, ginger short hair, neutral skin, age ~35"
+    archetype_template: "manager"
+    role_mapping: ["manager"]
+    size: { w: 16, h: 24 }
+    pivot: { x: 8, y: 24 }
+    animations: [idle, walk, work, talk]
+    directions: [N, NE, E, SE, S]
+    seed: null
+    status: "queued"
+
+  - id: "char/employee-default"
+    type: "character"
+    description: "Plain t-shirt + jeans, dark hair, varied skin (mid-tone)"
+    archetype_template: "employee"
+    role_mapping: ["employee"]
+    size: { w: 16, h: 24 }
+    pivot: { x: 8, y: 24 }
+    animations: [idle, walk, work, talk]
+    directions: [N, NE, E, SE, S]
+    seed: null
+    status: "queued"
+
+  - id: "char/auditor-default"
+    type: "character"
+    description: "Grey blazer, glasses, salt-and-pepper hair, holding clipboard"
+    archetype_template: "auditor"
+    role_mapping: ["auditor", "admin"]
+    size: { w: 16, h: 24 }
+    pivot: { x: 8, y: 24 }
+    animations: [idle, walk, work, talk]
+    directions: [N, NE, E, SE, S]
+    seed: null
+    status: "queued"
+
+# -----------------------------------------------------------------
+# 3 — ROOMS (4 V1)
+# -----------------------------------------------------------------
+rooms:
+
+  - id: "room/ceo-office"
+    type: "room"
+    description: "Premium small office: dark wood desk, executive chair, bulletin board on west wall, plant, framed firefly logo print"
+    size: { w: 256, h: 192 }
+    desk_slots:
+      - { x: 144, y: 96, facing: "S" }      # CEO desk, faces south
+    doorway: { x: 128, y: 192 }
+    status: "queued"
+
+  - id: "room/sales-bullpen"
+    type: "room"
+    description: "Open bullpen: 4 desks in 2x2, whiteboard north wall, water cooler east, posters"
+    size: { w: 256, h: 192 }
+    desk_slots:
+      - { x: 64,  y: 80,  facing: "S" }
+      - { x: 192, y: 80,  facing: "S" }
+      - { x: 64,  y: 144, facing: "N" }
+      - { x: 192, y: 144, facing: "N" }
+    doorway: { x: 128, y: 192 }
+    status: "queued"
+
+  - id: "room/product-makerspace"
+    type: "room"
+    description: "Maker space: 2 desks with monitors, prototype table centre, plants in corners, sticky-note wall"
+    size: { w: 256, h: 192 }
+    desk_slots:
+      - { x: 64,  y: 96, facing: "S" }
+      - { x: 192, y: 96, facing: "S" }
+    doorway: { x: 128, y: 192 }
+    status: "queued"
+
+  - id: "room/floor-flex"
+    type: "room"
+    description: "Open-plan flex space: 4 hot desks in row, lounge chair area, big window with city view"
+    size: { w: 256, h: 192 }
+    desk_slots:
+      - { x: 32,  y: 96, facing: "S" }
+      - { x: 96,  y: 96, facing: "S" }
+      - { x: 160, y: 96, facing: "S" }
+      - { x: 224, y: 96, facing: "S" }
+    doorway: { x: 128, y: 192 }
+    status: "queued"
+
+# -----------------------------------------------------------------
+# 4 — HALLWAY TILES (tile-able horizontally)
+# -----------------------------------------------------------------
+hallway:
+
+  - id: "hallway/segment-straight"
+    type: "tile"
+    description: "Hallway floor tile, polished wood, palette-locked"
+    size: { w: 16, h: 16 }
+    status: "queued"
+
+  - id: "hallway/segment-junction-T"
+    type: "tile"
+    description: "T-junction connecting two rooms via hallway"
+    size: { w: 16, h: 16 }
+    status: "queued"
+
+# -----------------------------------------------------------------
+# 5 — EFFECTS / OVERLAY ASSETS
+# -----------------------------------------------------------------
+effects:
+
+  - id: "effect/sticky-note-yellow"
+    type: "effect"
+    description: "12x12 yellow sticky note with slight rotation, soft drop-shadow"
+    size: { w: 16, h: 16 }                # bbox includes shadow
+    status: "queued"
+
+  - id: "effect/sticky-note-orange"
+    type: "effect"
+    description: "12x12 orange sticky note (high-priority variant)"
+    size: { w: 16, h: 16 }
+    status: "queued"
+
+  - id: "effect/a2a-particle"
+    type: "effect"
+    description: "2x2 dot used as particle along A2A bezier path; 4 frames (alpha pulse)"
+    size: { w: 4, h: 4 }
+    animations: [pulse]
+    status: "queued"
+
+  - id: "effect/mascot-firefly"
+    type: "effect"
+    description: "8x8 firefly mascot, 4-frame breathing-glow animation"
+    size: { w: 8, h: 8 }
+    animations: [breathe]
+    status: "queued"
+
+  - id: "effect/door-arch"
+    type: "effect"
+    description: "16x32 archway, used at room entrances; 2-frame subtle glow"
+    size: { w: 16, h: 32 }
+    animations: [glow]
+    status: "queued"
+
+  - id: "effect/desk-glow-pending"
+    type: "effect"
+    description: "16x4 orange glow at desk feet to indicate pending HITL on this employee"
+    size: { w: 16, h: 4 }
+    animations: [pulse]
+    status: "queued"
+
+# -----------------------------------------------------------------
+# 6 — UI ICONS (rasterised lucide)
+# -----------------------------------------------------------------
+icons:
+
+  - id: "icon/network"
+    type: "icon"
+    source: "lucide:network"
+    description: "Network icon, 16x16, palette neutral mid #80708e"
+    size: { w: 16, h: 16 }
+    generator: "scripts/scene/build-lucide-icons.mjs"
+    status: "queued"
+
+  - id: "icon/inbox"
+    type: "icon"
+    source: "lucide:inbox"
+    size: { w: 16, h: 16 }
+    generator: "scripts/scene/build-lucide-icons.mjs"
+    status: "queued"
+
+  - id: "icon/history"
+    type: "icon"
+    source: "lucide:history"
+    size: { w: 16, h: 16 }
+    generator: "scripts/scene/build-lucide-icons.mjs"
+    status: "queued"
+
+  - id: "icon/sparkles"
+    type: "icon"
+    source: "lucide:sparkles"
+    size: { w: 16, h: 16 }
+    generator: "scripts/scene/build-lucide-icons.mjs"
+    status: "queued"
+
+# -----------------------------------------------------------------
+# Totals (auto-validated by validate-production-list.mjs)
+#
+#   characters: 4 × (5 dirs × (4 idle + 8 walk) + 6 work + 4 talk) = 4 × 70 = 280 frames
+#   rooms:      4 × 1 PNG = 4 PNG
+#   hallway:    2 tiles
+#   effects:    6 PNG (some animated, accounted in atlas pack)
+#   icons:      4 PNG
+#   foundation: 2 (palette + style reference)
+#
+#   PixelLab API calls (deterministic, cached if re-run with same seed):
+#     - characters: 4 chars × 5 dirs × 4 anims = 80 calls (V1 minimal)
+#     - rooms:      4 calls
+#     - hallway:    2 calls
+#     - effects:    6 calls
+#     - foundation: 2 calls (style ref needs ~3-5 iterations human-curated)
+#     - icons:      0 calls (rasterised from lucide SVG, not PixelLab)
+#
+#   Total V1 PixelLab calls: ~94 (one-time; rebuild-from-scratch is reproducible)
+# -----------------------------------------------------------------
