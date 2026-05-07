@@ -99,10 +99,28 @@ export const GET = withAuth(async (_req: NextRequest, ctx) => {
   });
 });
 
+// Avatar accepts either an http(s) URL (Gravatar / S3 / CDN) OR a small
+// data URL (in-DB inline; capped to ~280K chars ≈ 200KB binary).
+// MVP path until a real storage layer lands.
+const AVATAR_MAX_CHARS = 280_000;
+
 const PutBody = z.object({
   name: z.string().min(1).max(100).optional(),
   title: z.string().max(80).optional(),
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: z
+    .string()
+    .max(AVATAR_MAX_CHARS)
+    .refine(
+      (v) =>
+        v === "" ||
+        /^https?:\/\//i.test(v) ||
+        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(v),
+      {
+        message:
+          "avatarUrl must be an http(s) URL or a data:image/* base64 URL",
+      },
+    )
+    .optional(),
 });
 
 export const PUT = withAuth(async (req: NextRequest, ctx) => {

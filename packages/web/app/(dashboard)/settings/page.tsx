@@ -164,6 +164,29 @@ function AccountSection({
     onSuccess: () => onSaved(),
   });
 
+  const [avatarErr, setAvatarErr] = useState<string | null>(null);
+  const onPickFile = async (file: File | null) => {
+    setAvatarErr(null);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setAvatarErr("Pick an image file (PNG / JPEG / GIF / WebP).");
+      return;
+    }
+    if (file.size > 200 * 1024) {
+      setAvatarErr(
+        `File too large (${Math.round(file.size / 1024)}KB). Max 200KB until storage layer lands.`,
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => setAvatarErr("Failed to read file.");
+    reader.onload = () => {
+      const dataUrl = String(reader.result ?? "");
+      setAvatarUrl(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <Section title="Account" description="Your personal profile in this organization.">
       <div className="flex items-center gap-3">
@@ -171,15 +194,41 @@ function AccountSection({
           {avatarUrl ? <AvatarImage src={avatarUrl} alt={name} /> : null}
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
-        <div className="text-xs text-muted-foreground">
-          Paste an HTTPS image URL (e.g. Gravatar, S3, your CDN).
+        <div className="flex flex-col gap-1.5">
+          <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border bg-card px-2 text-xs hover:bg-secondary">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              className="hidden"
+              onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+            />
+            Upload image (max 200KB)
+          </label>
+          {avatarUrl ? (
+            <button
+              type="button"
+              onClick={() => setAvatarUrl("")}
+              className="text-xs text-destructive hover:underline self-start"
+            >
+              Remove avatar
+            </button>
+          ) : null}
         </div>
       </div>
 
-      <Field label="Avatar URL" help="Leave empty to use your initials.">
+      {avatarErr ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {avatarErr}
+        </div>
+      ) : null}
+
+      <Field
+        label="Or paste image URL"
+        help="HTTPS image URL (Gravatar, S3, your CDN). Leave empty to use initials."
+      >
         <input
           type="url"
-          value={avatarUrl}
+          value={avatarUrl.startsWith("data:") ? "" : avatarUrl}
           onChange={(e) => setAvatarUrl(e.target.value)}
           placeholder="https://…"
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"

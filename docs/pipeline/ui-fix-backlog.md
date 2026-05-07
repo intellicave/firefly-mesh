@@ -118,7 +118,7 @@
   - [x] Client-side 校验 length / 匹配；server error 显示 inline
   - [x] Account section 加 Avatar URL 输入 + 当前预览 (Avatar w/ AvatarImage fallback initials)
   - [x] Save 把 avatarUrl 一起 PUT /api/me；空字符串 → undefined → fallback initials
-  - [ ] File upload — **推迟到有 storage layer (S3/Blob/var/avatars endpoint)**；URL 输入足够 MVP
+  - [x] File upload — done in commit pending; data URL inline (max 200KB, base64 → DB text column). Both UI (file picker + size validation + remove) and server (PUT /api/me zod schema accepts http(s) OR data:image/* base64) updated. Real storage layer (S3/local FS) still pending — but unblocked for MVP self-host.
   - [x] typecheck 5/5 全过
 - **evidence**:
   - "Change password" 按钮在 Account section 底部左下
