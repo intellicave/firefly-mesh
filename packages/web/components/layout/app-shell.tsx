@@ -23,6 +23,7 @@ import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CommandPalette } from "@/components/layout/command-palette";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 interface MeResponse {
   user: { id: string };
@@ -113,6 +114,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             </span>
           </button>
         </div>
+
+        <ThemeToggle />
 
         <button
           type="button"

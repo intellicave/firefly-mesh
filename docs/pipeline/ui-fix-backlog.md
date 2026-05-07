@@ -139,14 +139,16 @@
 
 ### P2-B: dark mode toggle
 
-- **status**: pending
-- **入口文件**: `packages/web/components/layout/app-shell.tsx` + `packages/web/components/providers.tsx`
+- **status**: ✅ done
+- **入口文件**: `packages/web/components/providers.tsx` + `packages/web/components/layout/theme-toggle.tsx` (new) + `packages/web/components/layout/app-shell.tsx` + `packages/web/components/layout/command-palette.tsx`
 - **acceptance_criteria**:
-  - [ ] 装 `next-themes`
-  - [ ] Settings page 加 theme select (system / light / dark)
-  - [ ] AppShell 加 quick toggle icon (sun / moon)
-  - [ ] tailwind dark: classes 在所有页面正确应用（已存在 globals.css 暗色 token）
-  - [ ] typecheck 全过
+  - [x] 装 `next-themes`
+  - [x] Providers wraps `<ThemeProvider attribute="class" defaultTheme="system" enableSystem>`
+  - [x] AppShell quick toggle icon (Sun / Moon / Monitor) — cycles light → dark → system
+  - [x] CommandPalette Theme group 3 个 commands (Light / Dark / System)
+  - [x] tailwind v4 `@custom-variant dark` 已在 globals.css，dark: classes 自动生效
+  - [ ] Settings page theme select — 推迟（已通过 ⌘K + TopBar toggle 暴露，单独 Settings select 冗余）
+  - [x] typecheck 全过
 
 ### P2-C: Sidebar 顺序按 ui.md §1 重排
 

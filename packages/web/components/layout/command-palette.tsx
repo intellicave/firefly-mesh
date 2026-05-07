@@ -6,14 +6,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
+import { useTheme } from "next-themes";
 import {
   BookOpen,
   History,
   Inbox,
   LogOut,
+  Monitor,
+  Moon,
   Network,
   Settings,
   Sparkles,
+  Sun,
 } from "lucide-react";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -49,6 +53,7 @@ export function CommandPalette({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const { setTheme } = useTheme();
 
   // Reset query when closed
   useEffect(() => {
@@ -111,6 +116,39 @@ export function CommandPalette({
                   <span className="ml-auto font-mono text-[10px] text-muted-foreground">
                     {item.href}
                   </span>
+                </Command.Item>
+              ))}
+            </Command.Group>
+
+            <Command.Group
+              heading="Theme"
+              className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground"
+            >
+              {[
+                { value: "theme light", label: "Light", Icon: Sun, set: "light" as const },
+                { value: "theme dark", label: "Dark", Icon: Moon, set: "dark" as const },
+                {
+                  value: "theme system",
+                  label: "System",
+                  Icon: Monitor,
+                  set: "system" as const,
+                },
+              ].map((t) => (
+                <Command.Item
+                  key={t.set}
+                  value={t.value}
+                  onSelect={() => {
+                    setTheme(t.set);
+                    onOpenChange(false);
+                  }}
+                  className="mt-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm aria-selected:bg-secondary"
+                >
+                  <t.Icon
+                    size={14}
+                    strokeWidth={1.75}
+                    className="text-muted-foreground"
+                  />
+                  <span>{t.label}</span>
                 </Command.Item>
               ))}
             </Command.Group>
