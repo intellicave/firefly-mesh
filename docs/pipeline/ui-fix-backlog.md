@@ -50,10 +50,10 @@
   - [x] API extended: GET /api/a2a/inbox 加 type/counterpart/sort/cursor 参数 + 返回 nextCursor
   - [x] Empty state 区分 filtersActive vs 真空
   - [x] typecheck 5/5 全过
-  - [ ] state 同步到 URL search params — 推迟到 P1-B (TopBar cmdk + 全局 state) 时一起做
+  - [x] state 同步到 URL search params — done in FP-2 (commit 726b3f6); useSearchParams hydrate + router.replace on change，刷新 / back-forward / shareable link 全部生效
 - **evidence**:
-  - 截图 `.review-evidence/firefly-mesh-ui/01-inbox-after.png`
-  - 视觉：toolbar 三 control + tabs 英文 ✓
+  - 截图 `.review-evidence/firefly-mesh-ui/01-inbox-after.png` + `.review-evidence/firefly-mesh-ui/final-inbox-url-state.png`
+  - 视觉：toolbar 三 control + tabs 英文 ✓ + URL `?tab=action&type=request&sort=asc` 完整 round-trip ✓
 
 ### P0-C: i18n 统一（先全英文，预留 next-intl 接入点）
 
@@ -101,8 +101,8 @@
   - [x] command palette 内容：6 dashboard 页面跳转 + Sign out
   - [x] cmdk 内置 fuzzy search，type 时实时过滤
   - [x] esc 关闭，再按 ⌘K toggle
-  - [ ] Toggle theme command — 推迟到 P2-B (next-themes) 完成后接进来
-  - [ ] org switcher dropdown — 推迟到 `/api/me/switch-org` endpoint + 多 org 场景实装
+  - [x] Toggle theme command — done in P2-B (commit c38389b); palette Theme group 含 Light / Dark / System
+  - [ ] org switcher dropdown — **blocked** 等 `/api/me/switch-org` endpoint + 真实多 org 场景
   - [x] typecheck 全过
 - **evidence**:
   - 视觉：TopBar Search 按钮文字 "Search or jump to…" + ⌘K 角标显示
@@ -195,12 +195,17 @@ c38389b fix(ui): P2-B — next-themes dark/light/system toggle
 
 ---
 
-## Future polish (非阻塞，下个 sprint)
+## Future polish
 
-- **React DOM `removeChild` console error** — cmdk Dialog 在 setTheme + onOpenChange 同步触发时偶发 hydration race。修法：setTimeout(setTheme, 0) defer 到 dialog close 后。
-- **org switcher dropdown** — `POST /api/me/switch-org` endpoint + 多 org 场景实装时再做。
-- **Avatar 文件上传** — 等 storage layer (S3/Blob/local var/avatars endpoint)；当前 URL 输入已 cover MVP。
-- **Settings theme select** — TopBar toggle + ⌘K 已暴露，单独 select 冗余；可选 nice-to-have。
-- **central messages/en.ts** — 接入 next-intl V0.2 时一起做。
-- **inbox URL state persist** — 工具条 type/counterpart/sort 写入 URLSearchParams（刷新保留）。
-- **org graph: graph view 在 employee 数 > 100 时性能优化** — virtualize off-screen nodes 或加 LOD。
+### Done in this loop
+- ✅ **FP-1: React DOM `removeChild` console error** — fixed in commit `bc3af1c`. setTimeout(fn, 0) defers cmdk side-effects (router push / setTheme / signOut) past Dialog unmount; race resolved.
+- ✅ **FP-2: inbox URL state persist** — fixed in commit `726b3f6`. useSearchParams hydrate + router.replace(querystring) on state change; refresh / back-forward / shareable links all work.
+
+### Blocked / out-of-scope (non-actionable until prerequisites land)
+- ⛔ **org switcher dropdown** — needs `POST /api/me/switch-org` endpoint + a real multi-org user. Single-org users get nothing useful; defer.
+- ⛔ **Avatar file upload** — needs storage layer (S3 / Blob / local var/avatars endpoint with serving route). Current URL input covers Gravatar / S3-presigned / CDN cases for MVP.
+- ⛔ **central messages/en.ts** — pair with next-intl V0.2 integration; refactoring strings before that is wasted churn.
+- ⛔ **org graph >100-employee performance** — virtualization / LOD / clustering only meaningful when a real org with that many members exists. Premature.
+
+### Redundant / declined
+- 🟡 **Settings theme select** — TopBar toggle + ⌘K Theme group already cover light/dark/system; a third surface is noise. Skip unless user-tested feedback contradicts.
