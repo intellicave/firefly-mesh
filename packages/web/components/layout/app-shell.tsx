@@ -39,11 +39,13 @@ interface MeResponse {
 }
 
 const NAV_ITEMS = [
+  // Order per ui.md §1: Inbox + Audit (HITL hot path), then org-management,
+  // then knowledge / skills (back-of-house), then settings.
   { href: "/inbox", label: "Inbox", Icon: InboxIcon, badge: "inbox" },
+  { href: "/audit", label: "Audit", Icon: History },
   { href: "/organization", label: "Organization", Icon: Network },
   { href: "/knowledge", label: "Knowledge", Icon: BookOpen },
   { href: "/skills", label: "Skills", Icon: Sparkles },
-  { href: "/audit", label: "Audit", Icon: History },
   { href: "/settings", label: "Settings", Icon: Settings },
 ] as const;
 
@@ -125,7 +127,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {me ? (
           <Link
-            href="/settings/account"
+            href="/settings"
             className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-secondary"
           >
             <Avatar className="size-7">

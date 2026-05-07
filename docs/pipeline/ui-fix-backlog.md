@@ -130,7 +130,7 @@
 
 ### P2-A: AppShell 头像链接 `/settings/account` 改为 `/settings`，删 redirect
 
-- **status**: pending
+- **status**: ✅ done
 - **入口文件**: `packages/web/components/layout/app-shell.tsx` line ~112 + 删除 `app/(dashboard)/settings/account/page.tsx`
 - **acceptance_criteria**:
   - [ ] AppShell 头像 href 改成 `/settings`
@@ -150,7 +150,7 @@
 
 ### P2-C: Sidebar 顺序按 ui.md §1 重排
 
-- **status**: pending
+- **status**: ✅ done
 - **入口文件**: `packages/web/components/layout/app-shell.tsx` NAV_ITEMS
 - **acceptance_criteria**:
   - [ ] 顺序：Inbox / Audit / Organization / Knowledge / Skills / Settings (Audit 紧跟 Inbox)
