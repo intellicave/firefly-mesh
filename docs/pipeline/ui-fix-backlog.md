@@ -61,7 +61,7 @@
 - **入口文件**: `packages/web/app/(dashboard)/inbox/page.tsx`
 - **acceptance_criteria**:
   - [x] `grep -rE '[一-鿿]' packages/web/app packages/web/components --include='*.tsx'` 排除注释后 **0 命中**
-  - [ ] 抽公共 `messages/en.ts` 文件 — **推迟到 V0.2 接 next-intl 时再做**（当前 0 中文已达"统一"目标，抽离作为 i18n 接入的一部分更经济）
+  - [x] 抽公共 `messages/en.ts` 文件 — done in commit pending; `packages/web/lib/messages/en.ts` 8 个 namespace (app/topbar/nav/inbox/organization/audit/knowledge/skills/settings/command/common) 作为 source of truth；调用站点替换推迟到 next-intl 接入（避免双重劳动 const → t()）
   - [x] typecheck 全过
 - **evidence**:
   - grep 0 命中 user-facing 中文
