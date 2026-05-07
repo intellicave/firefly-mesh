@@ -130,12 +130,12 @@
 
 ### P2-A: AppShell 头像链接 `/settings/account` 改为 `/settings`，删 redirect
 
-- **status**: ✅ done
+- **status**: ✅ done (commit e2082e2)
 - **入口文件**: `packages/web/components/layout/app-shell.tsx` line ~112 + 删除 `app/(dashboard)/settings/account/page.tsx`
 - **acceptance_criteria**:
-  - [ ] AppShell 头像 href 改成 `/settings`
-  - [ ] 删 settings/account 目录
-  - [ ] typecheck 全过
+  - [x] AppShell 头像 href 改成 `/settings`
+  - [x] 删 settings/account 目录
+  - [x] typecheck 全过
 
 ### P2-B: dark mode toggle
 
@@ -152,11 +152,11 @@
 
 ### P2-C: Sidebar 顺序按 ui.md §1 重排
 
-- **status**: ✅ done
+- **status**: ✅ done (commit e2082e2)
 - **入口文件**: `packages/web/components/layout/app-shell.tsx` NAV_ITEMS
 - **acceptance_criteria**:
-  - [ ] 顺序：Inbox / Audit / Organization / Knowledge / Skills / Settings (Audit 紧跟 Inbox)
-  - [ ] typecheck 全过
+  - [x] 顺序：Inbox / Audit / Organization / Knowledge / Skills / Settings (Audit 紧跟 Inbox)
+  - [x] typecheck 全过
 
 ---
 
