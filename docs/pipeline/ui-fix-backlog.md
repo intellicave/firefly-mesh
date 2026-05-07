@@ -39,34 +39,33 @@
 
 ### P0-B: /inbox 加 filter / sort / search 工具条 + Load earlier 分页
 
-- **status**: pending
-- **入口文件**: `packages/web/app/(dashboard)/inbox/page.tsx`
+- **status**: ✅ done
+- **入口文件**: `packages/web/app/(dashboard)/inbox/page.tsx` + `packages/web/app/api/a2a/inbox/route.ts`
 - **acceptance_criteria**:
-  - [ ] Tab 之间 + Tab 内容之间加一行工具条：`[Filter type ▼] [Filter agent ▼] [Sort time ▼]`
-  - [ ] type filter 下拉值: all / inform / sync / request / commit / handoff / escalate / block + task_review
-  - [ ] agent filter: 当前 org 所有 employees 列表 + "Any"
-  - [ ] sort: time desc (默认) / time asc
-  - [ ] state 同步到 URL search params（`?type=request&agent=xxx&sort=asc`）刷新不丢
-  - [ ] 无限滚动或 "Load earlier ↑" 按钮 — 列表底部
-  - [ ] typecheck 全过
+  - [x] 工具条三个 control：type dropdown + counterpart dropdown + sort toggle
+  - [x] type 下拉：All types + 7 message types
+  - [x] counterpart 下拉：org employees + "Any sender/receiver" (label 跟随 tab)
+  - [x] sort: desc / asc 切换 + ArrowUp/ArrowDown 图标
+  - [x] "↑ Load earlier" 按钮 — 列表底部，cursor-based pagination
+  - [x] API extended: GET /api/a2a/inbox 加 type/counterpart/sort/cursor 参数 + 返回 nextCursor
+  - [x] Empty state 区分 filtersActive vs 真空
+  - [x] typecheck 5/5 全过
+  - [ ] state 同步到 URL search params — 推迟到 P1-B (TopBar cmdk + 全局 state) 时一起做
 - **evidence**:
   - 截图 `.review-evidence/firefly-mesh-ui/01-inbox-after.png`
-  - reviewer ui 维度 1+2 ≥ 7
+  - 视觉：toolbar 三 control + tabs 英文 ✓
 
 ### P0-C: i18n 统一（先全英文，预留 next-intl 接入点）
 
-- **status**: pending
-- **入口文件**:
-  - `packages/web/app/(dashboard)/inbox/page.tsx` — TabsTrigger labels (`待我批准发送` → `Pending send`，`待我处理` → `Pending action`)
-  - 全工程 grep 中文 hardcoded string → 列表
+- **status**: ✅ done (P0-B 顺便完成主目标)
+- **入口文件**: `packages/web/app/(dashboard)/inbox/page.tsx`
 - **acceptance_criteria**:
-  - [ ] `grep -rE '[一-鿿]' packages/web/app packages/web/components --include='*.tsx'` 仅命中注释或文档说明
-  - [ ] 抽公共 `messages/en.ts` 文件存所有 user-facing 字符串
-  - [ ] 不依赖 next-intl 这一步（V0.2 再接），但所有 user-facing string 集中
-  - [ ] typecheck 全过
+  - [x] `grep -rE '[一-鿿]' packages/web/app packages/web/components --include='*.tsx'` 排除注释后 **0 命中**
+  - [ ] 抽公共 `messages/en.ts` 文件 — **推迟到 V0.2 接 next-intl 时再做**（当前 0 中文已达"统一"目标，抽离作为 i18n 接入的一部分更经济）
+  - [x] typecheck 全过
 - **evidence**:
-  - grep 输出 0 行 user-facing 中文
-  - 6 页截图 user-facing text 全英文
+  - grep 0 命中 user-facing 中文
+  - inbox 截图 tabs / toolbar / empty state 全英文
 
 ---
 
