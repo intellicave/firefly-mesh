@@ -8,7 +8,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Loader2, LogOut, Save, X } from "lucide-react";
+import { useTheme } from "next-themes";
+import {
+  KeyRound,
+  Loader2,
+  LogOut,
+  Monitor,
+  Moon,
+  Save,
+  Sun,
+  X,
+} from "lucide-react";
 
 import { api, ApiCallError } from "@/lib/api-client";
 import { authClient } from "@/lib/auth-client";
@@ -94,6 +104,8 @@ export default function SettingsPage() {
                 }
               />
             ) : null}
+
+            <AppearanceSection />
 
             <DangerSection
               onSignedOut={() => {
@@ -480,6 +492,59 @@ function OrgSection({
           )}
         </button>
       </div>
+    </Section>
+  );
+}
+
+function AppearanceSection() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const options = [
+    { value: "light" as const, label: "Light", Icon: Sun },
+    { value: "dark" as const, label: "Dark", Icon: Moon },
+    { value: "system" as const, label: "System", Icon: Monitor },
+  ];
+
+  return (
+    <Section title="Appearance" description="Theme preference for this device.">
+      <div className="grid grid-cols-3 gap-2">
+        {options.map((opt) => {
+          const active = mounted && theme === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTheme(opt.value)}
+              className={
+                active
+                  ? "flex flex-col items-center gap-1.5 rounded-md border-2 border-primary bg-primary/5 px-3 py-3 text-xs"
+                  : "flex flex-col items-center gap-1.5 rounded-md border bg-card px-3 py-3 text-xs hover:border-primary/40"
+              }
+              aria-pressed={active}
+            >
+              <opt.Icon
+                size={16}
+                strokeWidth={1.75}
+                className={active ? "text-primary" : "text-muted-foreground"}
+              />
+              <span
+                className={active ? "font-medium text-foreground" : "text-foreground"}
+              >
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Same setting as the ⌘K palette → Theme group and the TopBar quick
+        toggle. They all sync.
+      </p>
     </Section>
   );
 }

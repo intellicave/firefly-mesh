@@ -147,7 +147,7 @@
   - [x] AppShell quick toggle icon (Sun / Moon / Monitor) — cycles light → dark → system
   - [x] CommandPalette Theme group 3 个 commands (Light / Dark / System)
   - [x] tailwind v4 `@custom-variant dark` 已在 globals.css，dark: classes 自动生效
-  - [ ] Settings page theme select — 推迟（已通过 ⌘K + TopBar toggle 暴露，单独 Settings select 冗余）
+  - [x] Settings page theme select — done in commit pending; Appearance section in /settings 3-button grid (Light / Dark / System) syncs with TopBar toggle and ⌘K Theme group
   - [x] typecheck 全过
 
 ### P2-C: Sidebar 顺序按 ui.md §1 重排
