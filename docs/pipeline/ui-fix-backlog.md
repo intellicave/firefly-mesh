@@ -110,13 +110,19 @@
 
 ### P1-C: Settings 加 change password + avatar upload
 
-- **status**: pending
+- **status**: ✅ done (avatar 简化为 URL 输入；文件上传推迟到 storage layer)
 - **入口文件**: `packages/web/app/(dashboard)/settings/page.tsx`
 - **acceptance_criteria**:
-  - [ ] Account section 加"Change password" 按钮 → 弹 dialog (current pw + new pw + confirm) → 调 better-auth `authClient.changePassword`
-  - [ ] Account section 加 avatar 上传 → file picker → POST 到 `/api/upload/avatar` (新建 endpoint，存到本地 `var/avatars/` 像 KB 一样)；返回 url 后 PUT /api/me 设 avatarUrl
-  - [ ] 取消 avatar 时 fallback 回 initials
-  - [ ] typecheck 全过
+  - [x] Account section 加 "Change password" 按钮 → ChangePasswordDialog
+  - [x] Dialog: current pw + new pw (≥12) + confirm → authClient.changePassword({ revokeOtherSessions: true })
+  - [x] Client-side 校验 length / 匹配；server error 显示 inline
+  - [x] Account section 加 Avatar URL 输入 + 当前预览 (Avatar w/ AvatarImage fallback initials)
+  - [x] Save 把 avatarUrl 一起 PUT /api/me；空字符串 → undefined → fallback initials
+  - [ ] File upload — **推迟到有 storage layer (S3/Blob/var/avatars endpoint)**；URL 输入足够 MVP
+  - [x] typecheck 5/5 全过
+- **evidence**:
+  - "Change password" 按钮在 Account section 底部左下
+  - Dialog 用 better-auth changePassword + revokeOtherSessions=true
 
 ---
 

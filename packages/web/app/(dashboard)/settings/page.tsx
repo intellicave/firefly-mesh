@@ -8,10 +8,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, LogOut, Save } from "lucide-react";
+import { KeyRound, Loader2, LogOut, Save, X } from "lucide-react";
 
 import { api, ApiCallError } from "@/lib/api-client";
 import { authClient } from "@/lib/auth-client";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface MeResponse {
   user: { id: string };
@@ -106,25 +117,63 @@ function AccountSection({
 }) {
   const [name, setName] = useState(employee.name);
   const [title, setTitle] = useState(employee.title ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(employee.avatarUrl ?? "");
+  const [pwOpen, setPwOpen] = useState(false);
 
   useEffect(() => {
     setName(employee.name);
     setTitle(employee.title ?? "");
-  }, [employee.name, employee.title]);
+    setAvatarUrl(employee.avatarUrl ?? "");
+  }, [employee.name, employee.title, employee.avatarUrl]);
 
-  const dirty = name !== employee.name || (title || "") !== (employee.title ?? "");
+  const dirty =
+    name !== employee.name ||
+    (title || "") !== (employee.title ?? "") ||
+    (avatarUrl || "") !== (employee.avatarUrl ?? "");
+
+  const initials = employee.name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   const save = useMutation({
     mutationFn: () =>
       api("/api/me", {
         method: "PUT",
-        body: { name, title: title || undefined },
+        body: {
+          name,
+          title: title || undefined,
+          avatarUrl: avatarUrl || undefined,
+        },
       }),
     onSuccess: () => onSaved(),
   });
 
   return (
     <Section title="Account" description="Your personal profile in this organization.">
+      <div className="flex items-center gap-3">
+        <Avatar className="size-14">
+          {avatarUrl ? <AvatarImage src={avatarUrl} alt={name} /> : null}
+          <AvatarFallback>{initials}</AvatarFallback>
+        </Avatar>
+        <div className="text-xs text-muted-foreground">
+          Paste an HTTPS image URL (e.g. Gravatar, S3, your CDN).
+        </div>
+      </div>
+
+      <Field label="Avatar URL" help="Leave empty to use your initials.">
+        <input
+          type="url"
+          value={avatarUrl}
+          onChange={(e) => setAvatarUrl(e.target.value)}
+          placeholder="https://…"
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        />
+      </Field>
+
       <Field label="Email" help="Managed by your sign-in account.">
         <input
           type="text"
@@ -162,7 +211,15 @@ function AccountSection({
 
       {save.error ? <ErrorInline error={save.error} /> : null}
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2 border-t pt-4">
+        <button
+          type="button"
+          onClick={() => setPwOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-xs hover:bg-secondary"
+        >
+          <KeyRound size={12} strokeWidth={1.75} />
+          Change password
+        </button>
         <button
           type="button"
           disabled={!dirty || save.isPending || !name.trim()}
@@ -186,7 +243,148 @@ function AccountSection({
           )}
         </button>
       </div>
+
+      <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
     </Section>
+  );
+}
+
+function ChangePasswordDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      setErr(null);
+    }
+  }, [open]);
+
+  const submit = async () => {
+    setErr(null);
+    if (next.length < 12) {
+      setErr("New password must be at least 12 characters.");
+      return;
+    }
+    if (next !== confirm) {
+      setErr("New password and confirmation do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await authClient.changePassword({
+        currentPassword: current,
+        newPassword: next,
+        revokeOtherSessions: true,
+      });
+      if (res.error) {
+        setErr(res.error.message ?? "Change password failed.");
+        return;
+      }
+      onOpenChange(false);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Change password failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Change password</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <Field label="Current password">
+            <input
+              type="password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              autoComplete="current-password"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+          </Field>
+
+          <Field label="New password" help="At least 12 characters.">
+            <input
+              type="password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              autoComplete="new-password"
+              minLength={12}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+          </Field>
+
+          <Field label="Confirm new password">
+            <input
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              autoComplete="new-password"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+          </Field>
+
+          <p className="text-xs text-muted-foreground">
+            All other sessions will be signed out.
+          </p>
+
+          {err ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {err}
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={busy || !current || !next || !confirm}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {busy ? (
+                <Loader2
+                  size={12}
+                  strokeWidth={1.75}
+                  className="animate-spin"
+                />
+              ) : null}
+              Change password
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          aria-label="Close"
+          className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-md hover:bg-secondary"
+        >
+          <X size={14} strokeWidth={1.75} />
+        </button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
