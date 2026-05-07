@@ -60,18 +60,22 @@ export function CommandPalette({
     if (!open) setQuery("");
   }, [open]);
 
+  // Close dialog first, then run the side-effect on the next tick so the
+  // Dialog unmount completes cleanly before route / theme / signOut work.
   const go = (href: string) => {
     onOpenChange(false);
-    router.push(href);
+    setTimeout(() => router.push(href), 0);
   };
 
-  const signOut = async () => {
+  const signOut = () => {
     onOpenChange(false);
-    try {
-      await authClient.signOut();
-    } finally {
-      router.replace("/login");
-    }
+    setTimeout(async () => {
+      try {
+        await authClient.signOut();
+      } finally {
+        router.replace("/login");
+      }
+    }, 0);
   };
 
   return (
@@ -138,8 +142,14 @@ export function CommandPalette({
                   key={t.set}
                   value={t.value}
                   onSelect={() => {
-                    setTheme(t.set);
+                    // Close dialog first, then setTheme on next tick.
+                    // Without the defer, root <html> className flips while
+                    // the radix Dialog is still mid-unmount, causing React
+                    // to call removeChild on a node Tailwind's dark variant
+                    // already swapped out, throwing
+                    // `Failed to execute 'removeChild': not a child`.
                     onOpenChange(false);
+                    setTimeout(() => setTheme(t.set), 0);
                   }}
                   className="mt-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm aria-selected:bg-secondary"
                 >
