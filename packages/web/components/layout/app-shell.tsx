@@ -3,6 +3,7 @@
 // App shell — TopBar + Sidebar + main area.
 // Used by (dashboard) routes after user signs in.
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import type { ReactNode } from "react";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CommandPalette } from "@/components/layout/command-palette";
 
 interface MeResponse {
   user: { id: string };
@@ -47,10 +49,23 @@ const NAV_ITEMS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const meQuery = useQuery({
     queryKey: ["me"],
     queryFn: () => api<MeResponse>("/api/me"),
   });
+
+  // ⌘K / Ctrl+K to open command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const me = meQuery.data;
   const inboxTotal =
@@ -85,12 +100,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex flex-1 justify-center">
           <button
             type="button"
-            className="flex h-8 items-center gap-2 rounded-md border bg-background px-3 text-sm text-muted-foreground hover:text-foreground"
-            disabled
+            onClick={() => setPaletteOpen(true)}
+            className="flex h-8 w-full max-w-md items-center gap-2 rounded-md border bg-background px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            aria-label="Open command palette"
           >
             <Search size={14} strokeWidth={1.75} />
-            <span>Search…</span>
-            <span className="ml-2 hidden rounded bg-muted px-1 text-[10px] sm:inline">
+            <span>Search or jump to…</span>
+            <span className="ml-auto hidden rounded bg-muted px-1.5 py-0.5 text-[10px] sm:inline">
               ⌘K
             </span>
           </button>
@@ -183,6 +199,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="col-start-2 row-start-2 overflow-y-auto">
         {children}
       </main>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }

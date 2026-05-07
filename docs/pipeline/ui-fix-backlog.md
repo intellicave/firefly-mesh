@@ -93,13 +93,20 @@
 
 ### P1-B: TopBar 全局 search (cmdk) + org switcher dropdown
 
-- **status**: pending
-- **入口文件**: `packages/web/components/layout/app-shell.tsx`
+- **status**: ✅ done (org switcher 推迟到多 org 场景启用)
+- **入口文件**: `packages/web/components/layout/app-shell.tsx` + 新建 `packages/web/components/layout/command-palette.tsx`
 - **acceptance_criteria**:
-  - [ ] 装 `cmdk` 包，TopBar Search 按钮启用，⌘K 触发 command palette
-  - [ ] command palette 内容：跳转到 6 个 dashboard 页面 / "Sign out" / "Toggle theme"
-  - [ ] org name `· IC` 改成 dropdown：列出所有 user 所属 org，点击调 `POST /api/me/switch-org`
-  - [ ] typecheck 全过
+  - [x] 装 `cmdk` 包
+  - [x] TopBar Search 按钮启用 — 点击或 ⌘K/Ctrl+K 触发 command palette dialog
+  - [x] command palette 内容：6 dashboard 页面跳转 + Sign out
+  - [x] cmdk 内置 fuzzy search，type 时实时过滤
+  - [x] esc 关闭，再按 ⌘K toggle
+  - [ ] Toggle theme command — 推迟到 P2-B (next-themes) 完成后接进来
+  - [ ] org switcher dropdown — 推迟到 `/api/me/switch-org` endpoint + 多 org 场景实装
+  - [x] typecheck 全过
+- **evidence**:
+  - 视觉：TopBar Search 按钮文字 "Search or jump to…" + ⌘K 角标显示
+  - 功能：⌘K 弹 dialog，input + 6 nav items + sign out
 
 ### P1-C: Settings 加 change password + avatar upload
 
