@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, Upload } from "lucide-react";
 
 import { api, ApiCallError } from "@/lib/api-client";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   KnowledgeUploadDialog,
@@ -162,6 +163,7 @@ export default function KnowledgePage() {
               isLoading={list.isLoading}
               error={list.error}
               onPick={setSelectedDocId}
+              onUploadClick={() => setOpenUpload(true)}
             />
           </TabsContent>
         ))}
@@ -190,11 +192,13 @@ function DocumentList({
   isLoading,
   error,
   onPick,
+  onUploadClick,
 }: {
   data?: ListResponse;
   isLoading: boolean;
   error: unknown;
   onPick: (id: string) => void;
+  onUploadClick: () => void;
 }) {
   if (isLoading) {
     return (
@@ -213,9 +217,16 @@ function DocumentList({
   }
   if (!data || data.documents.length === 0) {
     return (
-      <div className="rounded-lg border bg-card px-6 py-16 text-center text-sm text-muted-foreground">
-        No documents yet. Click Upload to add one.
-      </div>
+      <EmptyState
+        Icon={Upload}
+        title="No documents yet"
+        description="Upload a PDF, DOCX, MD, TXT, or HTML file. We'll chunk + embed it so your agents can RAG-search it."
+        cta={{
+          label: "Upload first document",
+          icon: Upload,
+          onClick: onUploadClick,
+        }}
+      />
     );
   }
   return (

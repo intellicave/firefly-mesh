@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Sparkles } from "lucide-react";
 
 import { api, ApiCallError } from "@/lib/api-client";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkillDrawer } from "@/components/skills/skill-drawer";
 import { SkillCreateDialog } from "@/components/skills/create-dialog";
@@ -115,7 +116,7 @@ export default function SkillsPage() {
               ) : list.error ? (
                 <ErrorBox error={list.error} />
               ) : !list.data || list.data.skills.length === 0 ? (
-                <Empty />
+                <Empty onCreateClick={() => setOpenCreate(true)} />
               ) : (
                 <SkillGrid
                   rows={list.data.skills}
@@ -132,7 +133,7 @@ export default function SkillsPage() {
           ) : loaded.error ? (
             <ErrorBox error={loaded.error} />
           ) : !loaded.data || loaded.data.skills.length === 0 ? (
-            <Empty />
+            <Empty onCreateClick={() => setOpenCreate(true)} />
           ) : (
             <>
               <p className="mb-3 text-xs text-muted-foreground">
@@ -240,10 +241,17 @@ function ErrorBox({ error }: { error: unknown }) {
   );
 }
 
-function Empty() {
+function Empty({ onCreateClick }: { onCreateClick: () => void }) {
   return (
-    <div className="rounded-lg border bg-card px-6 py-16 text-center text-sm text-muted-foreground">
-      No skills yet. Click <strong>New skill</strong> to create one.
-    </div>
+    <EmptyState
+      Icon={Sparkles}
+      title="No skills yet"
+      description="Skills are agentskills.io-compatible packages your agents can install. Define them at company / department / personal scope."
+      cta={{
+        label: "Create your first skill",
+        icon: Plus,
+        onClick: onCreateClick,
+      }}
+    />
   );
 }

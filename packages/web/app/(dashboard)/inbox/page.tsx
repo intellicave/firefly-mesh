@@ -15,6 +15,7 @@ import {
 import { api, ApiCallError } from "@/lib/api-client";
 import { InboxRow, type InboxItem } from "@/components/inbox/inbox-row";
 import { InboxDrawer } from "@/components/inbox/inbox-drawer";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -263,7 +264,28 @@ export default function InboxPage() {
                     : "Failed to load inbox"}
                 </div>
               ) : tab === t && allItems.length === 0 ? (
-                <EmptyState tab={t} filtersActive={filtersActive} />
+                <EmptyState
+                  Icon={InboxIcon}
+                  title={filtersActive ? "No matches" : "Nothing pending"}
+                  description={
+                    filtersActive
+                      ? "No items match your filters. Try clearing them."
+                      : t === "approve"
+                        ? "Your agent has no messages waiting for your approval to send."
+                        : "No incoming requests or task reviews need your action."
+                  }
+                  secondary={
+                    filtersActive
+                      ? {
+                          label: "Clear filters",
+                          onClick: () => {
+                            setTypeFilter("");
+                            setCounterpartFilter("");
+                          },
+                        }
+                      : undefined
+                  }
+                />
               ) : tab === t ? (
                 <>
                   <ul>
@@ -336,26 +358,3 @@ export default function InboxPage() {
   );
 }
 
-function EmptyState({
-  tab,
-  filtersActive,
-}: {
-  tab: Tab;
-  filtersActive: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-muted-foreground">
-      <InboxIcon size={20} strokeWidth={1.5} className="text-primary" />
-      <h2 className="font-serif text-base text-foreground">
-        {filtersActive ? "No matches" : "Nothing pending"}
-      </h2>
-      <p className="max-w-md text-sm">
-        {filtersActive
-          ? "No items match your filters. Try clearing them."
-          : tab === "approve"
-            ? "Your agent has no messages waiting for your approval to send."
-            : "No incoming requests or task reviews need your action."}
-      </p>
-    </div>
-  );
-}

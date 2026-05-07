@@ -28,6 +28,7 @@ import {
 } from "@/components/organization/org-graph";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 
 interface OrgGraphPayload {
@@ -258,21 +259,21 @@ function ViewToggle({
 
 function EmployeesEmptyState({ canManage }: { canManage: boolean }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
-      <Network size={20} strokeWidth={1.5} className="text-primary" />
-      <h2 className="font-serif text-base text-foreground">No employees yet</h2>
-      <p className="max-w-md text-sm">
-        Your organization is empty. Import employees from a CSV to get started.
-      </p>
-      {canManage ? (
-        <a
-          href="/onboarding/import"
-          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <User size={12} strokeWidth={1.75} />
-          Import employees
-        </a>
-      ) : null}
+    <div className="flex h-full items-center justify-center">
+      <EmptyState
+        Icon={Network}
+        title="No employees yet"
+        description="Your organization is empty. Import employees from a CSV to get started."
+        cta={
+          canManage
+            ? {
+                label: "Import employees",
+                icon: User,
+                href: "/onboarding/import",
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

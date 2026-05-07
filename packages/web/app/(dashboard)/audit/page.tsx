@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, History, Loader2, MessageSquare } from "lucide-react";
 
 import { api, ApiCallError } from "@/lib/api-client";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThreadDrawer } from "@/components/audit/thread-drawer";
 
@@ -166,7 +167,7 @@ function ThreadsView({
     );
   }
   if (!data || data.threads.length === 0) {
-    return <EmptyState kind="threads" />;
+    return <AuditEmptyState kind="threads" />;
   }
   return (
     <div className="rounded-lg border bg-card">
@@ -230,7 +231,7 @@ function LogView({
     );
   }
   if (!data || data.entries.length === 0) {
-    return <EmptyState kind="log" />;
+    return <AuditEmptyState kind="log" />;
   }
   return (
     <div className="rounded-lg border bg-card">
@@ -267,17 +268,17 @@ function LogView({
   );
 }
 
-function EmptyState({ kind }: { kind: "threads" | "log" }) {
+function AuditEmptyState({ kind }: { kind: "threads" | "log" }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-muted-foreground">
-      <History size={20} strokeWidth={1.5} className="text-primary" />
-      <h2 className="font-serif text-base text-foreground">Nothing yet</h2>
-      <p className="max-w-md text-sm">
-        {kind === "threads"
+    <EmptyState
+      Icon={History}
+      title="Nothing yet"
+      description={
+        kind === "threads"
           ? "No A2A threads in this org yet. They'll appear here as agents start collaborating."
-          : "No audit entries yet. Every state change in the system is recorded here."}
-      </p>
-    </div>
+          : "No audit entries yet. Every state change in the system is recorded here."
+      }
+    />
   );
 }
 

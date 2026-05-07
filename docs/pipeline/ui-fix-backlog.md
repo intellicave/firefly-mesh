@@ -73,18 +73,23 @@
 
 ### P1-A: 抽公共 `<EmptyState>` 组件统一所有 5 页空状态
 
-- **status**: pending
+- **status**: ✅ done
 - **入口文件**:
   - 新建 `packages/web/components/ui/empty-state.tsx`
   - 替换 `inbox/page.tsx`、`audit/page.tsx`、`organization/page.tsx`、`knowledge/page.tsx`、`skills/page.tsx`
 - **acceptance_criteria**:
-  - [ ] 公共组件 props: `{ icon: LucideIcon; title: string; description?: string; cta?: { label, onClick | href } }`
-  - [ ] 5 页全部用同一组件
-  - [ ] knowledge / skills 加 icon + heading + helper（之前只有一行文字）
-  - [ ] organization 0 employees 状态加 "Add your first employee" admin CTA → 跳 onboarding/import 或弹 dialog
-  - [ ] knowledge 0 docs 状态 CTA "Upload first document" → 触发 upload dialog
-  - [ ] skills 0 skills 状态 CTA "Create your first skill" → 触发 create dialog
-  - [ ] typecheck 全过
+  - [x] 公共组件 props: `{ Icon, title, description?, cta?, secondary?, className?, children? }`
+  - [x] 5 页全部用同一组件
+  - [x] knowledge / skills 加 icon + heading + helper + primary CTA
+  - [x] organization 0 employees 状态：admin CTA "Import employees" → /onboarding/import
+  - [x] knowledge 0 docs 状态：CTA "Upload first document" → 触发 upload dialog
+  - [x] skills 0 skills 状态：CTA "Create your first skill" → 触发 create dialog
+  - [x] inbox empty: filtersActive 时多 "Clear filters" secondary
+  - [x] audit empty: 用 history icon + 描述
+  - [x] typecheck 5/5 全过
+- **evidence**:
+  - 截图 `.review-evidence/firefly-mesh-ui/04-knowledge-after.png`
+  - 视觉：upload icon + heading + 详描述 + 橙色 primary CTA
 
 ### P1-B: TopBar 全局 search (cmdk) + org switcher dropdown
 
