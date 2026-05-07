@@ -3,7 +3,8 @@
 // Real Inbox page — per ui.md §4.1.
 // Two tabs (approve / action) + filter / sort toolbar + drawer + Load earlier pagination.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -44,14 +45,47 @@ const MESSAGE_TYPES = [
 ] as const;
 
 export default function InboxPage() {
-  const [tab, setTab] = useState<Tab>("approve");
-  const [typeFilter, setTypeFilter] = useState<string>("");
-  const [counterpartFilter, setCounterpartFilter] = useState<string>("");
-  const [sort, setSort] = useState<SortDir>("desc");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Initialise state from URL — refresh / back-forward / shared link all hydrate.
+  const initialTab = (searchParams.get("tab") as Tab) || "approve";
+  const initialType = searchParams.get("type") ?? "";
+  const initialCounterpart = searchParams.get("counterpart") ?? "";
+  const initialSort = (searchParams.get("sort") as SortDir) || "desc";
+
+  const [tab, setTab] = useState<Tab>(
+    initialTab === "approve" || initialTab === "action" ? initialTab : "approve",
+  );
+  const [typeFilter, setTypeFilter] = useState<string>(initialType);
+  const [counterpartFilter, setCounterpartFilter] = useState<string>(
+    initialCounterpart,
+  );
+  const [sort, setSort] = useState<SortDir>(
+    initialSort === "asc" ? "asc" : "desc",
+  );
   const [selected, setSelected] = useState<InboxItem | null>(null);
   const [pages, setPages] = useState<InboxItem[][]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Sync state → URL (replace, not push, so back/forward isn't polluted).
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (tab !== "approve") params.set("tab", tab);
+    if (typeFilter) params.set("type", typeFilter);
+    if (counterpartFilter) params.set("counterpart", counterpartFilter);
+    if (sort !== "desc") params.set("sort", sort);
+    const qs = params.toString();
+    const target = qs ? `${pathname}?${qs}` : pathname;
+    const current =
+      pathname +
+      (searchParams.toString() ? `?${searchParams.toString()}` : "");
+    if (target !== current) {
+      router.replace(target, { scroll: false });
+    }
+  }, [tab, typeFilter, counterpartFilter, sort, pathname, router, searchParams]);
 
   const queryKey = useMemo(
     () => ["a2a-inbox", tab, typeFilter, counterpartFilter, sort],
