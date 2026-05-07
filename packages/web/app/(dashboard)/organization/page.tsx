@@ -1,68 +1,64 @@
 "use client";
 
-// /organization — M2 baseline view: grouped list by department.
-// Click any employee row → AgentDetailDrawer (3 tabs).
-// xyflow + Dagre graph rendering deferred to next iteration; the
-// underlying API (/api/org/graph) returns the same payload either way,
-// so swapping to graph view is purely a UI concern.
+// /organization — per ui.md §4.2.
+// Default view: xyflow + Dagre force-directed graph.
+// Toggle: Graph / List. Toolbar: search + dept filter + refresh.
+// Click any node → AgentDetailDrawer (Profile / Agent / Boundary tabs).
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Building2, Loader2, User } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Building2,
+  LayoutGrid,
+  Loader2,
+  Network,
+  RefreshCw,
+  Search,
+  User,
+} from "lucide-react";
 
 import { api, ApiCallError } from "@/lib/api-client";
 import { AgentDetailDrawer } from "@/components/organization/agent-detail-drawer";
+import {
+  OrgGraph as OrgGraphView,
+  type OrgEmployee,
+  type OrgAgent,
+  type OrgDepartment,
+  type OrgDepartmentMember,
+} from "@/components/organization/org-graph";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
-interface OrgGraph {
-  employees: Array<{
-    id: string;
-    userId: string | null;
-    name: string;
-    email: string;
-    title: string | null;
-    avatarUrl: string | null;
-    role: "owner" | "admin" | "manager" | "employee" | "auditor";
-    status: "active" | "archived";
-  }>;
-  departments: Array<{
-    id: string;
-    parentId: string | null;
-    name: string;
-    description: string | null;
-  }>;
-  departmentMembers: Array<{
-    departmentId: string;
-    employeeId: string;
-    role: string | null;
-  }>;
+interface OrgGraphPayload {
+  employees: OrgEmployee[];
+  departments: OrgDepartment[];
+  departmentMembers: OrgDepartmentMember[];
   projects: Array<unknown>;
   projectMembers: Array<unknown>;
-  agents: Array<{
-    id: string;
-    ownerEmployeeId: string;
-    runtimeKind: string;
-    runtimeMeta: { version?: string; protocolVersion?: string } | null;
-    status: "inactive" | "active" | "archived";
-    lastSeenAt: string | null;
-  }>;
+  agents: OrgAgent[];
 }
 
 interface MeResponse {
   employee: { id: string; role: string };
 }
 
+type ViewMode = "graph" | "list";
+
 export default function OrganizationPage() {
+  const queryClient = useQueryClient();
   const meQuery = useQuery({
     queryKey: ["me"],
     queryFn: () => api<MeResponse>("/api/me"),
   });
   const orgQuery = useQuery({
     queryKey: ["org-graph"],
-    queryFn: () => api<OrgGraph>("/api/org/graph"),
+    queryFn: () => api<OrgGraphPayload>("/api/org/graph"),
   });
 
+  const [view, setView] = useState<ViewMode>("graph");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterDeptId, setFilterDeptId] = useState<string | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
     null,
   );
@@ -71,6 +67,19 @@ export default function OrganizationPage() {
     meQuery.data?.employee.role === "owner" ||
     meQuery.data?.employee.role === "admin";
 
+  // Filter employees by search term (graph view only — list view filters internally)
+  const filteredEmployees = useMemo(() => {
+    if (!orgQuery.data) return [];
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return orgQuery.data.employees;
+    return orgQuery.data.employees.filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.email.toLowerCase().includes(q) ||
+        (e.title?.toLowerCase().includes(q) ?? false),
+    );
+  }, [orgQuery.data, searchTerm]);
+
   const grouped = useMemo(() => {
     if (!orgQuery.data) return null;
     const data = orgQuery.data;
@@ -78,29 +87,7 @@ export default function OrganizationPage() {
     const agentByOwner = new Map(
       data.agents.map((a) => [a.ownerEmployeeId, a]),
     );
-    const empToDepts = new Map<string, string[]>();
-    for (const m of data.departmentMembers) {
-      const list = empToDepts.get(m.employeeId) ?? [];
-      list.push(m.departmentId);
-      empToDepts.set(m.employeeId, list);
-    }
-
-    const groupsByDept = new Map<string, typeof data.employees>();
-    const unassigned: typeof data.employees = [];
-    for (const emp of data.employees) {
-      const deptIds = empToDepts.get(emp.id) ?? [];
-      if (deptIds.length === 0) {
-        unassigned.push(emp);
-        continue;
-      }
-      for (const did of deptIds) {
-        const list = groupsByDept.get(did) ?? [];
-        list.push(emp);
-        groupsByDept.set(did, list);
-      }
-    }
-
-    return { empById, agentByOwner, groupsByDept, unassigned, data };
+    return { empById, agentByOwner, data };
   }, [orgQuery.data]);
 
   const selectedEmployee =
@@ -113,7 +100,7 @@ export default function OrganizationPage() {
       : null;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex h-full flex-col">
       <header className="flex h-14 items-center justify-between border-b bg-card px-6">
         <h1 className="font-serif text-lg leading-tight tracking-tight">
           Organization
@@ -128,23 +115,103 @@ export default function OrganizationPage() {
         ) : null}
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 border-b bg-card/40 px-6 py-2">
+        <div className="flex flex-1 items-center gap-2">
+          <div className="flex h-8 max-w-xs flex-1 items-center gap-1.5 rounded-md border bg-background px-2">
+            <Search size={12} strokeWidth={1.75} className="text-muted-foreground" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search name / email / title…"
+              className="h-full flex-1 bg-transparent text-xs focus:outline-none"
+            />
+          </div>
+
+          <select
+            value={filterDeptId ?? ""}
+            onChange={(e) => setFilterDeptId(e.target.value || null)}
+            disabled={!orgQuery.data || orgQuery.data.departments.length === 0}
+            className="h-8 rounded-md border bg-background px-2 text-xs disabled:opacity-50"
+          >
+            <option value="">All departments</option>
+            {(orgQuery.data?.departments ?? []).map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() =>
+              queryClient.invalidateQueries({ queryKey: ["org-graph"] })
+            }
+            className="inline-flex h-8 items-center gap-1 rounded-md border bg-background px-2 text-xs hover:bg-secondary"
+          >
+            <RefreshCw
+              size={12}
+              strokeWidth={1.75}
+              className={cn(orgQuery.isFetching && "animate-spin")}
+            />
+            Refresh
+          </button>
+        </div>
+
+        <div className="inline-flex h-8 items-center rounded-md border bg-background p-0.5">
+          <ViewToggle
+            active={view === "graph"}
+            onClick={() => setView("graph")}
+            Icon={Network}
+            label="Graph"
+          />
+          <ViewToggle
+            active={view === "list"}
+            onClick={() => setView("list")}
+            Icon={LayoutGrid}
+            label="List"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden">
         {orgQuery.isLoading ? (
-          <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
             <Loader2 size={20} className="mr-2 animate-spin" />
             Loading mesh…
           </div>
         ) : orgQuery.error ? (
-          <p className="text-destructive">
-            {orgQuery.error instanceof ApiCallError
-              ? orgQuery.error.message
-              : "Failed to load org"}
-          </p>
+          <div className="p-6">
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {orgQuery.error instanceof ApiCallError
+                ? orgQuery.error.message
+                : "Failed to load org"}
+            </p>
+          </div>
+        ) : orgQuery.data && orgQuery.data.employees.length === 0 ? (
+          <EmployeesEmptyState canManage={canEditBoundary} />
         ) : grouped ? (
-          <OrgGroupedList
-            grouped={grouped}
-            onSelect={(id) => setSelectedEmployeeId(id)}
-          />
+          view === "graph" ? (
+            <OrgGraphView
+              employees={filteredEmployees}
+              agents={grouped.data.agents}
+              departments={grouped.data.departments}
+              departmentMembers={grouped.data.departmentMembers}
+              filterDepartmentId={filterDeptId}
+              onSelect={(id) => setSelectedEmployeeId(id)}
+            />
+          ) : (
+            <div className="h-full overflow-y-auto p-6">
+              <OrgGroupedList
+                data={grouped.data}
+                agentByOwner={grouped.agentByOwner}
+                searchTerm={searchTerm}
+                filterDeptId={filterDeptId}
+                onSelect={(id) => setSelectedEmployeeId(id)}
+              />
+            </div>
+          )
         ) : null}
       </div>
 
@@ -161,18 +228,106 @@ export default function OrganizationPage() {
   );
 }
 
+function ViewToggle({
+  active,
+  onClick,
+  Icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  Icon: typeof Network;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-7 items-center gap-1 rounded px-2 text-xs",
+        active
+          ? "bg-secondary text-foreground"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Icon size={12} strokeWidth={1.75} />
+      {label}
+    </button>
+  );
+}
+
+function EmployeesEmptyState({ canManage }: { canManage: boolean }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
+      <Network size={20} strokeWidth={1.5} className="text-primary" />
+      <h2 className="font-serif text-base text-foreground">No employees yet</h2>
+      <p className="max-w-md text-sm">
+        Your organization is empty. Import employees from a CSV to get started.
+      </p>
+      {canManage ? (
+        <a
+          href="/onboarding/import"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <User size={12} strokeWidth={1.75} />
+          Import employees
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 function OrgGroupedList({
-  grouped,
+  data,
+  agentByOwner,
+  searchTerm,
+  filterDeptId,
   onSelect,
 }: {
-  grouped: NonNullable<ReturnType<typeof useGroupedHookFake>>;
+  data: OrgGraphPayload;
+  agentByOwner: Map<string, OrgAgent>;
+  searchTerm: string;
+  filterDeptId: string | null;
   onSelect: (id: string) => void;
 }) {
-  const { data, groupsByDept, agentByOwner, unassigned } = grouped;
+  const empToDepts = new Map<string, string[]>();
+  for (const m of data.departmentMembers) {
+    const list = empToDepts.get(m.employeeId) ?? [];
+    list.push(m.departmentId);
+    empToDepts.set(m.employeeId, list);
+  }
+
+  const q = searchTerm.trim().toLowerCase();
+  const matches = (e: OrgEmployee) =>
+    !q ||
+    e.name.toLowerCase().includes(q) ||
+    e.email.toLowerCase().includes(q) ||
+    (e.title?.toLowerCase().includes(q) ?? false);
+
+  const groupsByDept = new Map<string, OrgEmployee[]>();
+  const unassigned: OrgEmployee[] = [];
+  for (const emp of data.employees) {
+    if (!matches(emp)) continue;
+    const deptIds = empToDepts.get(emp.id) ?? [];
+    if (deptIds.length === 0) {
+      if (!filterDeptId) unassigned.push(emp);
+      continue;
+    }
+    for (const did of deptIds) {
+      if (filterDeptId && filterDeptId !== did) continue;
+      const list = groupsByDept.get(did) ?? [];
+      list.push(emp);
+      groupsByDept.set(did, list);
+    }
+  }
+
+  const visibleDepts = filterDeptId
+    ? data.departments.filter((d) => d.id === filterDeptId)
+    : data.departments;
 
   return (
     <div className="space-y-6">
-      {data.departments.map((dept) => {
+      {visibleDepts.map((dept) => {
         const employees = groupsByDept.get(dept.id) ?? [];
         return (
           <section key={dept.id} className="rounded-lg border bg-card p-4">
@@ -201,7 +356,7 @@ function OrgGroupedList({
         );
       })}
 
-      {unassigned.length > 0 ? (
+      {unassigned.length > 0 && !filterDeptId ? (
         <section className="rounded-lg border bg-card p-4">
           <header className="mb-3 flex items-center gap-2">
             <User size={14} strokeWidth={1.75} className="text-muted-foreground" />
@@ -227,24 +382,13 @@ function OrgGroupedList({
   );
 }
 
-// Helper purely to satisfy TS for the OrgGroupedList prop type.
-function useGroupedHookFake(): {
-  empById: Map<string, OrgGraph["employees"][number]>;
-  agentByOwner: Map<string, OrgGraph["agents"][number]>;
-  groupsByDept: Map<string, OrgGraph["employees"]>;
-  unassigned: OrgGraph["employees"];
-  data: OrgGraph;
-} | null {
-  return null;
-}
-
 function EmployeeCard({
   employee,
   agent,
   onClick,
 }: {
-  employee: OrgGraph["employees"][number];
-  agent: OrgGraph["agents"][number] | undefined;
+  employee: OrgEmployee;
+  agent: OrgAgent | undefined;
   onClick: () => void;
 }) {
   const initials = employee.name
