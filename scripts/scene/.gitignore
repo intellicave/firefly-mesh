@@ -1,0 +1,11 @@
+# PixelLab raw outputs — re-rollable from production-list seeds, not source.
+raw/
+
+# Auto-generated processed outputs — derived from raw/, regenerable.
+processed/
+
+# QA gate per-asset reports — regenerable.
+reports/
+
+# Local node_modules (covered by root .gitignore but explicit here).
+node_modules/

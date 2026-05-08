@@ -1,0 +1,19 @@
+{
+  "name": "@firefly-mesh/scene-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Build tooling for the /scene pixel-game view: palette / style-reference / PixelLab / QA gate / atlas pack. Isolated from the main app bundle.",
+  "scripts": {
+    "build:palette": "node build-palette-png.mjs",
+    "build:manifest": "node build-asset-manifest.mjs",
+    "produce": "node produce.mjs",
+    "produce:queued": "node produce.mjs --queued",
+    "validate:asset": "node validate-asset-qa.mjs",
+    "post-process": "node post-process.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.34.5",
+    "yaml": "^2.8.0"
+  }
+}
