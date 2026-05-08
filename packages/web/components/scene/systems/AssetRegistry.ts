@@ -44,6 +44,10 @@ const PLACEHOLDER_COLORS: Record<string, number> = {
   "tile/cooler": 0x1e2d30,
   "tile/plant": 0x1a2b1a,
   "tile/whiteboard": 0x282830,
+  "tile/bookcase":    0x3a2510,
+  "tile/sofa":        0x2a2a3a,
+  "tile/server-rack": 0x202835,
+  "tile/tv-screen":   0x101828,
   char: 0x4a7c59,
 };
 
@@ -82,6 +86,10 @@ export class AssetRegistry {
       ["tile/cooler",          `${TILE_BASE}/tile__cooler.png`],
       ["tile/plant",           `${TILE_BASE}/tile__plant.png`],
       ["tile/whiteboard",      `${TILE_BASE}/tile__whiteboard.png`],
+      ["tile/bookcase",        `${TILE_BASE}/tile__bookcase.png`],
+      ["tile/sofa",            `${TILE_BASE}/tile__sofa.png`],
+      ["tile/server-rack",     `${TILE_BASE}/tile__server-rack.png`],
+      ["tile/tv-screen",       `${TILE_BASE}/tile__tv-screen.png`],
     ];
     for (const [key, path] of tiles) {
       this.scene.load.image(key, path);
@@ -122,6 +130,10 @@ export class AssetRegistry {
       "tile/cooler":         [32, 32],
       "tile/plant":          [32, 32],
       "tile/whiteboard":     [48, 48],
+      "tile/bookcase":       [48, 48],
+      "tile/sofa":           [64, 64],
+      "tile/server-rack":    [32, 32],
+      "tile/tv-screen":      [64, 64],
     };
 
     for (const [key, [w, h]] of Object.entries(tileSizes)) {

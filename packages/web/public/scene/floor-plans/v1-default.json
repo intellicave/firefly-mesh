@@ -1,45 +1,94 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "cols": 12,
   "rows": 9,
+
+  "partition_cols": [
+    { "col": 4, "rowMin": 1, "rowMax": 3 },
+    { "col": 6, "rowMin": 6, "rowMax": 8 }
+  ],
+
   "rooms": {
     "ceo-office": {
-      "label": "CEO Office",
-      "bounds": { "colMin": 0, "colMax": 5, "rowMin": 0, "rowMax": 3 },
+      "label": "CEO Suite",
+      "floor_tint": 16765056,
+      "bounds": { "colMin": 0, "colMax": 3, "rowMin": 0, "rowMax": 3 },
       "desk_slots": [
-        { "col": 2, "row": 2, "facing": "s", "type": "desk-ceo", "id": "ceo-desk-0" }
+        { "id": "ceo-0", "col": 2, "row": 2, "facing": "s", "type": "desk-ceo" }
+      ],
+      "decor_slots": [
+        { "id": "ceo-bookcase", "col": 1, "row": 1, "tile": "tile/bookcase" },
+        { "id": "ceo-plant-l", "col": 0, "row": 2, "tile": "tile/plant" },
+        { "id": "ceo-plant-r", "col": 3, "row": 1, "tile": "tile/plant" },
+        { "id": "ceo-sofa",    "col": 1, "row": 3, "tile": "tile/sofa" }
       ]
     },
+
     "product-maker": {
-      "label": "Product Maker Space",
-      "bounds": { "colMin": 6, "colMax": 11, "rowMin": 0, "rowMax": 3 },
+      "label": "Product & Design",
+      "floor_tint": 13692671,
+      "bounds": { "colMin": 5, "colMax": 11, "rowMin": 0, "rowMax": 3 },
       "desk_slots": [
-        { "col": 7, "row": 2, "facing": "s", "type": "desk-employee", "id": "pm-desk-0" },
-        { "col": 8, "row": 2, "facing": "s", "type": "desk-employee", "id": "pm-desk-1" },
-        { "col": 9, "row": 2, "facing": "s", "type": "desk-employee", "id": "pm-desk-2" }
+        { "id": "pm-0", "col": 6, "row": 2, "facing": "s", "type": "desk-employee" },
+        { "id": "pm-1", "col": 7, "row": 2, "facing": "s", "type": "desk-employee" },
+        { "id": "pm-2", "col": 8, "row": 2, "facing": "s", "type": "desk-employee" },
+        { "id": "pm-3", "col": 9, "row": 2, "facing": "s", "type": "desk-employee" },
+        { "id": "pm-4", "col": 6, "row": 3, "facing": "s", "type": "desk-employee" },
+        { "id": "pm-5", "col": 7, "row": 3, "facing": "s", "type": "desk-employee" },
+        { "id": "pm-6", "col": 8, "row": 3, "facing": "s", "type": "desk-employee" },
+        { "id": "pm-7", "col": 9, "row": 3, "facing": "s", "type": "desk-employee" }
+      ],
+      "decor_slots": [
+        { "id": "pm-wb-0",  "col": 5,  "row": 1, "tile": "tile/whiteboard" },
+        { "id": "pm-wb-1",  "col": 8,  "row": 1, "tile": "tile/whiteboard" },
+        { "id": "pm-plant", "col": 11, "row": 1, "tile": "tile/plant" },
+        { "id": "pm-bull",  "col": 10, "row": 1, "tile": "tile/bulletin" }
       ]
     },
+
     "hallway": {
       "label": "Hallway",
       "bounds": { "colMin": 0, "colMax": 11, "rowMin": 4, "rowMax": 4 },
       "desk_slots": []
     },
+
     "sales-bullpen": {
-      "label": "Sales Bullpen",
+      "label": "Sales & Customer Success",
+      "floor_tint": 16765088,
       "bounds": { "colMin": 0, "colMax": 5, "rowMin": 5, "rowMax": 8 },
       "desk_slots": [
-        { "col": 1, "row": 6, "facing": "s", "type": "desk-employee", "id": "sales-desk-0" },
-        { "col": 2, "row": 6, "facing": "s", "type": "desk-employee", "id": "sales-desk-1" },
-        { "col": 3, "row": 6, "facing": "s", "type": "desk-employee", "id": "sales-desk-2" }
+        { "id": "sales-0", "col": 1, "row": 7, "facing": "s", "type": "desk-employee" },
+        { "id": "sales-1", "col": 2, "row": 7, "facing": "s", "type": "desk-employee" },
+        { "id": "sales-2", "col": 3, "row": 7, "facing": "s", "type": "desk-employee" },
+        { "id": "sales-3", "col": 1, "row": 8, "facing": "s", "type": "desk-employee" },
+        { "id": "sales-4", "col": 2, "row": 8, "facing": "s", "type": "desk-employee" },
+        { "id": "sales-5", "col": 3, "row": 8, "facing": "s", "type": "desk-employee" }
+      ],
+      "decor_slots": [
+        { "id": "sales-tv",     "col": 0, "row": 6, "tile": "tile/tv-screen" },
+        { "id": "sales-cooler", "col": 4, "row": 6, "tile": "tile/cooler" },
+        { "id": "sales-plant",  "col": 5, "row": 8, "tile": "tile/plant" },
+        { "id": "sales-bull",   "col": 4, "row": 8, "tile": "tile/bulletin" }
       ]
     },
+
     "floor-flex": {
-      "label": "Floor Flex",
-      "bounds": { "colMin": 6, "colMax": 11, "rowMin": 5, "rowMax": 8 },
+      "label": "Engineering & Ops",
+      "floor_tint": 13172688,
+      "bounds": { "colMin": 7, "colMax": 11, "rowMin": 5, "rowMax": 8 },
       "desk_slots": [
-        { "col": 7, "row": 6, "facing": "s", "type": "desk-employee", "id": "flex-desk-0" },
-        { "col": 8, "row": 6, "facing": "s", "type": "desk-employee", "id": "flex-desk-1" },
-        { "col": 9, "row": 6, "facing": "s", "type": "desk-employee", "id": "flex-desk-2" }
+        { "id": "eng-0", "col": 8,  "row": 7, "facing": "s", "type": "desk-employee" },
+        { "id": "eng-1", "col": 9,  "row": 7, "facing": "s", "type": "desk-employee" },
+        { "id": "eng-2", "col": 10, "row": 7, "facing": "s", "type": "desk-employee" },
+        { "id": "eng-3", "col": 8,  "row": 8, "facing": "s", "type": "desk-employee" },
+        { "id": "eng-4", "col": 9,  "row": 8, "facing": "s", "type": "desk-employee" },
+        { "id": "eng-5", "col": 10, "row": 8, "facing": "s", "type": "desk-employee" }
+      ],
+      "decor_slots": [
+        { "id": "eng-server",  "col": 7,  "row": 6, "tile": "tile/server-rack" },
+        { "id": "eng-wb",      "col": 11, "row": 6, "tile": "tile/whiteboard" },
+        { "id": "eng-plant-l", "col": 7,  "row": 8, "tile": "tile/plant" },
+        { "id": "eng-plant-r", "col": 11, "row": 8, "tile": "tile/plant" }
       ]
     }
   }

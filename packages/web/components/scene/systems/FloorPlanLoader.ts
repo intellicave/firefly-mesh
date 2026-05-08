@@ -1,14 +1,30 @@
 // Parse floor-plan JSON → instantiate Tile + DepartmentRoom objects.
-// Tile layer assignment is derived from grid position (not declared per-cell).
+// Supports partition_cols (internal room dividers), decor_slots (env furniture),
+// and floor_tint (per-room colour overlay).
 
 import Phaser from "phaser";
 import { Tile, type TileLayer } from "../entities/Tile";
 import { DepartmentRoom, type DeskSlot } from "../entities/DepartmentRoom";
 
+interface DecorSlot {
+  id: string;
+  col: number;
+  row: number;
+  tile: string; // full tile key, e.g. "tile/plant"
+}
+
 interface FloorPlanRoom {
   label: string;
   bounds: { colMin: number; colMax: number; rowMin: number; rowMax: number };
   desk_slots: Array<{ id: string; col: number; row: number; facing: string; type: string }>;
+  decor_slots?: DecorSlot[];
+  floor_tint?: number; // Phaser hex colour, e.g. 0xFFD070
+}
+
+interface PartitionCol {
+  col: number;
+  rowMin: number;
+  rowMax: number;
 }
 
 interface FloorPlan {
@@ -16,6 +32,7 @@ interface FloorPlan {
   cols: number;
   rows: number;
   rooms: Record<string, FloorPlanRoom>;
+  partition_cols?: PartitionCol[];
 }
 
 export interface FloorLayout {
@@ -23,6 +40,12 @@ export interface FloorLayout {
   rooms: Map<string, DepartmentRoom>;
   allTiles: Tile[];
 }
+
+// desk_slot.type → tile key
+const DESK_TILE: Record<string, string> = {
+  "desk-ceo":      "tile/desk-ceo",
+  "desk-employee": "tile/desk-employee",
+};
 
 export class FloorPlanLoader {
   private scene: Phaser.Scene;
@@ -46,17 +69,13 @@ export class FloorPlanLoader {
     const rooms = new Map<string, DepartmentRoom>();
     const allTiles: Tile[] = [];
 
-    // Create DepartmentRoom objects
+    // Build DepartmentRoom objects
     for (const [id, rDef] of Object.entries(plan.rooms)) {
-      const slots: DeskSlot[] = rDef.desk_slots.map((s) => ({
-        ...s,
-        occupantId: null,
-      }));
-      const room = new DepartmentRoom(id, rDef.label, rDef.bounds, slots);
-      rooms.set(id, room);
+      const slots: DeskSlot[] = rDef.desk_slots.map((s) => ({ ...s, occupantId: null }));
+      rooms.set(id, new DepartmentRoom(id, rDef.label, rDef.bounds, slots));
     }
 
-    // Instantiate one Tile per cell
+    // Floor + wall tiles (one per grid cell)
     for (let row = 0; row < plan.rows; row++) {
       for (let col = 0; col < plan.cols; col++) {
         const { tileId, layer } = this.classifyCell(col, row, plan);
@@ -68,24 +87,59 @@ export class FloorPlanLoader {
         allTiles.push(tile);
 
         const roomId = roomForCell.get(`${col},${row}`);
-        if (roomId) rooms.get(roomId)?.addTile(tile);
+        if (roomId) {
+          rooms.get(roomId)?.addTile(tile);
+          // Apply per-room floor tint
+          const tint = plan.rooms[roomId]?.floor_tint;
+          if (layer === "floor" && tint != null) {
+            tile.sprite.setTint(tint);
+          }
+        }
       }
     }
 
-    // Instantiate furniture tiles at desk slots
-    for (const room of rooms.values()) {
+    // Desk furniture tiles
+    for (const [roomId, room] of rooms) {
       for (const slot of room.deskSlots) {
-        const furnitureTileId = slot.type === "desk-ceo"
-          ? "tile/desk-ceo" : "tile/desk-employee";
+        const tileKey = DESK_TILE[slot.type] ?? "tile/desk-employee";
         const tile = new Tile(this.scene, {
           col: slot.col, row: slot.row,
-          tileId: furnitureTileId,
+          tileId: tileKey,
           layer: "furniture",
           originX: this.originX,
           originY: this.originY,
         });
         allTiles.push(tile);
         room.addTile(tile);
+      }
+
+      // Decorative / env furniture tiles
+      const decors = plan.rooms[roomId]?.decor_slots ?? [];
+      for (const d of decors) {
+        const tile = new Tile(this.scene, {
+          col: d.col, row: d.row,
+          tileId: d.tile,
+          layer: "furniture",
+          originX: this.originX,
+          originY: this.originY,
+        });
+        allTiles.push(tile);
+        room.addTile(tile);
+      }
+    }
+
+    // Partition walls overlay floor tiles at room boundaries.
+    // Placed AFTER the floor loop so both floor + wall exist at these cells.
+    for (const pw of plan.partition_cols ?? []) {
+      for (let row = pw.rowMin; row <= pw.rowMax; row++) {
+        const tile = new Tile(this.scene, {
+          col: pw.col, row,
+          tileId: "tile/wall-side-w",
+          layer: "furniture",
+          originX: this.originX,
+          originY: this.originY,
+        });
+        allTiles.push(tile);
       }
     }
 
@@ -96,11 +150,9 @@ export class FloorPlanLoader {
     const lookup = new Map<string, string>();
     for (const [id, rDef] of Object.entries(plan.rooms)) {
       const { colMin, colMax, rowMin, rowMax } = rDef.bounds;
-      for (let r = rowMin; r <= rowMax; r++) {
-        for (let c = colMin; c <= colMax; c++) {
+      for (let r = rowMin; r <= rowMax; r++)
+        for (let c = colMin; c <= colMax; c++)
           lookup.set(`${c},${r}`, id);
-        }
-      }
     }
     return lookup;
   }
@@ -113,14 +165,11 @@ export class FloorPlanLoader {
     const isLeftEdge    = col === 0;
     const isRightEdge   = col === plan.cols - 1;
 
-    // Corners take priority over flat back-wall
     if (isBackWallRow && isLeftEdge)  return { tileId: "tile/wall-corner-nw", layer: "backWall" };
     if (isBackWallRow && isRightEdge) return { tileId: "tile/wall-corner-ne", layer: "backWall" };
     if (isBackWallRow)                return { tileId: "tile/wall-back",      layer: "backWall" };
 
-    // Side walls: only on the row directly below each back-wall row.
-    // Putting them on every interior row creates a diagonal pillar-forest in
-    // isometric view; a single strip per room block is visually sufficient.
+    // Side walls only on the row directly below each back-wall row
     const isSideWallRow = row === 1 || row === 6;
     if (isSideWallRow && isLeftEdge)  return { tileId: "tile/wall-side-w", layer: "backWall" };
     if (isSideWallRow && isRightEdge) return { tileId: "tile/wall-side-e", layer: "backWall" };
