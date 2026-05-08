@@ -1,0 +1,5 @@
+# Synthetic / downloaded test artefacts — regenerable by the .mjs scripts here.
+# Keep the .mjs scripts checked in.
+*.png
+ceo-south.png
+char-pivots.json

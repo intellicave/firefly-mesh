@@ -58,9 +58,12 @@ foundation:
 # -----------------------------------------------------------------
 characters:
 
-  # Pivot values below are *expected* (canvas-centred feet); download-pixellab-character.mjs
-  # auto-detects each south-facing frame's feet-centre and writes the actual pivot into
-  # the manifest. QA gate HR15 verifies actual is within ±2 px of expected.
+  # Pivot values below are calibrated by `scripts/scene/test-fixtures/probe-all-chars.mjs`
+  # (one-off probe of all 10 south.png rotations from the public CDN). All chars occupy
+  # central ~52×69 area within their canvas, so feet sit ~75% down the canvas — NOT at
+  # canvas-bottom-centre. download-pixellab-character.mjs auto-detects each sprite's
+  # actual feet-centre and writes that into the manifest; HR15 v3.0 enforces detected
+  # within ±2 px of the declared pivot below.
 
   - id: "char/firefly-ceo"
     type: "character"
@@ -68,7 +71,7 @@ characters:
     description: "Anthropomorphic firefly CEO from existing PixelLab library; brown messy hair, business attire, dark-purple torso + 2 antennae + sparse-pixel pale-blue wings + glowing lantern abdomen anatomy. Already shipped with full 8-direction breathing-idle and walk animations."
     role_mapping: ["owner"]
     size: { w: 116, h: 116 }
-    pivot: { x: 58, y: 108 }
+    pivot: { x: 58, y: 87 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]      # 8 native; HR6 mirror trick repealed for chars
     status: "external-library"
@@ -80,7 +83,7 @@ characters:
     role_mapping: ["admin"]                         # admin/operations branch
     role_branch: "operations"
     size: { w: 120, h: 120 }
-    pivot: { x: 60, y: 112 }
+    pivot: { x: 60, y: 89 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -92,7 +95,7 @@ characters:
     role_mapping: ["admin"]                         # admin/technology branch
     role_branch: "technology"
     size: { w: 120, h: 120 }
-    pivot: { x: 60, y: 112 }
+    pivot: { x: 60, y: 88 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -104,7 +107,7 @@ characters:
     role_mapping: ["manager"]
     department: "Product"
     size: { w: 120, h: 120 }
-    pivot: { x: 60, y: 112 }
+    pivot: { x: 60, y: 89 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -116,7 +119,7 @@ characters:
     role_mapping: ["manager"]
     department: "Marketing"
     size: { w: 120, h: 120 }
-    pivot: { x: 60, y: 112 }
+    pivot: { x: 61, y: 89 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -128,7 +131,7 @@ characters:
     role_mapping: ["manager"]
     department: "Service"
     size: { w: 124, h: 124 }
-    pivot: { x: 62, y: 116 }
+    pivot: { x: 63, y: 93 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -140,7 +143,7 @@ characters:
     role_mapping: ["manager"]
     department: "Operations"
     size: { w: 124, h: 124 }
-    pivot: { x: 62, y: 116 }
+    pivot: { x: 62, y: 92 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -152,7 +155,7 @@ characters:
     role_mapping: ["employee", "auditor"]
     department: "Operations"
     size: { w: 120, h: 120 }
-    pivot: { x: 60, y: 112 }
+    pivot: { x: 60, y: 89 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -164,7 +167,7 @@ characters:
     role_mapping: ["employee"]
     department: "Engineering"
     size: { w: 124, h: 124 }
-    pivot: { x: 62, y: 116 }
+    pivot: { x: 62, y: 91 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"
@@ -176,7 +179,7 @@ characters:
     role_mapping: ["employee"]
     department: "Design"
     size: { w: 124, h: 124 }
-    pivot: { x: 62, y: 116 }
+    pivot: { x: 62, y: 91 }                       # probed
     animations: [breathing-idle, walk]
     directions: [N, NE, E, SE, S, SW, W, NW]
     status: "external-library"

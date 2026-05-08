@@ -1,7 +1,13 @@
 // Asset QA gate — runs before any PNG is accepted into public/scene/assets/.
 //
 // Per docs/art/firefly-mesh-art-bible.md § 11 hard rules + docs/plans/.../rules.md
-// R1, R2, R9, R15, R16. Each violation is a merge blocker.
+// R1, R2, R9, R15, R16, R18. Each violation is a merge blocker.
+//
+// v3.0 additions:
+//   - HR12 / R18: for type ∈ {floor, wall, tile}, floor edges within ±2° of
+//     canonical iso 30° (delegated to validateIsoAngle)
+//   - HR15 / R15: pivot tolerance is ±2 px for character (per-archetype
+//     auto-detected pivot) and ±1 px for tile/floor/wall (declared anchor)
 //
 // Usage:
 //   node validate-asset-qa.mjs <png-path> [--spec='{"size":{"w":16,"h":24},"pivot":{"x":8,"y":24},"type":"character"}']
@@ -16,6 +22,7 @@ import { argv, exit } from "node:process";
 import sharp from "sharp";
 
 import { PALETTE_RGB } from "./palette.mjs";
+import { validateIsoAngle } from "./validate-iso-angle.mjs";
 
 /** Build set of "rrggbb" lower-case hex strings for fast membership. */
 function paletteSet() {
@@ -136,16 +143,19 @@ export async function validateAsset(path, spec) {
   }
 
   // ── 5. Pivot point (characters / objects) ─────────────────────────
+  // HR15 v3.0: tolerance ±2 px for characters (per-archetype auto-detected
+  // pivot drifts up to 2 px between archetypes due to 116/120/124 canvas
+  // sizes); ±1 px for tiles (declared anchor is exact).
   if (spec.pivot) {
     const { x, y } = spec.pivot;
+    const pivotTolerance = spec.type === "character" ? 2 : 1;
     if (x < 0 || x >= W || y < 0 || y >= H) {
       errors.push(`pivot (${x},${y}) is outside image bounds ${W}×${H}`);
     } else {
       // Pivot is encoded as a transparent dot at (x, y).
-      // Tolerance: ±1 px in either direction.
       let found = false;
-      for (let dy = -1; dy <= 1 && !found; dy++) {
-        for (let dx = -1; dx <= 1 && !found; dx++) {
+      for (let dy = -pivotTolerance; dy <= pivotTolerance && !found; dy++) {
+        for (let dx = -pivotTolerance; dx <= pivotTolerance && !found; dx++) {
           const px = x + dx;
           const py = y + dy;
           if (px < 0 || px >= W || py < 0 || py >= H) continue;
@@ -156,7 +166,7 @@ export async function validateAsset(path, spec) {
       if (!found) {
         errors.push(
           `pivot point at (${x},${y}) not detected ` +
-            `(expected a transparent pixel within ±1 px of declared pivot)`,
+            `(expected a transparent pixel within ±${pivotTolerance} px of declared pivot)`,
         );
       }
     }
@@ -166,6 +176,34 @@ export async function validateAsset(path, spec) {
   if (spec.type === "palette") {
     if (W !== 32 || H !== 1) {
       errors.push(`palette must be 32×1, got ${W}×${H}`);
+    }
+  }
+
+  // ── 7. HR12 iso-angle (floor / wall / tile) ───────────────────────
+  // v3.0 R18 enforcement. We run only on floor tiles and on the floor
+  // footprint of wall tiles. The validator inspects the bottom 1/3 and
+  // verifies the dominant edge angles land within ±2° of canonical 30°.
+  const isoTypes = new Set(["floor", "wall", "tile"]);
+  if (isoTypes.has(spec.type)) {
+    const iso = await validateIsoAngle(path);
+    if (iso.error) {
+      // Insufficient samples / degenerate fit. For floor tiles this is a
+      // hard error (tile has no recognisable rhombus). For walls it's a
+      // warning because tall walls may have a thin floor-footprint band.
+      if (spec.type === "floor") {
+        errors.push(`HR12: ${iso.error}`);
+      } else {
+        warnings.push(
+          `HR12: iso-angle check skipped (${iso.error}); consider a manual eyeball`,
+        );
+      }
+    } else if (!iso.ok) {
+      errors.push(
+        `HR12: floor edges drifted from canonical 30° ` +
+          `(left ${iso.angleLeft.toFixed(2)}° drift ${iso.driftLeft.toFixed(2)}°, ` +
+          `right ${iso.angleRight.toFixed(2)}° drift ${iso.driftRight.toFixed(2)}°; ` +
+          `tolerance ±2°). Re-roll with iso-grid-reference.png as reference.`,
+      );
     }
   }
 

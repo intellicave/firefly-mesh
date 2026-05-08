@@ -6,13 +6,17 @@
   "description": "Build tooling for the /scene pixel-game view: palette / style-reference / PixelLab / QA gate / atlas pack. Isolated from the main app bundle.",
   "scripts": {
     "build:palette": "node build-palette-png.mjs",
+    "build:iso-grid": "node build-iso-grid-reference.mjs",
     "build:manifest": "node build-asset-manifest.mjs",
+    "download:characters": "node download-pixellab-character.mjs",
     "produce": "node produce.mjs",
     "produce:queued": "node produce.mjs --queued",
     "validate:asset": "node validate-asset-qa.mjs",
+    "validate:iso-angle": "node validate-iso-angle.mjs",
     "post-process": "node post-process.mjs"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "sharp": "^0.34.5",
     "yaml": "^2.8.0"
   }

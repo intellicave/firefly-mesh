@@ -1,13 +1,13 @@
 {
-  "version": "1.0.0",
-  "generatedAt": "2026-05-08T08:52:08.423Z",
+  "version": "3.0.0",
+  "generatedAt": "2026-05-08T12:01:58.594Z",
   "palette": "scene/assets/palette.png",
+  "iso_grid_reference": "scene/assets/iso-grid-reference.png",
   "atlases": {},
   "foundation": {},
   "characters": {},
-  "rooms": {},
-  "hallway": {},
+  "tiles": {},
   "effects": {},
   "icons": {},
-  "checksum": "316873a6cab28aece0ecea0f1d2d811186ee57d68392b1a4953b805d0a586784"
+  "checksum": "c60229218b7e176025f2c3342c22c90865f9e20c986ba92307cb7fa396f82f58"
 }
