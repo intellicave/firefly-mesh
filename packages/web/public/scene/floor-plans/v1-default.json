@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "cols": 12,
+  "rows": 9,
+  "rooms": {
+    "ceo-office": {
+      "label": "CEO Office",
+      "bounds": { "colMin": 0, "colMax": 5, "rowMin": 0, "rowMax": 3 },
+      "desk_slots": [
+        { "col": 2, "row": 2, "facing": "s", "type": "desk-ceo", "id": "ceo-desk-0" }
+      ]
+    },
+    "product-maker": {
+      "label": "Product Maker Space",
+      "bounds": { "colMin": 6, "colMax": 11, "rowMin": 0, "rowMax": 3 },
+      "desk_slots": [
+        { "col": 7, "row": 2, "facing": "s", "type": "desk-employee", "id": "pm-desk-0" },
+        { "col": 8, "row": 2, "facing": "s", "type": "desk-employee", "id": "pm-desk-1" },
+        { "col": 9, "row": 2, "facing": "s", "type": "desk-employee", "id": "pm-desk-2" }
+      ]
+    },
+    "hallway": {
+      "label": "Hallway",
+      "bounds": { "colMin": 0, "colMax": 11, "rowMin": 4, "rowMax": 4 },
+      "desk_slots": []
+    },
+    "sales-bullpen": {
+      "label": "Sales Bullpen",
+      "bounds": { "colMin": 0, "colMax": 5, "rowMin": 5, "rowMax": 8 },
+      "desk_slots": [
+        { "col": 1, "row": 6, "facing": "s", "type": "desk-employee", "id": "sales-desk-0" },
+        { "col": 2, "row": 6, "facing": "s", "type": "desk-employee", "id": "sales-desk-1" },
+        { "col": 3, "row": 6, "facing": "s", "type": "desk-employee", "id": "sales-desk-2" }
+      ]
+    },
+    "floor-flex": {
+      "label": "Floor Flex",
+      "bounds": { "colMin": 6, "colMax": 11, "rowMin": 5, "rowMax": 8 },
+      "desk_slots": [
+        { "col": 7, "row": 6, "facing": "s", "type": "desk-employee", "id": "flex-desk-0" },
+        { "col": 8, "row": 6, "facing": "s", "type": "desk-employee", "id": "flex-desk-1" },
+        { "col": 9, "row": 6, "facing": "s", "type": "desk-employee", "id": "flex-desk-2" }
+      ]
+    }
+  }
+}

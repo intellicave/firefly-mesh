@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
   BookOpen,
+  Clapperboard,
   History,
   Inbox as InboxIcon,
   Network,
@@ -45,6 +46,7 @@ const NAV_ITEMS = [
   { href: "/inbox", label: "Inbox", Icon: InboxIcon, badge: "inbox" },
   { href: "/audit", label: "Audit", Icon: History },
   { href: "/organization", label: "Organization", Icon: Network },
+  { href: "/scene", label: "Scene", Icon: Clapperboard },
   { href: "/knowledge", label: "Knowledge", Icon: BookOpen },
   { href: "/skills", label: "Skills", Icon: Sparkles },
   { href: "/settings", label: "Settings", Icon: Settings },
