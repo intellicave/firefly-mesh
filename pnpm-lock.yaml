@@ -108,6 +108,9 @@ importers:
       hono:
         specifier: ^4.12.18
         version: 4.12.18
+      jose:
+        specifier: ^6.1.0
+        version: 6.2.3
       nanoid:
         specifier: ^5.1.5
         version: 5.1.11

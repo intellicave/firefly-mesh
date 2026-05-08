@@ -110,3 +110,86 @@ export const auditLog = sqliteTable("audit_log", {
   targetId: text("target_id"),
   createdAt: text("created_at").notNull(),
 })
+
+// ---------------------------------------------------------------------------
+// M2: Delivery tables
+// ---------------------------------------------------------------------------
+
+export const devicePairingCodes = sqliteTable("device_pairing_codes", {
+  code: text("code").primaryKey(),
+  deviceName: text("device_name").notNull(),
+  userId: text("user_id").references(() => user.id),
+  tenantId: text("tenant_id").references(() => tenants.id),
+  agentId: text("agent_id"),
+  expiresAt: text("expires_at").notNull(),
+  claimedAt: text("claimed_at"),
+})
+
+export const agents = sqliteTable("agents", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  ownerUserId: text("owner_user_id")
+    .notNull()
+    .references(() => user.id),
+  displayName: text("display_name").notNull(),
+  type: text("type", { enum: ["skill", "bot"] }).notNull().default("skill"),
+  identityKey: text("identity_key"),
+  signedPrekey: text("signed_prekey"),
+  signedPrekeySig: text("signed_prekey_sig"),
+  createdAt: text("created_at").notNull(),
+  lastSeenAt: text("last_seen_at"),
+})
+
+export const threads = sqliteTable("threads", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  participants: text("participants").notNull().default("[]"),
+  createdAt: text("created_at").notNull(),
+  lastMessageAt: text("last_message_at").notNull(),
+})
+
+export const messagesMeta = sqliteTable("messages_meta", {
+  id: text("id").primaryKey(),
+  threadId: text("thread_id").references(() => threads.id),
+  tenantId: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  senderAgentId: text("sender_agent_id").references(() => agents.id),
+  recipientAgentId: text("recipient_agent_id").references(() => agents.id),
+  type: text("type").notNull().default("inform"),
+  summary: text("summary"),
+  createdAt: text("created_at").notNull(),
+})
+
+export const pendingMessages = sqliteTable("pending_messages", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id")
+    .notNull()
+    .references(() => messagesMeta.id, { onDelete: "cascade" }),
+  recipientAgentId: text("recipient_agent_id")
+    .notNull()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  senderAgentId: text("sender_agent_id").references(() => agents.id),
+  threadId: text("thread_id"),
+  payload: text("payload").notNull(),
+  ciphertext: text("ciphertext"),
+  nonce: text("nonce"),
+  ephemeralPk: text("ephemeral_pk"),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+})
+
+export const pushSubscriptions = sqliteTable("push_subscriptions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: text("created_at").notNull(),
+})
