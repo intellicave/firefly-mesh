@@ -2,6 +2,15 @@
 
 Architecture, three-view rendering strategy, data flow, file layout. Implementation contract.
 
+> **v3.0 sync (2026-05-08)** — design now matches `firefly-mesh-art-bible.md` v3.0:
+> true isometric (1:1:1, 30°/45°, regular-hexagonal-cube outline; **not** 2:1 dimetric);
+> modular tile-based floor composition (15 tile primitives) replaces integral
+> 256×192 room PNGs; characters source from existing 10-archetype PixelLab
+> firefly-folk library (8 native dirs, 116/120/124 px canvas); 3-layer scene
+> structure (back walls + entities/floor + front-occluder) gives "X-ray ghost"
+> occlusion when characters walk behind walls/desks. See bottom of doc for
+> full v3.0 delta. Sections 2.1, 4, 5, 8.4 updated to reflect this.
+
 ## 1. System architecture
 
 ```
@@ -57,25 +66,50 @@ Architecture, three-view rendering strategy, data flow, file layout. Implementat
 
 ### 2.1 OrgScene (view A — default, always live)
 
-**Camera**: orthographic with 30° pitch, 2:1 dimetric isometric. Dynamic zoom 0.5×–2.5× (mouse wheel).
+**Camera**: orthographic, **true isometric (1:1:1)** at 30° elevation / 45° azimuth. Floor tiles render as 64×32 rhombi (60°/120° interior angles); a unit cube outline is a regular hexagon. **Not** 2:1 dimetric — the art bible v3.0 section 1 enforces this and HR12 (Hough angle gate) blocks any tile whose floor edges drift more than ±2° from canonical 30°. Dynamic zoom 0.5×–2.5× (mouse wheel).
 
-**Layout**: a single office floor, room layout derived from `/api/org/graph`:
+**Layout**: a single office floor of an office building, composed at runtime from **15 tile primitives** (8 floor/wall + 7 furniture; see `production-list.yaml` § tiles). The composition is data-driven by `public/scene/floor-plans/v1-default.yaml`; the V1 layout is 12 cols × 9 rows and looks like:
 
-- Centre-top: CEO room (1 room per `role=owner`, fallback to `role=admin`)
-- Left wing: 1 room per `department`, sized to membership
-- Right wing: spillover (employees with no department) labelled "Floor"
-- Connecting hallway with floor-tile walking surface
+```
+                    iso-grid (12 cols × 9 rows of floor tiles)
+            col:  0  1  2  3  4  5  6  7  8  9 10 11
+    row 0–3:  [── back walls ──][D]  CEO Office  /  Product Maker Space
+    row 4:    ← hallway tiles ─────────────────────────────────────────→
+    row 5–8:  [── back walls ──][D]  Sales Bullpen  /  Floor Flex
+```
+
+`DepartmentRoom` is no longer a single 256×192 PNG; it's a **logical grouping** of floor + wall + furniture tiles whose iso-grid coords come from the floor-plan YAML. Department-to-room mapping is derived from `/api/org/graph`:
+
+- `ceo-office` slot → owner (or admin fallback)
+- Department-named rooms (alphabetic) → up to 3 departments, then overflow to `floor-flex`
+- Hallway → no occupants; pathfinder transit only
+
+**3-layer scene structure** (for occlusion / "X-ray ghost"):
+
+```
+  layer 0 — backWalls    (z = -1000): tile/wall-back, wall-corner-*, doorway-*
+  layer 1 — entitiesFloor (z = computed): characters + floor-attached furniture
+                                          + tile/floor-* (sorted by isoY, then renderOrder)
+  layer 2 — frontOccluders (z = +1000): tile/wall-side-W, wall-side-E,
+                                        chair backrests when occupied,
+                                        any furniture between camera and char
+```
+
+`OcclusionSystem` walks every `EmployeeEntity` each frame; if its bounds intersect a layer-2 occluder, the system spawns / updates a **silhouette ghost** sprite (recoloured outline of the char's current frame, ramp-1 light, alpha 0.55) drawn at z between layer-1 and the occluder. This realises the "人在墙后只显示轮廓" requirement.
 
 **Entities**:
-- `DepartmentRoom` — one per department (or implicit "Unassigned" room). Background image is from `art/firefly-mesh-art-bible.md` § rooms. Each has 4 collider walls + a doorway tile.
-- `EmployeeEntity` — one per active employee. Spawns at their department's pre-assigned desk slot. Default state = `idle`. Periodic state change to `walk-to-water-cooler` and back (gives ambient life).
-- Each entity has hit-area = its sprite bounding box; click emits `employeeClick {employeeId}`.
+- `DepartmentRoom` — logical aggregator (no sprite of its own); owns its tile composition + desk_slots from floor-plan.yaml. Hit area = union of its floor-tile bounds (clicking empty floor opens the room's drawer in V0.2).
+- `EmployeeEntity` — one per active employee. Spawns at the desk_slot deterministically assigned by `OrgScene.placeEmployees()` (owner→ceo-office slot 0; managers→dept first slot; employees→remaining alphabetic; overflow→hallway standee positions). Default state = `idle`. Periodic ambient: `walk-to-water-cooler` and back. Hit area = sprite bbox; click emits `employeeClick {employeeId}`.
+- `Tile` — a single sprite at its iso-grid coord, render-ordered by layer + isoY. Not interactive in V1.
 
-**Animations**:
-- `idle` (4 frames @ 6fps, looping) — desk-slot rotation, blinks
-- `work` (6 frames @ 4fps) — desk-slot, hands typing
-- `walk-{N|NE|E|SE|S|SW|W|NW}` (8 frames @ 8fps) — pathfinding driven
-- `talk` (4 frames @ 6fps) — when standing next to another employee
+**Animations** (from art-bible §3.4 — sourced from existing PixelLab firefly-folk library):
+
+- `idle-{dir}` (4 frames @ 6fps, looping; PixelLab `breathing-idle`) — engine adds lantern-pulse overlay (ramp 3 light → mid → light → mid)
+- `walk-{N|NE|E|SE|S|SW|W|NW}` (6 frames @ 8fps; PixelLab `walk`) — pathfinding driven; 8 native directions, NO mirror trick (HR6 repealed for chars in v3.0)
+- `work-s` (S-only; reuses idle-s frames) — engine applies "dim + burst" lantern overlay
+- `talk-s` (S-only placeholder; reuses idle-s frames) — engine applies "double-pulse" lantern overlay; dedicated frames added in V0.2
+
+Lantern overlay is engine-side (tints colour-masked ramp-3 region per state), not separate sprite frames — saves ~2× sprite production.
 
 ### 2.2 TaskScene (view B — camera-follow)
 
@@ -164,13 +198,17 @@ packages/web/components/scene/scene/
 
 packages/web/components/scene/entities/
   EmployeeEntity.ts                     (150 — sprite + state machine + hit area)
-  DepartmentRoom.ts                     (100 — background + walls + doorway)
+  DepartmentRoom.ts                     (100 — logical aggregator over tiles + desk_slots)
+  Tile.ts                               (60  — single tile sprite + layer + isoY z-sort)
   TaskNote.ts                           (80  — sticky note + bezier flight)
   A2ALine.ts                            (80  — bezier line + particle trail + colour)
 
 packages/web/components/scene/systems/
   AssetRegistry.ts                      (200 — manifest load + lazy + cache + QA)
   AnimationSystem.ts                    (180 — state machine + 8-direction picker)
+  LanternOverlaySystem.ts               (120 — engine-side lantern colour cycle per state)
+  OcclusionSystem.ts                    (180 — front-occluder hit test + silhouette ghost)
+  FloorPlanLoader.ts                    (130 — parse floor-plan YAML → tile composition)
   DataBindingSync.ts                    (200 — TQ cache observer + diff & patch)
   Pathfinder.ts                         (100 — wraps phaser-easystar)
   CameraDirector.ts                     (150 — view follow / smooth zoom / pan)
@@ -179,29 +217,39 @@ packages/web/lib/scene/
   event-bus.ts                          (100 — typed pub/sub, mitt-based)
   data-bindings.ts                      (150 — React-side bridge, mounts/unmounts)
   query-keys.ts                         (50  — shared query keys for TQ→scene)
+  iso-math.ts                           (60  — true-iso projection helpers)
 
 packages/web/public/scene/
   assets/manifest.json
   assets/atlas/                         (sprite atlases, machine-built)
-  assets/rooms/                         (room background images)
-  assets/characters/                    (character sprite sheets)
+  assets/tiles/                         (15 tile primitives — floor/wall/furniture)
+  assets/characters/                    (character sprite sheets — pulled from PixelLab)
   assets/effects/                       (particles, light trails)
+  floor-plans/v1-default.yaml           (canonical office-floor layout)
 
 scripts/scene/
-  build-asset-manifest.mjs
-  validate-asset-qa.mjs
-  pixellab-character.mjs
-  pixellab-room.mjs
-  build-sprite-atlas.mjs
+  build-palette-png.mjs                 ✓ shipped
+  build-style-reference.mjs             — Phase 0 follow-up
+  build-iso-grid-reference.mjs          (Stage 2.1 — 256×256 hex grid for tile prompts)
+  validate-iso-angle.mjs                (Stage 2.2 — Hough check; HR12 enforcement)
+  download-pixellab-character.mjs       (Stage 2.3 — pull existing 10 sprites + auto pivot)
+  build-asset-manifest.mjs              ✓ shipped (extends to char animations in 2.4)
+  validate-asset-qa.mjs                 ✓ shipped (extends with HR12-15 in 2.2/2.5)
+  produce.mjs                           ✓ shipped
+  post-process.mjs                      ✓ shipped
+  pixellab-tile.mjs                     (Phase 2 — drives the 15 tile create_object calls)
+  build-sprite-atlas.mjs                (Phase 2 — pack manifest into atlas)
 
 docs/art/
-  firefly-mesh-art-bible.md
+  firefly-mesh-art-bible.md             ✓ v3.0 (true iso + tile-based + occlusion)
   production-pipeline.md
-  production-list.yaml
-  style-reference.png                   (master ref, all PixelLab calls cite)
+  production-list.yaml                  ✓ v3.0
+  style-reference.png                   (master ref; all PixelLab calls cite)
+  iso-grid-reference.png                (NEW v3.0; all tile calls cite this so floor edges
+                                         lock to canonical 30°/45° iso angle)
 ```
 
-**Total source lines budget V1**: ~3000 (engine + systems + page + toolbar + lib).
+**Total source lines budget V1**: ~3500 (engine + systems + page + toolbar + lib; +500 vs v2.0 because occlusion + floor-plan loader + lantern overlay are net-new systems).
 
 ## 5. Engine architecture commitments
 
@@ -214,6 +262,8 @@ docs/art/
 | C5 | One canonical `AssetRegistry`; no scene loads sprites directly via Phaser loader | Lint: forbid `this.load.image / load.spritesheet` outside `BootScene`/`AssetRegistry` |
 | C6 | All assets must come from manifest.json (which is the QA-gated output of pipeline) | `BootScene` checksum validates manifest before play |
 | C7 | Three views are: OrgScene (always alive) + TaskScene (start/stop on demand) + A2AOverlayScene (parallel, additive) | `SceneRouter` is the only place that calls `scene.start/stop/sleep` |
+| C8 | 3-layer scene structure (backWalls / entitiesFloor / frontOccluders) with `OcclusionSystem` driving silhouette-ghost rendering for chars behind layer-2 occluders | `OcclusionSystem` is the sole owner of layer assignments; entities never `setDepth()` themselves |
+| C9 | All tile sprites pass HR12 iso-angle Hough check (±2°) and HR15 pivot tolerance (±2 px); chars source from `pixellab_id` external library only (no new char generations in V1) | `validate-iso-angle.mjs` + `validate-asset-qa.mjs` both run pre-merge in CI; `download-pixellab-character.mjs` is the sole channel for char sprites |
 
 ## 6. Performance budget
 
@@ -269,17 +319,22 @@ Visual regression catches the most realistic class of bug (palette drift, sprite
 8. Reload, assert state persists in URL (?view=a2a).
 ```
 
-### 8.4 Asset QA gate (scripts/scene/validate-asset-qa.mjs)
+### 8.4 Asset QA gate (scripts/scene/validate-asset-qa.mjs + validate-iso-angle.mjs)
 
-Pre-merge gate run by CI on every asset PR:
+Pre-merge gate run by CI on every asset PR. Each check maps to an art-bible Hard Rule (HR#).
 
-- Each PNG must use only colours from `style-reference.palette.png`
-- Sprite dimensions match declared in `production-list.yaml`
-- Pivot point (defined as transparent dot at known coords) is exactly at expected coord
-- Edge transparency: no semi-transparent edge pixels (Stardew style is sharp)
-- Frame count for animations matches manifest
+| HR | Check | Tool |
+|---|---|---|
+| HR1 | All non-transparent pixels colour-match the 32-colour master palette | `validate-asset-qa.mjs` palette pass |
+| HR2 | Sprite dimensions match declared in `production-list.yaml` | `validate-asset-qa.mjs` size pass |
+| HR8 | No partial-alpha pixels (only 0 or 255); HR8a translucency uses sparse-pixel pattern, not alpha | `validate-asset-qa.mjs` alpha pass; sparse-pixel sub-check verifies wing region density 30-45% |
+| HR12 | All tile floor edges within ±2° of canonical iso 30° (Hough line detection on the bottom 1/3 of each tile) | `validate-iso-angle.mjs` (Stage 2.2) |
+| HR15 | Pivot point within ±2 px of expected (auto-detected feet-centre for chars; declared `anchor` for tiles) | `validate-asset-qa.mjs` pivot pass |
+| (general) | Frame count for animations matches manifest | `validate-asset-qa.mjs` frame-count pass |
 
-Failed gate blocks merge. Passing gate produces a `.qa-passed` sidecar file.
+Failed gate blocks merge. Passing gate produces a `.qa-passed` sidecar file under `scripts/scene/reports/<asset-id>/`.
+
+Characters from the external PixelLab library still pass through QA gate after `download-pixellab-character.mjs`: palette tolerance is widened by 1 step to absorb small palette drift in the source library, but pivot/sparse-pixel/alpha checks are strict.
 
 ## 9. URL & deep linking
 

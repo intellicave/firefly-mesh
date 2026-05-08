@@ -1,12 +1,15 @@
 # firefly-mesh /scene — Project Meta
 
 **Date opened**: 2026-05-07
+**Last v3.0 sync**: 2026-05-08
 **Owner**: Leooo-Huang (Cyberautonomy)
 **Pipeline**: autodev-style (ideation → design → ui → api → plan → rules → index) augmented by **art bible + production pipeline + production list** because this project has heavy art-asset deliverables.
 
+> **v3.0 (2026-05-08)**: Visual tier upgraded from Stardew (24×24 sprites, 4 dirs, integral room PNGs) to **Eastward / Owlboy mid-density** (116/120/124 px chars, 8 native dirs, modular tile-based composition, 3-layer occlusion). All character art now sources from the user's existing 10-archetype PixelLab firefly-folk library (0 new generations in V1). See art-bible v3.0 header for full rationale.
+
 ## Mission
 
-Add a **Stardew-Valley-style pixel-game view** at `/scene` inside the firefly-mesh dashboard. The view visualises the user's real org as an isometric office building, with employees as pixel characters in their department rooms, A2A messages as flying light trails, and tasks as sticky notes that fan out from a CEO bulletin board. Subjects are bound to live firefly-mesh data via the existing REST API + SSE channels.
+Add a **Steam-grade pixel-game view** at `/scene` inside the firefly-mesh dashboard, at Eastward / Owlboy mid-density tier (true isometric, anthropomorphic firefly characters with antennae + sparse-pixel wings + glowing lantern abdomen anatomy, modular tile-based office floor). The view visualises the user's real org as an isometric office building, with employees as pixel characters in their department rooms, A2A messages as flying light trails, and tasks as sticky notes that fan out from a CEO bulletin board. Subjects are bound to live firefly-mesh data via the existing REST API + SSE channels.
 
 ## Why
 
@@ -20,10 +23,13 @@ Add a **Stardew-Valley-style pixel-game view** at `/scene` inside the firefly-me
 |---|---|---|
 | Q1 | **Three views** (Org / Task / A2A) layered, switchable | ideation.md |
 | Q2 | **Embedded inside firefly-mesh** at `/scene`, no asset reuse from MultiAgent's `/theater` | ideation.md |
-| Q3 | **Office-building metaphor** (Stardew + Two Point Hospital lineage) | ideation.md, art-bible.md |
-| Q4 | **Stardew Valley visual style** (16×16 base, 1px outline, ≤32-color palette, isometric) | art-bible.md |
-| Q5 | **Phaser 3.80+** with brand-new architecture (≤250 lines/file) | design.md |
+| Q3 | **Office-building metaphor** — multiple offices on one floor of an office building, modular tile-based composition | art-bible.md v3.0 § 4 |
+| Q4 v3.0 | **Eastward / Owlboy mid-density visual tier** (116-124px chars, true iso 1:1:1 30°/45°, 32-color palette, sparse-pixel wing translucency, lantern abdomen) | art-bible.md v3.0 |
+| Q5 | **Phaser 3.80+** with brand-new architecture (≤250 lines/file; +OcclusionSystem + FloorPlanLoader + LanternOverlaySystem in v3.0) | design.md |
 | Q6 | **Light-interactive** (click character → existing dashboard drawer; no in-pixel mutations) | ui.md |
+| Q7 v3.0 | **Anthropomorphic firefly characters** with antennae + sparse-pixel wings + glowing lantern abdomen — the species itself is the brand differentiator | art-bible.md v3.0 § 3 |
+| Q8 v3.0 | **Existing PixelLab library is canonical** — 10-archetype firefly-folk library is already curated and quality-accepted; V1 sources from it via `pixellab_id`, no new generations | art-bible.md v3.0 § 3.2 |
+| Q9 v3.0 | **3-layer scene structure** with silhouette-ghost when chars walk behind walls/desks | art-bible.md v3.0 § 5b |
 | methodology | **Art Bible + Pipeline + QA Gate** before any production asset is generated | art-bible.md, production-pipeline.md |
 
 ## Non-goals (write-down, prevents scope creep)
@@ -31,7 +37,7 @@ Add a **Stardew-Valley-style pixel-game view** at `/scene` inside the firefly-me
 - ❌ No in-pixel mutations (no drag-to-reassign, no in-game approve). Operations remain in the dashboard.
 - ❌ No multiplayer / collaborative cursor in pixel world.
 - ❌ No standalone game / marketing demo split from firefly-mesh repo.
-- ❌ No Eastward-level cinematic lighting / shaders. Stardew-grade polish is the bar.
+- ❌ No Eastward-level *cinematic real-time lighting / shaders / 2.5D parallax planes*. Eastward / Owlboy mid-density grade polish is the bar (palette-based shading + sparse-pixel translucency + per-state lantern overlay; nothing more elaborate).
 - ❌ No reuse of MultiAgent's `theater` assets (rejected as "粗制滥造 + 视觉不一致").
 - ❌ No reuse of MultiAgent's `theater` Phaser scene code (architectures has 771-line single-file scenes; we're not inheriting that debt).
 - ❌ No Chinese-only or English-only — defer i18n to V0.2 (same pattern as the rest of the dashboard).
@@ -55,25 +61,26 @@ The full feature is complete when **all of the following are simultaneously true
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | PixelLab outputs are visually inconsistent across calls (same problem that broke the old theater) | Master `style-reference.png` + identical view/palette/seed parameters per asset class + reject-and-regenerate gate |
+| R1 | PixelLab tile outputs drift in iso angle (the v2.0 problem that broke integral room PNGs) | v3.0: every tile cites `iso-grid-reference.png`; Hough HR12 gate rejects tiles with floor edge >±2° from canonical 30° |
 | R2 | Phaser scene file grows past 250 lines repeating old theater's mistake | Hard ESLint rule on max-lines for `components/scene/scene/*.ts` |
 | R3 | Bundle bloat creeps onto non-`/scene` routes | Bundle analyzer in CI, alarm if any common chunk grows |
-| R4 | Animation handcraft cost explodes (16 chars × 8 dirs × 4 anims = 512 frames) | Cap V1 to 4 chars × 4 dirs × 2 anims = 32 frames; expand iteratively |
+| R4 v3.0 | **Resolved**: animation handcraft cost is no longer V1 risk because all 10 chars + animations source from existing PixelLab library (0 new generations in V1). V0.2 palette-swap shaders also avoid frame regeneration. |
 | R5 | Real-time SSE → scene desync (race conditions, ghosts) | Single-source-of-truth invariant: tanstack-query is canonical, scene is derived view; reconcile every 5s as backstop |
-| R6 | Render perf <60 fps on low-end laptops | Target: 4-departments / 16-employees / 8-active-a2a-lines @ 60fps on a 2020 MacBook Air. Profile with Chrome DevTools each milestone. |
+| R6 | Render perf <60 fps on low-end laptops | Target: 4-departments / 16-employees / 8-active-a2a-lines @ 60fps on a 2020 MacBook Air. Profile with Chrome DevTools each milestone. v3.0 caveat: 3-layer occlusion adds per-frame hit-test cost — budgeted in OcclusionSystem with bounding-box first-pass. |
+| R7 v3.0 | Silhouette-ghost rendering looks bad at certain angles or with multiple stacked occluders | Visual regression tests for char-behind-wall and char-behind-desk; if quality is poor, +1 day for dilated-outline silhouette generation (R7 in plan.md) |
 
 ## Document map
 
 | File | Purpose | Status |
 |---|---|---|
-| `2026-05-07-firefly-mesh-scene-meta.md` (this) | Mission + scope + acceptance + risk register | ✅ |
-| `2026-05-07-firefly-mesh-scene-ideation.md` | Q1–Q6 decisions condensed + alternatives rejected | pending |
-| `2026-05-07-firefly-mesh-scene-design.md` | Architecture, 3 views, data flow, dir layout | pending |
-| `2026-05-07-firefly-mesh-scene-ui.md` | View toggle UX, drawer integration, scene UX flows | pending |
-| `2026-05-07-firefly-mesh-scene-api.md` | Consumed firefly-mesh API + SceneEventBus protocol | pending |
-| `art/firefly-mesh-art-bible.md` | Palette / tile / view / shading / anim rules | pending |
-| `art/production-pipeline.md` | PixelLab → QA gate → sprite atlas build sequence | pending |
-| `art/production-list.yaml` | Every asset ID / source prompt / dependencies / status | pending |
-| `2026-05-07-firefly-mesh-scene-plan.md` | Phase milestones + acceptance criteria per task | pending |
-| `2026-05-07-firefly-mesh-scene-rules.md` | Engineering red lines (file size, asset QA gate, single-source) | pending |
-| `2026-05-07-firefly-mesh-scene-index.md` | Code map + cross-references | pending |
+| `2026-05-07-firefly-mesh-scene-meta.md` (this) | Mission + scope + acceptance + risk register | ✅ v3.0 |
+| `2026-05-07-firefly-mesh-scene-ideation.md` | Q1–Q9 decisions condensed + alternatives rejected | ✅ |
+| `2026-05-07-firefly-mesh-scene-design.md` | Architecture, 3 views, data flow, dir layout | ✅ v3.0 |
+| `2026-05-07-firefly-mesh-scene-ui.md` | View toggle UX, drawer integration, scene UX flows | ✅ |
+| `2026-05-07-firefly-mesh-scene-api.md` | Consumed firefly-mesh API + SceneEventBus protocol | ✅ |
+| `art/firefly-mesh-art-bible.md` | Palette / iso / character / tile / occlusion spec | ✅ v3.0 |
+| `art/production-pipeline.md` | PixelLab → QA gate → sprite atlas build sequence | ✅ |
+| `art/production-list.yaml` | V1 asset catalogue (10 chars + 15 tiles + 6 effects + 4 icons + 3 foundation) | ✅ v3.0 |
+| `2026-05-07-firefly-mesh-scene-plan.md` | Phase milestones + acceptance criteria per task | ✅ v3.0 (incl. Phase 0.5) |
+| `2026-05-07-firefly-mesh-scene-rules.md` | Engineering red lines R1–R20 | ✅ v3.0 |
+| `2026-05-07-firefly-mesh-scene-index.md` | Code map + cross-references | ✅ v3.0 |
