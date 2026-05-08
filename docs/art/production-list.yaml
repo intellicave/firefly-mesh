@@ -34,19 +34,38 @@ foundation:
     status: "queued"
 
 # -----------------------------------------------------------------
-# 2 — CHARACTERS (4 archetypes × 5 directions × 4 anims)
+# 2 — CHARACTERS (4 firefly-folk archetypes × 5 directions × 4 anims)
+#     ALL employees are anthropomorphic firefly people (v2.0 art bible).
+#     Shared anatomy: 2 antennae + sparse-pixel pale-blue wings + glowing
+#     yellow lantern abdomen + dark-purple torso (covered by clothing).
+#     Archetypes differ by clothing / accessory / hand prop / posture.
+#
+#     Bbox 24×24 (square) — wings extend laterally, sprite needs full
+#     square canvas. Pivot at (12, 24).
+#
 #     Total V1 character frames = 4 × (5×(4+8) + 6 + 4) = 4 × 70 = 280
-#     +mirrored 4 × 3 dirs × (4 idle + 8 walk) = 144 mirror frames at runtime
+#     + 4 × 3 mirrored dirs × (4 idle + 8 walk) = 144 mirror frames runtime
 # -----------------------------------------------------------------
 characters:
 
   - id: "char/ceo-default"
     type: "character"
-    description: "Dark navy suit, brown short hair, neutral skin, age ~40, slight beard"
+    description: |
+      Pixel art anthropomorphic firefly character — CEO of a multi-agent
+      collaboration startup. Dark purple torso (firefly body), 2 thin black
+      antennae on head, sparse-pixel pale-blue wings folded flanking the back,
+      glowing yellow lantern abdomen (firefly tail-light) at lower rear.
+      Wearing rolled-up white shirt, dark blue jeans, canvas sneakers. Brown
+      messy hair, short stubble, neutral skin. Holding a warm-orange coffee
+      mug with steam rising. Slight forward-leaning posture. Low top-down
+      isometric, 24×24 px sprite, Stardew Valley × Hollow Knight hybrid
+      aesthetic, warm earthy palette (browns, oranges, soft yellows) with
+      deep purple accents and pale blue wings, single color black outline,
+      basic shading, no anti-aliasing.
     archetype_template: "ceo"
-    role_mapping: ["owner"]                    # which firefly-mesh roles use this sprite
-    size: { w: 16, h: 24 }
-    pivot: { x: 8, y: 24 }
+    role_mapping: ["owner"]
+    size: { w: 24, h: 24 }
+    pivot: { x: 12, y: 24 }
     animations: [idle, walk, work, talk]
     directions: [N, NE, E, SE, S]
     seed: null                                 # auto-derived from sha256(id) at production time
@@ -54,11 +73,21 @@ characters:
 
   - id: "char/manager-default"
     type: "character"
-    description: "Smart casual button-up, ginger short hair, neutral skin, age ~35"
+    description: |
+      Pixel art anthropomorphic firefly character — sales manager. Dark
+      purple torso (firefly body), 2 thin black antennae on head, sparse-
+      pixel pale-blue wings flanking the back, glowing yellow lantern
+      abdomen at lower rear. Wearing bright orange-red scarf around neck,
+      crisp white button-up shirt, black trousers, with a Bluetooth earpiece
+      on left ear. Red short hair with one golden-yellow streak. Holding a
+      clipboard and pen. Confident upright posture, hands clasped front.
+      Low top-down isometric, 24×24 px sprite, Stardew Valley × Hollow Knight
+      hybrid aesthetic, warm earthy palette with deep purple body and pale
+      blue wings, single color black outline, basic shading, no anti-aliasing.
     archetype_template: "manager"
     role_mapping: ["manager"]
-    size: { w: 16, h: 24 }
-    pivot: { x: 8, y: 24 }
+    size: { w: 24, h: 24 }
+    pivot: { x: 12, y: 24 }
     animations: [idle, walk, work, talk]
     directions: [N, NE, E, SE, S]
     seed: null
@@ -66,11 +95,21 @@ characters:
 
   - id: "char/employee-default"
     type: "character"
-    description: "Plain t-shirt + jeans, dark hair, varied skin (mid-tone)"
+    description: |
+      Pixel art anthropomorphic firefly character — software engineer. Dark
+      purple torso (firefly body, layered under hoodie of same color), 2 thin
+      black antennae on head, sparse-pixel pale-blue wings flanking the back,
+      glowing yellow lantern abdomen at lower rear. Wearing dark purple
+      hoodie, khaki pants, shoulder backpack. Bright orange-framed glasses,
+      large over-ear headphones. Dark short hair, neutral skin. Holding an
+      open laptop with yellow-glowing screen. Focused head-down posture.
+      Low top-down isometric, 24×24 px sprite, Stardew Valley × Hollow Knight
+      hybrid aesthetic, warm earthy palette with deep purple and pale blue
+      accents, single color black outline, basic shading, no anti-aliasing.
     archetype_template: "employee"
     role_mapping: ["employee"]
-    size: { w: 16, h: 24 }
-    pivot: { x: 8, y: 24 }
+    size: { w: 24, h: 24 }
+    pivot: { x: 12, y: 24 }
     animations: [idle, walk, work, talk]
     directions: [N, NE, E, SE, S]
     seed: null
@@ -78,11 +117,21 @@ characters:
 
   - id: "char/auditor-default"
     type: "character"
-    description: "Grey blazer, glasses, salt-and-pepper hair, holding clipboard"
+    description: |
+      Pixel art anthropomorphic firefly character — old-fashioned scholar
+      auditor. Dark purple torso (firefly body), 2 thin black antennae on
+      head, sparse-pixel pale-blue wings flanking the back, glowing yellow
+      lantern abdomen at lower rear. Wearing grey wool vest, white shirt,
+      bright orange bow tie, with round gold-rimmed glasses. Silver-white
+      short hair, neutral skin. Holding a quill pen with glowing yellow tip
+      and a small parchment scroll. Upright posture, left hand behind back.
+      Low top-down isometric, 24×24 px sprite, Stardew Valley × Hollow Knight
+      hybrid aesthetic, warm earthy palette with grey accents and pale blue
+      wings, single color black outline, basic shading, no anti-aliasing.
     archetype_template: "auditor"
     role_mapping: ["auditor", "admin"]
-    size: { w: 16, h: 24 }
-    pivot: { x: 8, y: 24 }
+    size: { w: 24, h: 24 }
+    pivot: { x: 12, y: 24 }
     animations: [idle, walk, work, talk]
     directions: [N, NE, E, SE, S]
     seed: null
