@@ -15,14 +15,9 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     this.assetReg = new AssetRegistry(this);
     this.assetReg.loadManifest();
+    this.assetReg.loadTileAssets();
 
-    // Show loading progress in console during development
-    this.load.on("progress", (value: number) => {
-      if (typeof process !== "undefined") {
-        // server-side guard — preload only runs in browser
-      }
-      void value;
-    });
+    this.load.on("progress", (value: number) => { void value; });
   }
 
   create(): void {

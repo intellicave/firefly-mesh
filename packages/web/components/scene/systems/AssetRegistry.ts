@@ -63,6 +63,31 @@ export class AssetRegistry {
     this.scene.load.json("manifest", "/scene/assets/manifest.json");
   }
 
+  /** Queue all shipped tile PNGs for loading. Call in BootScene.preload(). */
+  loadTileAssets(): void {
+    const TILE_BASE = "/scene/assets/tiles";
+    const tiles: Array<[string, string]> = [
+      ["tile/floor-office",    `${TILE_BASE}/tile__floor-office.png`],
+      ["tile/floor-hallway",   `${TILE_BASE}/tile__floor-hallway.png`],
+      ["tile/wall-back",       `${TILE_BASE}/tile__wall-back.png`],
+      ["tile/wall-side-w",     `${TILE_BASE}/tile__wall-side-w.png`],
+      ["tile/wall-side-e",     `${TILE_BASE}/tile__wall-side-e.png`],
+      ["tile/wall-corner-nw",  `${TILE_BASE}/tile__wall-corner-nw.png`],
+      ["tile/wall-corner-ne",  `${TILE_BASE}/tile__wall-corner-ne.png`],
+      ["tile/wall-doorway-s",  `${TILE_BASE}/tile__wall-doorway-s.png`],
+      ["tile/desk-ceo",        `${TILE_BASE}/tile__desk-ceo.png`],
+      ["tile/desk-employee",   `${TILE_BASE}/tile__desk-employee.png`],
+      ["tile/chair",           `${TILE_BASE}/tile__chair.png`],
+      ["tile/bulletin",        `${TILE_BASE}/tile__bulletin.png`],
+      ["tile/cooler",          `${TILE_BASE}/tile__cooler.png`],
+      ["tile/plant",           `${TILE_BASE}/tile__plant.png`],
+      ["tile/whiteboard",      `${TILE_BASE}/tile__whiteboard.png`],
+    ];
+    for (const [key, path] of tiles) {
+      this.scene.load.image(key, path);
+    }
+  }
+
   /** Called in BootScene.create() after preload finishes. */
   processManifest(): { ok: boolean; shipped: number; total: number } {
     const raw = this.scene.cache.json.get("manifest") as Manifest | null;
@@ -80,23 +105,23 @@ export class AssetRegistry {
   }
 
   private registerPlaceholders(): void {
-    // Tile placeholders (64×32 for floor, 64×64 for wall)
+    // Actual sizes from PixelLab MCP output (Phase 2 production tiles)
     const tileSizes: Record<string, [number, number]> = {
-      "tile/floor-office": [64, 32],
-      "tile/floor-hallway": [64, 32],
-      "tile/wall-back": [64, 64],
-      "tile/wall-side-w": [32, 64],
-      "tile/wall-side-e": [32, 64],
-      "tile/wall-corner-nw": [32, 64],
-      "tile/wall-corner-ne": [32, 64],
+      "tile/floor-office":   [64, 64],
+      "tile/floor-hallway":  [64, 64],
+      "tile/wall-back":      [64, 64],
+      "tile/wall-side-w":    [32, 32],
+      "tile/wall-side-e":    [32, 32],
+      "tile/wall-corner-nw": [32, 32],
+      "tile/wall-corner-ne": [32, 32],
       "tile/wall-doorway-s": [64, 64],
-      "tile/desk-ceo": [64, 48],
-      "tile/desk-employee": [64, 48],
-      "tile/chair": [32, 48],
-      "tile/bulletin": [32, 48],
-      "tile/cooler": [24, 40],
-      "tile/plant": [32, 48],
-      "tile/whiteboard": [48, 56],
+      "tile/desk-ceo":       [64, 64],
+      "tile/desk-employee":  [64, 64],
+      "tile/chair":          [32, 32],
+      "tile/bulletin":       [32, 32],
+      "tile/cooler":         [32, 32],
+      "tile/plant":          [32, 32],
+      "tile/whiteboard":     [48, 48],
     };
 
     for (const [key, [w, h]] of Object.entries(tileSizes)) {
@@ -105,11 +130,13 @@ export class AssetRegistry {
       }
     }
 
-    // Character placeholders (116×116)
-    for (const id of ["char/firefly-ceo", "char/firefly-pm", "char/firefly-sales",
-      "char/firefly-eng", "char/firefly-ops", "char/firefly-hr",
-      "char/firefly-finance", "char/firefly-legal", "char/firefly-mktg",
-      "char/firefly-exec"]) {
+    // Character placeholders — IDs match stage-all-chars.mjs CHARS array
+    for (const id of [
+      "char/firefly-ceo", "char/firefly-coo", "char/firefly-cto",
+      "char/firefly-pm", "char/firefly-marketer", "char/firefly-service-lead",
+      "char/firefly-warehouse-lead", "char/firefly-ops",
+      "char/firefly-engineer", "char/firefly-designer",
+    ]) {
       if (!this.scene.textures.exists(id)) {
         this.makePlaceholder(id, 32, 48, PLACEHOLDER_COLORS.char);
       }
