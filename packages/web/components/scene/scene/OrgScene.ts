@@ -32,11 +32,12 @@ export class OrgScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(SCENE_BG);
 
-    // Position iso grid centred horizontally, 10% from top
+    // Position iso grid centred in the viewport (both axes)
     const { height: gridH } = isoGridBounds();
     const origin = defaultOrigin(width);
     this.originX = origin.x;
-    this.originY = Math.max(40, (height - gridH) * 0.15 + 40);
+    // Centre vertically; clamp so top tile always has room above it
+    this.originY = Math.max(60, (height - gridH) / 2);
 
     // Initialise systems
     this.animSys = new AnimationSystem();

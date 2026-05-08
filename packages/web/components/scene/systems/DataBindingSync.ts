@@ -128,11 +128,11 @@ export class DataBindingSync {
 
 function roleToCharId(role: string): string {
   const map: Record<string, string> = {
-    owner: "char/firefly-ceo",
-    admin: "char/firefly-exec",
-    manager: "char/firefly-pm",
-    employee: "char/firefly-eng",
-    auditor: "char/firefly-ops",
+    owner:    "char/firefly-ceo",
+    admin:    "char/firefly-coo",
+    manager:  "char/firefly-pm",
+    employee: "char/firefly-engineer",
+    auditor:  "char/firefly-ops",
   };
-  return map[role] ?? "char/firefly-eng";
+  return map[role] ?? "char/firefly-engineer";
 }

@@ -108,24 +108,18 @@ export class FloorPlanLoader {
   private classifyCell(
     col: number, row: number, plan: FloorPlan,
   ): { tileId: string; layer: TileLayer } {
-    const isTopEdge = row === 0;
-    const isMidEdge = row === 5;
-    const isHallway = row === 4;
-    const isLeftEdge = col === 0;
-    const isRightEdge = col === plan.cols - 1;
+    const isBackWallRow = row === 0 || row === 5;
+    const isHallway     = row === 4;
+    const isLeftEdge    = col === 0;
+    const isRightEdge   = col === plan.cols - 1;
 
-    if (isTopEdge || isMidEdge) {
-      return { tileId: "tile/wall-back", layer: "backWall" };
-    }
-    if (isLeftEdge) {
-      return { tileId: "tile/wall-side-w", layer: "frontOccluder" };
-    }
-    if (isRightEdge) {
-      return { tileId: "tile/wall-side-e", layer: "frontOccluder" };
-    }
-    if (isHallway) {
-      return { tileId: "tile/floor-hallway", layer: "floor" };
-    }
+    // Corners take priority over flat back-wall
+    if (isBackWallRow && isLeftEdge)  return { tileId: "tile/wall-corner-nw", layer: "backWall" };
+    if (isBackWallRow && isRightEdge) return { tileId: "tile/wall-corner-ne", layer: "backWall" };
+    if (isBackWallRow)                return { tileId: "tile/wall-back",      layer: "backWall" };
+    if (isLeftEdge)                   return { tileId: "tile/wall-side-w",    layer: "frontOccluder" };
+    if (isRightEdge)                  return { tileId: "tile/wall-side-e",    layer: "frontOccluder" };
+    if (isHallway)                    return { tileId: "tile/floor-hallway",  layer: "floor" };
     return { tileId: "tile/floor-office", layer: "floor" };
   }
 }

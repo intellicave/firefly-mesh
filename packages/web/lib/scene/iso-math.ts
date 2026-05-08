@@ -35,10 +35,13 @@ export function isoGridBounds(): { width: number; height: number } {
   };
 }
 
-/** Top-centre origin for a given viewport width so grid is horizontally centred. */
+/** Top-centre origin for a given viewport width so grid is horizontally centred.
+ *  Compensates for COLS≠ROWS asymmetry: iso grid centre is (COLS-ROWS)*CELL_W/4
+ *  to the right of the tile-space origin. */
 export function defaultOrigin(viewportW: number): { x: number; y: number } {
+  const centerAdjust = (COLS - ROWS) * (CELL_W / 4); // = (12-9)*16 = 48
   return {
-    x: viewportW / 2,
+    x: viewportW / 2 - centerAdjust,
     y: CELL_H * 2,
   };
 }
