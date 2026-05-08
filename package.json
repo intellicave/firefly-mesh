@@ -7,11 +7,12 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --filter \"@firefly-mesh/*\" build",
-    "dev": "pnpm --filter @firefly-mesh/web dev",
-    "lint": "pnpm -r --filter \"@firefly-mesh/*\" lint",
-    "typecheck": "pnpm -r --filter \"@firefly-mesh/*\" typecheck",
-    "test": "pnpm -r --filter \"@firefly-mesh/*\" test",
-    "clean": "pnpm -r --filter \"@firefly-mesh/*\" clean"
+    "dev:hub": "pnpm --filter @firefly-mesh/hub dev",
+    "dev:pwa": "pnpm --filter @firefly-mesh/pwa dev",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
   },
   "engines": {
     "node": ">=24.0.0",

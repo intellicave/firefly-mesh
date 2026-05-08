@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, edge]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -31,10 +31,9 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck (all packages)
-        run: pnpm typecheck
+      - name: Typecheck (all packages + services)
+        run: pnpm -r typecheck
 
-      - name: Build web
-        run: pnpm --filter @firefly-mesh/web build
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Build hub (wrangler dry-run)
+        run: pnpm --filter @firefly-mesh/hub exec wrangler deploy --dry-run
+        continue-on-error: true

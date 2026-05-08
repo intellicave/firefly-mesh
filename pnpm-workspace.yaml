@@ -1,3 +1,5 @@
 packages:
   - "packages/*"
+  - "services/hub"
+  - "services/pwa"
   - "scripts/scene"

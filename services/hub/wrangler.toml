@@ -1,0 +1,17 @@
+name = "firefly-mesh-hub"
+main = "src/index.ts"
+compatibility_date = "2025-05-09"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "firefly-mesh-hub-db"
+database_id = "placeholder-replace-before-deploy"
+
+[[durable_objects.bindings]]
+name = "TENANT_HUB"
+class_name = "TenantHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TenantHub"]

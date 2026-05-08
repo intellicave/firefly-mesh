@@ -1,0 +1,21 @@
+{
+  "name": "@firefly-mesh/client",
+  "version": "0.1.0",
+  "description": "OpenClaw / MCP client adapters for firefly-mesh edge",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@firefly-mesh/proto": "workspace:*",
+    "@firefly-mesh/shared": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

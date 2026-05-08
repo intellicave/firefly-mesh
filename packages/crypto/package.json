@@ -1,0 +1,22 @@
+{
+  "name": "@firefly-mesh/crypto",
+  "version": "0.1.0",
+  "description": "X3DH key agreement and AES-256-GCM encryption for firefly-mesh edge",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@firefly-mesh/shared": "workspace:*",
+    "@noble/ciphers": "^2.2.0",
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

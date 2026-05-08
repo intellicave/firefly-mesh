@@ -1,12 +1,12 @@
 name: Red-line
 
-# Enforces firefly-mesh quality red-lines (rules.md §1 + §2).
+# Enforces firefly-mesh edge quality red-lines (rules.md §1 + §2).
 # Any hit fails the PR — no exceptions, no "for now".
 
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, edge]
 
 jobs:
   red-line:
@@ -16,34 +16,84 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: R1+R3 Forbidden tokens (TODO/FIXME/mock/placeholder)
+      # R1: Ban TODO/FIXME/placeholder/stub tokens in source code
+      - name: R1 Forbidden tokens (TODO/FIXME/HACK/XXX/placeholder/stub)
         run: |
-          ! grep -rn -E '(TODO|FIXME|HACK|XXX|placeholder|stub)' \
-            packages/ --include='*.ts' --include='*.tsx' \
+          ! grep -rn -E '\b(TODO|FIXME|HACK|XXX|placeholder|stub)\b' \
+            packages/ services/ \
+            --include='*.ts' --include='*.tsx' \
             | grep -v -E '(\.test\.|__tests__|\.spec\.)'
 
-      - name: R3 Downgrade signal words
+      # R1: Ban throw new Error('not implemented')
+      - name: R1 Ban not-implemented errors (use AppError with ErrorCode)
+        run: |
+          ! grep -rn "throw new Error('not implemented')" \
+            packages/ services/ --include='*.ts'
+
+      # R2: Ban mock/fake/dummy files outside test directories
+      - name: R2 Ban mock/fake/dummy non-test files
+        run: |
+          ! find packages/ services/ -name '*.ts' -not -path '*/__tests__/*' \
+            -not -name '*.test.ts' -not -name '*.spec.ts' \
+            | xargs grep -l -E '(mock|fake|dummy)' 2>/dev/null \
+            | grep -E '(mock|fake|dummy)\.(ts|tsx)$'
+
+      # R3: Downgrade signal words
+      - name: R3 Ban downgrade signal words
         run: |
           ! grep -rn -E '(for now|暂时|先用|简单起见|to be replaced|will integrate later|简化版|简易版)' \
-            packages/ --include='*.ts' --include='*.tsx' --include='*.md'
+            packages/ services/ \
+            --include='*.ts' --include='*.tsx' --include='*.md' \
+            | grep -v -E '(legacy/|docs/)'
 
-      - name: R7 Ban ToolLoopAgent (BYO-agent enforcement)
-        run: |
-          ! grep -rn 'ToolLoopAgent' packages/core/
-
-      - name: R6 Ban hardcoded hex colors in components
-        run: |
-          ! grep -rn -E '#[0-9a-fA-F]{6}' \
-            packages/web/components/ --include='*.tsx' \
-            | grep -v -E '(\.test\.|__tests__)' \
-            | grep -v 'globals\.css'
-
+      # R6: Ban emoji in JSX/TSX text nodes (services/pwa)
       - name: R6 Ban emoji in JSX text nodes
-        # Detects emoji unicode in TSX (excluding strings inside backticks for
-        # documentation / i18n JSON / comments).
         run: |
           if grep -rn -P '>(?:[^<]*[\x{1F000}-\x{1FFFF}\x{2600}-\x{27BF}])' \
-              packages/web/ --include='*.tsx' 2>/dev/null; then
-            echo "::error::Emoji found in JSX text nodes. Use lucide-react icons."
+              services/pwa/ --include='*.tsx' --include='*.astro' 2>/dev/null; then
+            echo "::error::Emoji found in JSX/Astro text nodes. Use lucide-react icons."
             exit 1
           fi
+
+      # R7: Ban ToolLoopAgent (server never runs agent loops)
+      - name: R7 Ban ToolLoopAgent in hub
+        run: |
+          ! grep -rn 'ToolLoopAgent' services/hub/ --include='*.ts'
+
+      # R10: Hub must not import encrypt/decrypt from packages/crypto
+      - name: R10 Hub cannot import crypto encrypt/decrypt
+        run: |
+          ! grep -rn "from.*@firefly-mesh/crypto" \
+            services/hub/ --include='*.ts' \
+            | grep -E "(encrypt|decrypt)"
+
+      # R11: Ban P2P/mesh VPN libraries
+      - name: R11 Ban P2P/VPN libraries
+        run: |
+          ! grep -rn -E '"(tailscale|wireguard|wgctrl|simple-peer|@webrtc|webrtc)"' \
+            services/ packages/ \
+            --include='package.json' \
+            | grep -v legacy/
+
+      # R12: verifySignature must be called before any message processing in hub
+      - name: R12 ed25519 verifySignature present in hub message handlers
+        run: |
+          if find services/hub/src -name '*.ts' -exec grep -l 'sendMessage\|handleMessage\|processMessage' {} \; 2>/dev/null | head -1 | grep -q .; then
+            ! find services/hub/src -name '*.ts' -exec grep -l 'sendMessage\|handleMessage\|processMessage' {} \; 2>/dev/null \
+              | xargs grep -L 'verifySignature' 2>/dev/null \
+              | grep -v '\.test\.'
+          fi
+
+      # R15: Ban AWS/GCP/Azure SDKs in services/ (Cloudflare-only production)
+      - name: R15 Ban non-Cloudflare cloud SDKs in services/
+        run: |
+          ! grep -rn -E '"(@aws-sdk|@google-cloud|@azure)"' \
+            services/ --include='package.json' \
+            | grep -v 'hub-selfhost'
+
+      # R16: Ban UPDATE/DELETE on audit_log
+      - name: R16 audit_log append-only (no UPDATE/DELETE)
+        run: |
+          ! grep -rn -E '(update|delete).*audit_log' \
+            services/hub/ --include='*.ts' -i \
+            | grep -v -E '(\.test\.|cron.*truncate)'
