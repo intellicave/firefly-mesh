@@ -2,7 +2,7 @@
 // OcclusionSystem sets depth — this class never calls setDepth() directly (C8).
 
 import Phaser from "phaser";
-import { tileToScreen, DEPTH_BACK_WALLS, DEPTH_FRONT_OCCLUDERS } from "@/lib/scene/iso-math";
+import { tileToScreen, DEPTH_BACK_WALLS, DEPTH_FRONT_OCCLUDERS, CELL_W, CELL_H } from "@/lib/scene/iso-math";
 
 export type TileLayer = "backWall" | "floor" | "furniture" | "frontOccluder";
 
@@ -36,6 +36,11 @@ export class Tile {
 
     this.sprite = scene.add.image(screenX, screenY, cfg.tileId);
     this.sprite.setOrigin(0.5, 1);
+    // Floor tiles must be drawn at the exact iso-cell footprint (2:1 rhombus).
+    // PNGs from PixelLab may be square; scale them down here.
+    if (cfg.layer === "floor") {
+      this.sprite.setDisplaySize(CELL_W, CELL_H);
+    }
 
     // OcclusionSystem will call applyDepth(); initial assignment here so tiles
     // are visible before OcclusionSystem runs its first frame.
