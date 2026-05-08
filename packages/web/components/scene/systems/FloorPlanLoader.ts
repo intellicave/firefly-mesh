@@ -117,9 +117,15 @@ export class FloorPlanLoader {
     if (isBackWallRow && isLeftEdge)  return { tileId: "tile/wall-corner-nw", layer: "backWall" };
     if (isBackWallRow && isRightEdge) return { tileId: "tile/wall-corner-ne", layer: "backWall" };
     if (isBackWallRow)                return { tileId: "tile/wall-back",      layer: "backWall" };
-    if (isLeftEdge)                   return { tileId: "tile/wall-side-w",    layer: "frontOccluder" };
-    if (isRightEdge)                  return { tileId: "tile/wall-side-e",    layer: "frontOccluder" };
-    if (isHallway)                    return { tileId: "tile/floor-hallway",  layer: "floor" };
+
+    // Side walls: only on the row directly below each back-wall row.
+    // Putting them on every interior row creates a diagonal pillar-forest in
+    // isometric view; a single strip per room block is visually sufficient.
+    const isSideWallRow = row === 1 || row === 6;
+    if (isSideWallRow && isLeftEdge)  return { tileId: "tile/wall-side-w", layer: "backWall" };
+    if (isSideWallRow && isRightEdge) return { tileId: "tile/wall-side-e", layer: "backWall" };
+
+    if (isHallway) return { tileId: "tile/floor-hallway", layer: "floor" };
     return { tileId: "tile/floor-office", layer: "floor" };
   }
 }
