@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
+    "better-auth": "^1.2.8",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.18",
+    "nanoid": "^5.1.5",
+    "resend": "^4.5.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

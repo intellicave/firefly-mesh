@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2025-05-09"
 compatibility_flags = ["nodejs_compat"]
 
+[vars]
+APP_URL = "https://hub-dev.firefly-mesh.io"
+RESEND_FROM_EMAIL = "no-reply@cyberautonomy.io"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "firefly-mesh-hub-db"
@@ -15,3 +19,12 @@ class_name = "TenantHub"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["TenantHub"]
+
+# Secrets — set via: wrangler secret put <NAME>
+# BETTER_AUTH_SECRET   (random 32-byte string, e.g. openssl rand -hex 32)
+# GOOGLE_CLIENT_ID     (Google OAuth app)
+# GOOGLE_CLIENT_SECRET
+# GITHUB_CLIENT_ID     (GitHub OAuth app)
+# GITHUB_CLIENT_SECRET
+# RESEND_API_KEY       (Resend dashboard → API keys)
+# JWT_SECRET           (random 32-byte string for Agent JWT)

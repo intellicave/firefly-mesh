@@ -1,0 +1,16 @@
+---
+import '../styles/globals.css';
+import { LoginForm } from '../components/auth/LoginForm';
+---
+
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign in — Firefly Mesh</title>
+  </head>
+  <body class="h-full bg-background text-foreground font-sans antialiased">
+    <LoginForm client:load />
+  </body>
+</html>
