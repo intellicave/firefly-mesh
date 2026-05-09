@@ -13,7 +13,7 @@ const messages = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
 messages.use("*", requireAgentJwt)
 
-// POST /api/messages — send a message (Agent JWT)
+// POST /api/messages — send a message (Agent JWT). Hub never sees plaintext body/structured.
 messages.post(
   "/",
   zValidator(
@@ -25,11 +25,15 @@ messages.post(
         .enum(["inform", "sync", "request", "commit", "handoff", "escalate", "block"])
         .default("inform"),
       summary: z.string().max(500).optional(),
-      payload: z.record(z.string(), z.unknown()),
+      ciphertext: z.string(),
+      nonce: z.string(),
+      ephemeralPk: z.string(),
+      oneTimePrekeyId: z.number().int().optional(),
     }),
   ),
   async (c) => {
-    const { recipientAgentId, threadId, type, summary, payload } = c.req.valid("json")
+    const { recipientAgentId, threadId, type, summary, ciphertext, nonce, ephemeralPk, oneTimePrekeyId } =
+      c.req.valid("json")
     const senderAgentId = c.get("agentId") as string
     const tenantId = c.get("agentTenantId") as string
     const db = drizzle(c.env.DB, { schema })
@@ -81,18 +85,33 @@ messages.post(
     })
 
     const pendingId = nanoid(21)
+    const wireEnvelope = {
+      messageId,
+      threadId: resolvedThreadId,
+      type,
+      summary: summary ?? null,
+      senderAgentId,
+      ciphertext,
+      nonce,
+      ephemeralPk,
+      oneTimePrekeyId: oneTimePrekeyId ?? null,
+      createdAt: now.toISOString(),
+    }
     await db.insert(schema.pendingMessages).values({
       id: pendingId,
       messageId,
       recipientAgentId,
       senderAgentId,
       threadId: resolvedThreadId,
-      payload: JSON.stringify(payload),
+      payload: JSON.stringify(wireEnvelope),
+      ciphertext,
+      nonce,
+      ephemeralPk,
       createdAt: now.toISOString(),
       expiresAt,
     })
 
-    // Try real-time delivery via Durable Object
+    // Try real-time delivery via Durable Object (encrypted blob — hub never decrypts)
     const doId = c.env.TENANT_HUB.idFromName(tenantId)
     const stub = c.env.TENANT_HUB.get(doId)
     const deliverRes = await stub.fetch(
@@ -101,7 +120,7 @@ messages.post(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentId: recipientAgentId,
-          message: { messageId, ...payload, summary, type },
+          message: wireEnvelope,
         }),
       }),
     )

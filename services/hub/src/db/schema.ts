@@ -136,11 +136,26 @@ export const agents = sqliteTable("agents", {
   displayName: text("display_name").notNull(),
   type: text("type", { enum: ["skill", "bot"] }).notNull().default("skill"),
   identityKey: text("identity_key"),
+  identityKeyX: text("identity_key_x"),
   signedPrekey: text("signed_prekey"),
   signedPrekeySig: text("signed_prekey_sig"),
   createdAt: text("created_at").notNull(),
   lastSeenAt: text("last_seen_at"),
 })
+
+export const oneTimePrekeys = sqliteTable(
+  "one_time_prekeys",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    keyId: integer("key_id").notNull(),
+    publicKey: text("public_key").notNull(),
+    consumedAt: text("consumed_at"),
+    createdAt: text("created_at").notNull(),
+  },
+)
 
 export const threads = sqliteTable("threads", {
   id: text("id").primaryKey(),

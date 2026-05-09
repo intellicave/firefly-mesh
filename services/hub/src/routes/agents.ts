@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { drizzle } from "drizzle-orm/d1"
-import { eq, and, gt } from "drizzle-orm"
+import { eq, and, gt, isNull, count, asc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -138,7 +138,7 @@ agents.post(
   },
 )
 
-// POST /api/agents/register — skill registers agent + gets JWT
+// POST /api/agents/register — skill registers agent + uploads X3DH bundle + gets JWT
 agents.post(
   "/register",
   zValidator(
@@ -147,11 +147,27 @@ agents.post(
       code: z.string().length(6),
       displayName: z.string().min(1).max(50),
       type: z.enum(["skill", "bot"]).default("skill"),
-      identityKey: z.string().optional(),
+      identityKey: z.string(),
+      identityKeyX: z.string(),
+      signedPrekey: z.string(),
+      signedPrekeySignature: z.string(),
+      oneTimePrekeys: z
+        .array(z.object({ keyId: z.number().int(), publicKey: z.string() }))
+        .min(1)
+        .max(100),
     }),
   ),
   async (c) => {
-    const { code, displayName, type, identityKey } = c.req.valid("json")
+    const {
+      code,
+      displayName,
+      type,
+      identityKey,
+      identityKeyX,
+      signedPrekey,
+      signedPrekeySignature,
+      oneTimePrekeys,
+    } = c.req.valid("json")
     const db = drizzle(c.env.DB, { schema })
     const now = new Date()
 
@@ -180,9 +196,22 @@ agents.post(
       ownerUserId: pairing.userId,
       displayName,
       type,
-      identityKey: identityKey ?? null,
+      identityKey,
+      identityKeyX,
+      signedPrekey,
+      signedPrekeySig: signedPrekeySignature,
       createdAt: now.toISOString(),
     })
+
+    await db.insert(schema.oneTimePrekeys).values(
+      oneTimePrekeys.map((opk) => ({
+        id: nanoid(21),
+        agentId,
+        keyId: opk.keyId,
+        publicKey: opk.publicKey,
+        createdAt: now.toISOString(),
+      })),
+    )
 
     // Invalidate the pairing code by expiring it
     await db
@@ -202,6 +231,133 @@ agents.post(
     const token = await signAgentJwt(agentId, pairing.tenantId, pairing.userId, c.env.JWT_SECRET)
 
     return c.json({ data: { agentId, token, tenantId: pairing.tenantId } }, 201)
+  },
+)
+
+const LOW_PREKEY_THRESHOLD = 10
+
+// GET /api/agents/:agentId/prekey-bundle — fetch X3DH bundle + consume one OPK
+agents.get("/:agentId/prekey-bundle", requireAgentJwt, async (c) => {
+  const agentId = c.req.param("agentId")
+  const callerTenantId = c.get("agentTenantId") as string
+  const db = drizzle(c.env.DB, { schema })
+
+  const [agent] = await db
+    .select()
+    .from(schema.agents)
+    .where(
+      and(
+        eq(schema.agents.id, agentId),
+        eq(schema.agents.tenantId, callerTenantId),
+      ),
+    )
+
+  if (!agent) {
+    return c.json({ error: { code: "AGENT_NOT_FOUND", message: "Agent not found" } }, 404)
+  }
+
+  if (!agent.identityKey || !agent.identityKeyX || !agent.signedPrekey || !agent.signedPrekeySig) {
+    return c.json(
+      { error: { code: "AGENT_NOT_PROVISIONED", message: "Agent has no X3DH bundle" } },
+      422,
+    )
+  }
+
+  // Atomically claim one unconsumed OPK (D1 doesn't support SELECT ... FOR UPDATE,
+  // so we read + update + verify with a unique key + consumed_at IS NULL guard)
+  const [opk] = await db
+    .select()
+    .from(schema.oneTimePrekeys)
+    .where(
+      and(
+        eq(schema.oneTimePrekeys.agentId, agentId),
+        isNull(schema.oneTimePrekeys.consumedAt),
+      ),
+    )
+    .orderBy(asc(schema.oneTimePrekeys.keyId))
+    .limit(1)
+
+  let consumedOpk: { keyId: number; publicKey: string } | null = null
+  if (opk) {
+    const now = new Date().toISOString()
+    const updateRes = await db
+      .update(schema.oneTimePrekeys)
+      .set({ consumedAt: now })
+      .where(
+        and(
+          eq(schema.oneTimePrekeys.id, opk.id),
+          isNull(schema.oneTimePrekeys.consumedAt),
+        ),
+      )
+    if (updateRes.success && (updateRes.meta?.changes ?? 0) > 0) {
+      consumedOpk = { keyId: opk.keyId, publicKey: opk.publicKey }
+    }
+  }
+
+  const remainingRows = await db
+    .select({ remaining: count() })
+    .from(schema.oneTimePrekeys)
+    .where(
+      and(
+        eq(schema.oneTimePrekeys.agentId, agentId),
+        isNull(schema.oneTimePrekeys.consumedAt),
+      ),
+    )
+  const remaining = remainingRows[0]?.remaining ?? 0
+
+  return c.json({
+    data: {
+      agentId,
+      identityKey: agent.identityKey,
+      identityKeyX: agent.identityKeyX,
+      signedPrekey: agent.signedPrekey,
+      signedPrekeySignature: agent.signedPrekeySig,
+      oneTimePrekey: consumedOpk?.publicKey ?? null,
+      oneTimePrekeyId: consumedOpk?.keyId ?? null,
+      lowPrekeys: remaining < LOW_PREKEY_THRESHOLD,
+    },
+  })
+})
+
+// PUT /api/agents/:agentId/prekeys — upload more OPKs (caller must own the agent)
+agents.put(
+  "/:agentId/prekeys",
+  requireAgentJwt,
+  zValidator(
+    "json",
+    z.object({
+      keys: z
+        .array(z.object({ keyId: z.number().int(), publicKey: z.string() }))
+        .min(1)
+        .max(100),
+    }),
+  ),
+  async (c) => {
+    const targetAgentId = c.req.param("agentId")
+    const callerAgentId = c.get("agentId") as string
+    const { keys } = c.req.valid("json")
+
+    if (targetAgentId !== callerAgentId) {
+      return c.json(
+        { error: { code: "FORBIDDEN", message: "Can only upload prekeys for your own agent" } },
+        403,
+      )
+    }
+
+    const db = drizzle(c.env.DB, { schema })
+    const now = new Date().toISOString()
+
+    await db.insert(schema.oneTimePrekeys).values(
+      keys.map((k) => ({
+        id: nanoid(21),
+        agentId: targetAgentId,
+        keyId: k.keyId,
+        publicKey: k.publicKey,
+        createdAt: now,
+      })),
+    )
+
+    return c.json({ data: { uploaded: keys.length } })
   },
 )
 
