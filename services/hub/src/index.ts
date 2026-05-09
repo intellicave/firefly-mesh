@@ -6,6 +6,7 @@ import { tenantsRouter } from "./routes/tenants.ts"
 import { invitationsRouter } from "./routes/invitations.ts"
 import { agentsRouter } from "./routes/agents.ts"
 import { messagesRouter } from "./routes/messages.ts"
+import { a2aRouter } from "./routes/a2a.ts"
 import { TenantHub } from "./durable-objects/TenantHub.ts"
 
 export { TenantHub }
@@ -61,6 +62,7 @@ app.route("/api/tenants", tenantsRouter)
 app.route("/api/invite", invitationsRouter)
 app.route("/api/agents", agentsRouter)
 app.route("/api/messages", messagesRouter)
+app.route("/api/a2a", a2aRouter)
 
 export default {
   fetch(request: Request, env: Bindings, ctx: ExecutionContext) {

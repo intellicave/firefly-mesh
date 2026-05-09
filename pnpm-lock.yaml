@@ -96,6 +96,12 @@ importers:
 
   services/hub:
     dependencies:
+      '@firefly-mesh/proto':
+        specifier: workspace:*
+        version: link:../../packages/proto
+      '@firefly-mesh/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@hono/zod-validator':
         specifier: ^0.7.6
         version: 0.7.6(hono@4.12.18)(zod@4.4.3)

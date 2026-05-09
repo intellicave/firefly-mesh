@@ -8,6 +8,7 @@ import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireAgentJwt } from "../middleware/auth.ts"
+import { computeHitlFlags, type A2AMessageType } from "../hitl/engine.ts"
 
 const messages = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
@@ -183,4 +184,91 @@ messages.post("/:id/ack", async (c) => {
   return c.json({ data: { acked: true } })
 })
 
-export { messages as messagesRouter }
+// POST /api/messages/:id/accept — receiver accepts (HITL)
+messages.post("/:id/accept", async (c) => {
+  const messageId = c.req.param("id")
+  const agentId = c.get("agentId") as string
+  const tenantId = c.get("agentTenantId") as string
+  const db = drizzle(c.env.DB, { schema })
+  const now = new Date().toISOString()
+
+  const [meta] = await db
+    .select()
+    .from(schema.messagesMeta)
+    .where(
+      and(
+        eq(schema.messagesMeta.id, messageId),
+        eq(schema.messagesMeta.recipientAgentId, agentId),
+      ),
+    )
+
+  if (!meta) {
+    return c.json({ error: { code: "NOT_FOUND", message: "Message not found" } }, 404)
+  }
+
+  await db
+    .delete(schema.pendingMessages)
+    .where(
+      and(
+        eq(schema.pendingMessages.messageId, messageId),
+        eq(schema.pendingMessages.recipientAgentId, agentId),
+      ),
+    )
+
+  await db.insert(schema.auditLog).values({
+    id: nanoid(21),
+    tenantId,
+    actorId: agentId,
+    action: "message.accepted",
+    targetId: messageId,
+    createdAt: now,
+  })
+
+  return c.json({ data: { accepted: true, messageId } })
+})
+
+// POST /api/messages/:id/reject — receiver rejects (HITL)
+messages.post("/:id/reject", async (c) => {
+  const messageId = c.req.param("id")
+  const agentId = c.get("agentId") as string
+  const tenantId = c.get("agentTenantId") as string
+  const db = drizzle(c.env.DB, { schema })
+  const now = new Date().toISOString()
+
+  const [meta] = await db
+    .select()
+    .from(schema.messagesMeta)
+    .where(
+      and(
+        eq(schema.messagesMeta.id, messageId),
+        eq(schema.messagesMeta.recipientAgentId, agentId),
+      ),
+    )
+
+  if (!meta) {
+    return c.json({ error: { code: "NOT_FOUND", message: "Message not found" } }, 404)
+  }
+
+  await db
+    .delete(schema.pendingMessages)
+    .where(
+      and(
+        eq(schema.pendingMessages.messageId, messageId),
+        eq(schema.pendingMessages.recipientAgentId, agentId),
+      ),
+    )
+
+  await db.insert(schema.auditLog).values({
+    id: nanoid(21),
+    tenantId,
+    actorId: agentId,
+    action: "message.rejected",
+    targetId: messageId,
+    createdAt: now,
+  })
+
+  return c.json({ data: { rejected: true, messageId } })
+})
+
+export { messages as messagesRouter, computeHitlFlags as _computeHitlFlags }
+export type { A2AMessageType }
