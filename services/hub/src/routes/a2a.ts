@@ -120,8 +120,8 @@ a2a.post("/message", async (c) => {
 
   // Step 5: route via TenantHub for real-time delivery
   const doId = c.env.TENANT_HUB.idFromName(sender.tenantId)
-  const stub = c.env.TENANT_HUB.get(doId)
-  await stub.fetch(
+  const tenantHub = c.env.TENANT_HUB.get(doId)
+  await tenantHub.fetch(
     new Request("https://do.internal/internal/deliver", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

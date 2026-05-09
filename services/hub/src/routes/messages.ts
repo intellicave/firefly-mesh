@@ -114,8 +114,8 @@ messages.post(
 
     // Try real-time delivery via Durable Object (encrypted blob — hub never decrypts)
     const doId = c.env.TENANT_HUB.idFromName(tenantId)
-    const stub = c.env.TENANT_HUB.get(doId)
-    const deliverRes = await stub.fetch(
+    const tenantHub = c.env.TENANT_HUB.get(doId)
+    const deliverRes = await tenantHub.fetch(
       new Request("https://do.internal/internal/deliver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

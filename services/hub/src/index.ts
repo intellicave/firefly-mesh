@@ -51,7 +51,7 @@ app.get("/ws", async (c) => {
   }
 
   const doId = c.env.TENANT_HUB.idFromName(payload.tenantId)
-  const stub = c.env.TENANT_HUB.get(doId)
+  const tenantHub = c.env.TENANT_HUB.get(doId)
 
   const modifiedRequest = new Request(c.req.url, {
     method: "GET",
@@ -63,7 +63,7 @@ app.get("/ws", async (c) => {
     },
   })
 
-  return stub.fetch(modifiedRequest)
+  return tenantHub.fetch(modifiedRequest)
 })
 
 // API routes

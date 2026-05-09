@@ -16,10 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # R1: Ban TODO/FIXME/placeholder/stub tokens in source code
-      - name: R1 Forbidden tokens (TODO/FIXME/HACK/XXX/placeholder/stub)
+      # R1: Ban TODO/FIXME/HACK/XXX marker comments in source code.
+      # Note: 'placeholder' (HTML form attribute, Tailwind class) and 'stub'
+      # (Cloudflare Durable Object API term) are intentionally excluded —
+      # they have legitimate non-placeholder uses. Real placeholder code is
+      # caught by the dedicated checks below (R1 not-implemented, R2 mock files).
+      - name: R1 Forbidden marker comments
         run: |
-          ! grep -rn -E '\b(TODO|FIXME|HACK|XXX|placeholder|stub)\b' \
+          ! grep -rn -E '\b(TODO|FIXME|HACK|XXX)\b' \
             packages/ services/ \
             --include='*.ts' --include='*.tsx' \
             | grep -v -E '(\.test\.|__tests__|\.spec\.)'
