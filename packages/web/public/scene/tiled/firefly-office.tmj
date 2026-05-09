@@ -1,0 +1,182 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.10.2",
+  "orientation": "isometric",
+  "renderorder": "right-down",
+  "infinite": false,
+  "width": 12,
+  "height": 9,
+  "tilewidth": 64,
+  "tileheight": 32,
+  "nextlayerid": 6,
+  "nextobjectid": 100,
+  "compressionlevel": -1,
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "firefly-office",
+      "columns": 0,
+      "tilewidth": 64,
+      "tileheight": 64,
+      "tilecount": 19,
+      "spacing": 0,
+      "margin": 0,
+      "grid": { "orientation": "isometric", "width": 64, "height": 32 },
+      "tiles": [
+        { "id": 0, "image": "../assets/tiles/tile__floor-office.png", "imagewidth": 64, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/floor-office" }] },
+        { "id": 1, "image": "../assets/tiles/tile__floor-hallway.png", "imagewidth": 64, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/floor-hallway" }] },
+        { "id": 2, "image": "../assets/tiles/tile__wall-back.png", "imagewidth": 64, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/wall-back" }] },
+        { "id": 3, "image": "../assets/tiles/tile__wall-corner-nw.png", "imagewidth": 64, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/wall-corner-nw" }] },
+        { "id": 4, "image": "../assets/tiles/tile__wall-corner-ne.png", "imagewidth": 64, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/wall-corner-ne" }] },
+        { "id": 5, "image": "../assets/tiles/tile__wall-side-w.png", "imagewidth": 32, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/wall-side-w" }] },
+        { "id": 6, "image": "../assets/tiles/tile__wall-side-e.png", "imagewidth": 32, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/wall-side-e" }] },
+        { "id": 7, "image": "../assets/tiles/tile__wall-doorway-s.png", "imagewidth": 64, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/wall-doorway-s" }] },
+        { "id": 8, "image": "../assets/tiles/tile__desk-ceo.png", "imagewidth": 64, "imageheight": 48, "properties": [{ "name": "key", "type": "string", "value": "tile/desk-ceo" }] },
+        { "id": 9, "image": "../assets/tiles/tile__desk-employee.png", "imagewidth": 64, "imageheight": 48, "properties": [{ "name": "key", "type": "string", "value": "tile/desk-employee" }] },
+        { "id": 10, "image": "../assets/tiles/tile__chair.png", "imagewidth": 32, "imageheight": 48, "properties": [{ "name": "key", "type": "string", "value": "tile/chair" }] },
+        { "id": 11, "image": "../assets/tiles/tile__bulletin.png", "imagewidth": 32, "imageheight": 48, "properties": [{ "name": "key", "type": "string", "value": "tile/bulletin" }] },
+        { "id": 12, "image": "../assets/tiles/tile__cooler.png", "imagewidth": 32, "imageheight": 40, "properties": [{ "name": "key", "type": "string", "value": "tile/cooler" }] },
+        { "id": 13, "image": "../assets/tiles/tile__plant.png", "imagewidth": 32, "imageheight": 48, "properties": [{ "name": "key", "type": "string", "value": "tile/plant" }] },
+        { "id": 14, "image": "../assets/tiles/tile__whiteboard.png", "imagewidth": 48, "imageheight": 56, "properties": [{ "name": "key", "type": "string", "value": "tile/whiteboard" }] },
+        { "id": 15, "image": "../assets/tiles/tile__bookcase.png", "imagewidth": 48, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/bookcase" }] },
+        { "id": 16, "image": "../assets/tiles/tile__sofa.png", "imagewidth": 64, "imageheight": 48, "properties": [{ "name": "key", "type": "string", "value": "tile/sofa" }] },
+        { "id": 17, "image": "../assets/tiles/tile__server-rack.png", "imagewidth": 32, "imageheight": 64, "properties": [{ "name": "key", "type": "string", "value": "tile/server-rack" }] },
+        { "id": 18, "image": "../assets/tiles/tile__tv-screen.png", "imagewidth": 64, "imageheight": 56, "properties": [{ "name": "key", "type": "string", "value": "tile/tv-screen" }] }
+      ]
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "floor",
+      "type": "tilelayer",
+      "width": 12,
+      "height": 9,
+      "x": 0,
+      "y": 0,
+      "opacity": 1,
+      "visible": true,
+      "data": [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+      ]
+    },
+    {
+      "id": 2,
+      "name": "walls",
+      "type": "tilelayer",
+      "width": 12,
+      "height": 9,
+      "x": 0,
+      "y": 0,
+      "opacity": 1,
+      "visible": true,
+      "data": [
+        4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      ]
+    },
+    {
+      "id": 3,
+      "name": "decor",
+      "type": "tilelayer",
+      "width": 12,
+      "height": 9,
+      "x": 0,
+      "y": 0,
+      "opacity": 1,
+      "visible": true,
+      "data": [
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+        0, 16,  0, 14,  0, 15,  0,  0, 15,  0, 12, 14,
+       14,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+        0, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+       19,  0,  0,  0, 13,  0,  0, 18,  0,  0,  0, 15,
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+        0,  0,  0,  0, 12, 14,  0, 14,  0,  0,  0, 14
+      ]
+    },
+    {
+      "id": 4,
+      "name": "desks",
+      "type": "objectgroup",
+      "x": 0,
+      "y": 0,
+      "opacity": 1,
+      "visible": true,
+      "draworder": "topdown",
+      "objects": [
+        { "id": 1,  "name": "ceo-0",   "type": "desk", "gid": 9,  "x": 128, "y": 96,  "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 10, "name": "pm-0",    "type": "desk", "gid": 10, "x": 384, "y": 96,  "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 11, "name": "pm-1",    "type": "desk", "gid": 10, "x": 448, "y": 96,  "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 12, "name": "pm-2",    "type": "desk", "gid": 10, "x": 512, "y": 96,  "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 13, "name": "pm-3",    "type": "desk", "gid": 10, "x": 576, "y": 96,  "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 14, "name": "pm-4",    "type": "desk", "gid": 10, "x": 384, "y": 128, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 15, "name": "pm-5",    "type": "desk", "gid": 10, "x": 448, "y": 128, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 16, "name": "pm-6",    "type": "desk", "gid": 10, "x": 512, "y": 128, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 17, "name": "pm-7",    "type": "desk", "gid": 10, "x": 576, "y": 128, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 20, "name": "sales-0", "type": "desk", "gid": 10, "x": 64,  "y": 256, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 21, "name": "sales-1", "type": "desk", "gid": 10, "x": 128, "y": 256, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 22, "name": "sales-2", "type": "desk", "gid": 10, "x": 192, "y": 256, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 23, "name": "sales-3", "type": "desk", "gid": 10, "x": 64,  "y": 288, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 24, "name": "sales-4", "type": "desk", "gid": 10, "x": 128, "y": 288, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 25, "name": "sales-5", "type": "desk", "gid": 10, "x": 192, "y": 288, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 30, "name": "eng-0",   "type": "desk", "gid": 10, "x": 512, "y": 256, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 31, "name": "eng-1",   "type": "desk", "gid": 10, "x": 576, "y": 256, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 32, "name": "eng-2",   "type": "desk", "gid": 10, "x": 640, "y": 256, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 33, "name": "eng-3",   "type": "desk", "gid": 10, "x": 512, "y": 288, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 34, "name": "eng-4",   "type": "desk", "gid": 10, "x": 576, "y": 288, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] },
+        { "id": 35, "name": "eng-5",   "type": "desk", "gid": 10, "x": 640, "y": 288, "width": 64, "height": 48, "properties": [{ "name": "facing", "type": "string", "value": "s" }] }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "rooms",
+      "type": "objectgroup",
+      "x": 0,
+      "y": 0,
+      "opacity": 1,
+      "visible": true,
+      "draworder": "topdown",
+      "objects": [
+        { "id": 50, "name": "ceo-office",     "type": "room", "x": 0,   "y": 0,   "width": 256, "height": 128, "properties": [
+          { "name": "label", "type": "string", "value": "CEO Suite" },
+          { "name": "tint",  "type": "string", "value": "#8B5CFF" }
+        ]},
+        { "id": 51, "name": "product-maker",  "type": "room", "x": 320, "y": 0,   "width": 448, "height": 128, "properties": [
+          { "name": "label", "type": "string", "value": "Product & Design" },
+          { "name": "tint",  "type": "string", "value": "#00D4FF" }
+        ]},
+        { "id": 52, "name": "hallway",        "type": "room", "x": 0,   "y": 128, "width": 768, "height": 32,  "properties": [
+          { "name": "label", "type": "string", "value": "Hallway" },
+          { "name": "tint",  "type": "string", "value": "#B0E0FF" }
+        ]},
+        { "id": 53, "name": "sales-bullpen",  "type": "room", "x": 0,   "y": 160, "width": 384, "height": 128, "properties": [
+          { "name": "label", "type": "string", "value": "Sales & Customer Success" },
+          { "name": "tint",  "type": "string", "value": "#FF2E88" }
+        ]},
+        { "id": 54, "name": "floor-flex",     "type": "room", "x": 448, "y": 160, "width": 320, "height": 128, "properties": [
+          { "name": "label", "type": "string", "value": "Engineering & Ops" },
+          { "name": "tint",  "type": "string", "value": "#39FF8C" }
+        ]}
+      ]
+    }
+  ]
+}

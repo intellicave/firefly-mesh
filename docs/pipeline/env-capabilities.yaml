@@ -1,200 +1,65 @@
-# firefly-mesh — Environment Capabilities Probe
-#
-# Purpose: per CLAUDE.md global rule "环境断言必须先验证 (反自导自演降阶)",
-# any sleep / autonomous / ralph-loop run must first persist env probe here.
-# Any "task X cannot run because Y is missing" claim must reference a row in
-# this file (verified=false rows + verified_by command output).
-#
-# Updated: 2026-04-29
-# Probe by: AI main session, autodev pipeline post-M0
+# AutoDev Pipeline — Environment Capabilities (edge run)
+# Probed: 2026-05-09 by autodev step 1.4  (supersedes 2026-04-29 classic run)
+# Platform: win32 / Windows 11 Home China 10.0.26200
+# Project: firefly-mesh edge (v1.0)
 
-env:
-  os:
-    platform: win32
-    version: "Windows 11 Home China 10.0.26200"
+probed_at: "2026-05-09T00:00:00Z"
+platform: "win32"
 
-toolchain:
+tools:
   node:
     available: true
     version: "v24.13.0"
-    verified_by: "node --version"
-    required_by: ["all packages"]
+    evidence: "node --version exit 0"
 
   pnpm:
     available: true
     version: "10.30.3"
-    verified_by: "pnpm --version"
-    required_by: ["monorepo install / build / typecheck"]
-
-  docker:
-    cli_available: true
-    cli_version: "29.2.1"
-    verified_by: "docker --version (works)"
-    daemon_status: "running"  # 2026-04-29 — recovered after user retry
-    daemon_verified_by: |
-      docker version → client OK, server: 500 Internal Server Error
-        for API route http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/
-        v1.53/version, check if the server supports the requested API
-        version
-      Persisted 5+ minutes after Start-Process launch → Docker Desktop
-      Linux engine likely crashed during boot.
-    daemon_recovery: |
-      User action required (one of):
-      (a) Right-click Docker Desktop tray icon → Restart Docker Desktop
-      (b) Quit Docker Desktop fully + Restart Windows + relaunch DD
-      (c) wsl --shutdown then restart Docker Desktop
-      (d) Provide external Postgres via DATABASE_URL in .env.local
-          (Neon free tier / Supabase / local postgres install — must
-          have pgvector extension)
-    required_by:
-      - "M0-5 docker compose up"
-      - "M1-1 drizzle-kit migrate against postgres container"
-      - "M5 W1 demo end-to-end"
-      - "M10 Cyberautonomy dogfooding"
-    impact_when_down:
-      - "schema generation OK (drizzle-kit generate produces SQL files
-         without DB connection)"
-      - "migrate verification BLOCKED until daemon starts"
+    evidence: "pnpm --version exit 0"
 
   git:
     available: true
     version: "2.52.0.windows.1"
-    user: "Leo-Cyberautonomy"
-    verified_by: "git --version"
+    in_git_repo: true
+    user: "Leooo-Huang"
+    evidence: "git rev-parse --is-inside-work-tree = true"
 
-agent_runtimes:
-  openclaw:
-    installed: true
-    version: "2026.4.15"
-    install_path: "D:\\App\\Dev\\nvm\\v24.13.0\\openclaw"
-    verified_by: "openclaw --version"
-    enables: ["M9-2 skill compat smoke (1 of 3 runtimes)"]
-
-  hermes_agent:
-    installed: false
-    verified_by: "where hermes (not found)"
-    blocks: ["M9-2 skill compat smoke for Hermes (1 of 3 runtimes)"]
-    workaround: "OpenClaw smoke gives partial signal; full matrix
-                 requires dev team install Hermes locally"
-
-  claude_code:
-    installed: "host_only"   # we ARE running inside Claude Code, but no
-                              # programmatic skill install API in main session
-    blocks: ["M9-2 skill compat smoke for Claude Code"]
-    workaround: "dev team install firefly skill via /firefly:install
-                 manually after npm publish"
-
-mcp_clients:
-  cursor:
-    installed: false
-    verified_by: "where cursor (not found in PATH)"
-    blocks: ["M9-4 MCP smoke for Cursor (1 of 2 clients)"]
-
-  claude_desktop:
-    installed: "unknown"
-    blocks: ["M9-4 MCP smoke for Claude Desktop (1 of 2 clients)"]
-
-external_services:
-  ai_gateway:
-    api_key_set: true
-    env_var: "AI_GATEWAY_API_KEY"
-    verified_at: "2026-04-29"
-    verified_by: "pnpm --filter @firefly-mesh/core run smoke:llm
-                  → SUCCESS (anthropic/claude-sonnet-4-6,
-                  in 15 / out 10 tokens, finish=stop, geo=global)"
-    blocks: []
-    unblocks:
-      - "M1-7 LLM helper integration test ✓"
-      - "M5-1 task dispatch LLM decomposition (when M5 written)"
-      - "M5-5 W1 demo (when M5 written)"
-      - "M7-3 KB embed pipeline (untested for embed model specifically)"
-      - "M7-5 RAG search"
-
-  better_auth_secret:
+  wrangler:
     available: false
-    severity: "trivial"
-    workaround: "auto-generate via node -e crypto.randomBytes(32);
-                 user only needs to run once"
-    blocks: []
+    global: false
+    via_npx: false
+    evidence: "wrangler not in PATH; not in root package.json deps yet"
+    impact: "Cannot deploy to Cloudflare Workers until wrangler added to services/hub devDeps"
+    blocks:
+      - "M0: Cloudflare Workers actual deploy (code scaffold unblocked)"
+    workaround: "Add wrangler to services/hub/package.json devDeps; use pnpm exec wrangler"
 
-  postgres_runtime:
-    container_running: true   # 2026-04-29
-    container_name: "firefly-mesh-postgres-1"
-    health_status: "healthy"
-    image: "pgvector/pgvector:pg17"
-    extensions_loaded: ["vector", "uuid-ossp", "plpgsql"]
-    schema_state:
-      tables: 21
-      rules:
-        - "audit_log_no_update (UPDATE → INSTEAD NOTHING)"
-        - "audit_log_no_delete (DELETE → INSTEAD NOTHING)"
-      latest_migration: "0000_clear_wolverine.sql"
-    embedding_dim: 1024
-    embedding_dim_change_log:
-      - "2026-04-29: original schema vector(2048) hit pgvector HNSW
-         limit (max 2000 dims). Reduced to 1024 dim — voyage-3-large
-         supports output_dimension=1024; OpenAI text-embedding-3-small
-         is 1536 (still within limit but 1024 chosen for cost balance)."
-    blocks: []
+  gh_cli:
+    available: true
+    version: "2.87.0"
+    evidence: "gh --version exit 0"
 
-# === Decision support: which M tasks are unblocked vs blocked ===
-m_task_blocking_summary:
-  fully_unblocked:
-    - "M1-1 schema generation (DB up still needed for migrate test, but
-       can be written + drizzle-kit generate produces SQL; verification
-       runs after docker compose up)"
-    - "M1-3 middleware (pure code, unit-testable in-memory)"
-    - "M1-4 audit_log + DB RULE (SQL written to migration file)"
-    - "M1-5 SSE event bus (code, unit test)"
-    - "M1-6 boundary scope catalog (code)"
-    - "M2-1 employees/dept/projects API (code; unit test with mocked db
-       layer or real testcontainer Postgres)"
-    - "M2-2 token management (code; bcrypt-style hash test)"
-    - "M2-4 boundary endpoints (code)"
-    - "M3-1 HITL state machine (pure logic + unit test)"
-    - "M3-2 a2a/{id}/approve|reject|accept|reject-receive (code)"
-    - "M3-5 task review endpoints (code)"
-    - "M4-1 A2A wire schema + signature (code; ed25519 signed test
-       vectors don't need network)"
-    - "M4-2 A2A broker (code)"
-    - "M4-3 a2a inbox + detail endpoints (code)"
-    - "M4-5 well-known agent-card.json route (code)"
-    - "M6-1 audit/threads endpoints (code)"
-    - "M6-2 audit UI (code; visual test by humans)"
-    - "M8-2 skill CRUD endpoints (code)"
-    - "M8-3 skill loaded merge SQL (code; testable with seed)"
-    - "M9-1 @firefly-mesh/skill npm package (code; build + unit)"
-    - "M9-3 MCP server implementation (code; can self-test stdio)"
+  docker:
+    available: true
+    version: "29.2.1"
+    evidence: "docker --version exit 0"
 
-  blocked_by_missing_ai_gateway_key:
-    - "M1-7 LLM helper INTEGRATION test (code is fine; integration test
-       returns SKIPPED until key set)"
-    - "M5-1 task dispatch LLM decomposition (real call needed for E2E
-       demo; can ship as 'requires AI_GATEWAY_API_KEY in .env' note)"
-    - "M5-5 W1 demo full chain (cannot demo without LLM call)"
-    - "M7-3 embed pipeline integration test (voyage-3-large needs key)"
-    - "M7-7 firefly.kb.search integration smoke"
+  vercel_cli:
+    available: false
+    evidence: "not needed — edge uses Cloudflare Pages, not Vercel"
 
-  blocked_by_missing_runtimes:
-    - "M9-2 Hermes Agent smoke (1/3 runtimes)"
-    - "M9-2 Claude Code skill smoke (1/3 runtimes — host has Claude
-       Code but no programmatic install API in this session)"
-    - "M9-4 Cursor MCP smoke (1/2 MCP clients)"
-    - "M9-4 Claude Desktop MCP smoke (1/2 MCP clients)"
+# === Edge project docs status ===
+edge_docs_state:
+  ideation_md: "done"    # 2026-05-08-firefly-mesh-edge-ideation.md
+  design_md: "done"      # 2026-05-08-firefly-mesh-edge-design.md
+  meta_md: "done"        # 2026-05-08-firefly-mesh-edge-meta.md
+  plan_md: "done"        # 2026-05-08-firefly-mesh-edge-plan.md
+  index_md: "done"       # 2026-05-08-firefly-mesh-edge-index.md
+  rules_md: "done"       # 2026-05-08-firefly-mesh-edge-rules.md
+  ui_md: "missing"       # Phase 3 TODO
+  api_md: "missing"      # Phase 4 TODO
 
-  blocked_by_db_not_running:
-    - "M1-1 drizzle migrate verification (code generates SQL fine;
-       running migration needs container)"
-    - "All later M relying on DB writes (after M1)"
-
-# === Sleep-mode policy (from CLAUDE.md) ===
+# === Sleep-mode policy ===
 sleep_mode_policy:
-  rule: "Per CLAUDE.md, do not silently downgrade when blocked. Either:
-         (a) reference a verified=false row above and stop, OR
-         (b) write code + skip integration test with explicit STUB marker
-         in test name + audit_log line."
-
-  acceptable_skip_format:
-    - "test name MUST include '.skipped_until_env'"
-    - "test body MUST throw with reference to this yaml row, e.g.:
-       throw new Error('skipped: env-capabilities.yaml#ai_gateway')"
+  rule: "Per CLAUDE.md, any 'cannot do X because Y missing' claim must
+         reference a verified available=false row above."

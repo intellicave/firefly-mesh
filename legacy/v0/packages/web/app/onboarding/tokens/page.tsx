@@ -22,12 +22,11 @@ interface EmployeeRow {
   title: string | null;
 }
 
-// GET /api/employee returns { data: EmployeeRow[] }
+// GET /api/employee returns { data: EmployeeRow[] }; api() already unwraps .data.
 type EmployeeListResponse = EmployeeRow[];
 
-interface BatchResponse {
-  data: RevealedToken[];
-}
+// POST /api/token/batch returns { data: RevealedToken[] }; api() already unwraps .data.
+type BatchResponse = RevealedToken[];
 
 export default function TokensStep() {
   const router = useRouter();
@@ -49,7 +48,7 @@ export default function TokensStep() {
         method: "POST",
         body: { employeeIds: Array.from(picked), expiresInDays: 7 },
       }),
-    onSuccess: (r) => setRevealed(r.data),
+    onSuccess: (r) => setRevealed(r),
   });
 
   const togglePick = (id: string) => {

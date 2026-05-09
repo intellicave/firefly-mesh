@@ -1,0 +1,102 @@
+topic: "firefly-mesh edge — Cloudflare Workers + Durable Objects + E2E 加密 agent mesh"
+topic_slug: "firefly-mesh-edge"
+status: in_progress
+current_phase: 6
+paused_at_gate: null
+started_at: "2026-05-08T00:00:00Z"
+completed_at: null
+sleep_mode: true
+
+phases:
+  1:
+    name: ideation
+    status: completed
+    started_at: "2026-05-08T00:00:00Z"
+    completed_at: "2026-05-08T12:00:00Z"
+    output: "docs/plans/2026-05-08-firefly-mesh-edge-ideation.md"
+    error: null
+    retries: 0
+
+  2:
+    name: product-spec
+    status: completed
+    started_at: "2026-05-08T12:00:00Z"
+    completed_at: "2026-05-08T18:00:00Z"
+    output: "docs/plans/2026-05-08-firefly-mesh-edge-design.md"
+    error: null
+    retries: 0
+
+  3:
+    name: ui-ux
+    status: completed
+    started_at: "2026-05-09T01:00:00Z"
+    completed_at: "2026-05-09T02:00:00Z"
+    output: "docs/plans/2026-05-08-firefly-mesh-edge-ui.md"
+    error: null
+    retries: 0
+
+  4:
+    name: api
+    status: completed
+    started_at: "2026-05-09T02:00:00Z"
+    completed_at: "2026-05-09T03:00:00Z"
+    output: "docs/plans/2026-05-08-firefly-mesh-edge-api.md"
+    error: null
+    retries: 0
+
+  5:
+    name: planning
+    status: completed
+    started_at: "2026-05-08T18:00:00Z"
+    completed_at: "2026-05-09T00:00:00Z"
+    output: "docs/plans/2026-05-08-firefly-mesh-edge-plan.md"
+    error: null
+    retries: 0
+
+  "5.5":
+    name: index-rules
+    status: completed
+    started_at: "2026-05-09T00:00:00Z"
+    completed_at: "2026-05-09T01:00:00Z"
+    output: "docs/plans/2026-05-08-firefly-mesh-edge-index.md + rules.md"
+    error: null
+    retries: 0
+
+  "5.9":
+    name: plan-gan
+    status: completed
+    started_at: "2026-05-09T03:00:00Z"
+    completed_at: "2026-05-09T04:00:00Z"
+    output: "docs/plans/2026-05-08-firefly-mesh-edge-plan.md (plan_review_history 追加)"
+    plan_review: { verdict: "PASS", scores: [8,8,8,8], iterations: 2 }
+    error: null
+    retries: 0
+
+  6:
+    name: development
+    status: pending
+    started_at: null
+    completed_at: null
+    output: null
+    error: null
+    retries: 0
+
+  7:
+    name: verification
+    status: pending
+    started_at: null
+    completed_at: null
+    output: null
+    error: null
+    retries: 0
+
+  8:
+    name: delivery
+    status: pending
+    started_at: null
+    completed_at: null
+    output: null
+    error: null
+    retries: 0
+
+gate_history: []

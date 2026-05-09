@@ -1,0 +1,31 @@
+# AutoDev 流水线配置 — firefly-mesh edge
+# Created: 2026-05-09 by /autodev --sleep (edge continuation run)
+
+pipeline:
+  mode: auto
+
+gates: {}
+
+sleep_mode: true
+
+ralph_loop:
+  max_iterations: 50
+  completion_promise: "AUTODEV PIPELINE COMPLETE"
+
+phases:
+  ideation:
+    max_iterations: 3
+  ui_ux:
+    include_wireframes: true
+  api:
+    include_schemas: true
+  planning:
+    execution_style: auto
+  development:
+    use_worktree: true
+    branch_pattern: "autodev/firefly-mesh-edge"
+  delivery:
+    default_action: pr
+
+deployment:
+  auto_deploy: false

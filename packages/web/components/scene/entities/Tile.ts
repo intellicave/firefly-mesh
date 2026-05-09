@@ -52,6 +52,7 @@ export class Tile {
     switch (this.layer) {
       case "backWall": return DEPTH_BACK_WALLS + this.isoDepth * 0.001;
       case "frontOccluder": return DEPTH_FRONT_OCCLUDERS + this.isoDepth * 0.001;
+      case "furniture": return this.isoDepth + 50;
       default: return this.isoDepth;
     }
   }

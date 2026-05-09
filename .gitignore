@@ -41,3 +41,6 @@ Thumbs.db
 
 # Local seeds output
 deploy/seed/*/tokens-out.csv
+
+# Claude Code worktrees + skills cache (per-machine, not source)
+.claude/
