@@ -37,7 +37,7 @@ agents.post(
       data: {
         code,
         expiresAt,
-        confirmUrl: `${c.env.APP_URL}/connect?code=${code}`,
+        confirmUrl: `${c.env.PWA_URL}/connect?code=${code}`,
       },
     })
   },
@@ -317,6 +317,35 @@ agents.get("/:agentId/prekey-bundle", requireAgentJwt, async (c) => {
       lowPrekeys: remaining < LOW_PREKEY_THRESHOLD,
     },
   })
+})
+
+// DELETE /api/agents/:agentId — revoke an agent (session-auth, owner only)
+agents.delete("/:agentId", requireSession, async (c) => {
+  const agentId = c.req.param("agentId")
+  const userId = c.get("userId") as string
+  const db = drizzle(c.env.DB, { schema })
+
+  const [agent] = await db
+    .select()
+    .from(schema.agents)
+    .where(eq(schema.agents.id, agentId))
+
+  if (!agent || agent.ownerUserId !== userId) {
+    return c.json({ error: { code: "NOT_FOUND", message: "Agent not found" } }, 404)
+  }
+
+  await db.delete(schema.agents).where(eq(schema.agents.id, agentId))
+
+  await db.insert(schema.auditLog).values({
+    id: nanoid(21),
+    tenantId: agent.tenantId,
+    actorId: userId,
+    action: "agent.revoked",
+    targetId: agentId,
+    createdAt: new Date().toISOString(),
+  })
+
+  return c.json({ data: { revoked: true } })
 })
 
 // PUT /api/agents/:agentId/prekeys — upload more OPKs (caller must own the agent)

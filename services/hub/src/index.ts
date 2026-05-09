@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { cors } from "hono/cors"
 import { createAuth, type Bindings } from "./auth.ts"
 import { sessionMiddleware } from "./middleware/auth.ts"
 import { verifyAgentJwt } from "./lib/jwt.ts"
@@ -7,11 +8,21 @@ import { invitationsRouter } from "./routes/invitations.ts"
 import { agentsRouter } from "./routes/agents.ts"
 import { messagesRouter } from "./routes/messages.ts"
 import { a2aRouter } from "./routes/a2a.ts"
+import { meRouter } from "./routes/me.ts"
 import { TenantHub } from "./durable-objects/TenantHub.ts"
 
 export { TenantHub }
 
 const app = new Hono<{ Bindings: Bindings }>()
+
+app.use("*", (c, next) =>
+  cors({
+    origin: c.env.PWA_URL,
+    credentials: true,
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  })(c, next),
+)
 
 app.get("/", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
@@ -63,6 +74,7 @@ app.route("/api/invite", invitationsRouter)
 app.route("/api/agents", agentsRouter)
 app.route("/api/messages", messagesRouter)
 app.route("/api/a2a", a2aRouter)
+app.route("/api/me", meRouter)
 
 export default {
   fetch(request: Request, env: Bindings, ctx: ExecutionContext) {

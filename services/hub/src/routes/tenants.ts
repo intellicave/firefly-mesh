@@ -229,7 +229,7 @@ tenants.post(
       tenantName: tenant!.displayName,
       tenantSlug: tenant!.slug,
       token,
-      appUrl: c.env.APP_URL,
+      appUrl: c.env.PWA_URL,
     })
 
     await db.insert(schema.auditLog).values({

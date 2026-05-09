@@ -5,6 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 APP_URL = "https://hub-dev.firefly-mesh.io"
+PWA_URL = "https://firefly-mesh.io"
 RESEND_FROM_EMAIL = "no-reply@cyberautonomy.io"
 
 [[d1_databases]]

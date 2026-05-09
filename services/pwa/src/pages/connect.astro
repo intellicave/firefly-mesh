@@ -1,0 +1,24 @@
+---
+import '../styles/globals.css';
+import { ConnectPage } from '../components/connect/ConnectPage';
+
+const code = Astro.url.searchParams.get('code') ?? '';
+---
+
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connect device — Firefly Mesh</title>
+  </head>
+  <body class="h-full bg-background text-foreground font-sans antialiased">
+    {code ? (
+      <ConnectPage client:load code={code} />
+    ) : (
+      <div class="flex min-h-screen items-center justify-center">
+        <p class="text-sm text-destructive">Missing pairing code in URL</p>
+      </div>
+    )}
+  </body>
+</html>

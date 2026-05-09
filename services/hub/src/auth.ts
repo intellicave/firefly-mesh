@@ -15,6 +15,7 @@ export type Bindings = {
   RESEND_API_KEY: string
   RESEND_FROM_EMAIL: string
   APP_URL: string
+  PWA_URL: string
   JWT_SECRET: string
 }
 
@@ -36,7 +37,7 @@ export function createAuth(env: Bindings) {
         clientSecret: env.GITHUB_CLIENT_SECRET,
       },
     },
-    trustedOrigins: [env.APP_URL],
+    trustedOrigins: [env.APP_URL, env.PWA_URL],
   })
 }
 
