@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { drizzle } from "drizzle-orm/d1"
-import { eq, and } from "drizzle-orm"
+import { eq, and, desc, lt, inArray } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -244,6 +244,77 @@ tenants.post(
     return c.json({ data: { id: invId, email, role, expiresAt } }, 201)
   },
 )
+
+// GET /api/tenants/:id/messages — session view of tenant messages
+// Returns messages sent to or from any agent owned by the current user in this tenant.
+// Cursor-based pagination: ?cursor=<createdAt>&limit=N (default 50, max 100).
+tenants.get("/:id/messages", async (c) => {
+  const db = drizzle(c.env.DB, { schema })
+  const userId = c.get("userId")
+  const tenantId = c.req.param("id")
+
+  const membership = await db
+    .select({ role: schema.memberships.role })
+    .from(schema.memberships)
+    .where(
+      and(
+        eq(schema.memberships.tenantId, tenantId),
+        eq(schema.memberships.userId, userId),
+      ),
+    )
+
+  if (membership.length === 0) {
+    return c.json({ error: { code: "NOT_FOUND", message: "Tenant not found" } }, 404)
+  }
+
+  const cursor = c.req.query("cursor")
+  const limitRaw = Number(c.req.query("limit") ?? "50")
+  const limit = Math.min(Math.max(limitRaw, 1), 100)
+
+  const myAgents = await db
+    .select({ id: schema.agents.id })
+    .from(schema.agents)
+    .where(
+      and(
+        eq(schema.agents.tenantId, tenantId),
+        eq(schema.agents.ownerUserId, userId),
+      ),
+    )
+  const myAgentIds = myAgents.map((a) => a.id)
+
+  if (myAgentIds.length === 0) {
+    return c.json({ data: [], meta: { nextCursor: null } })
+  }
+
+  const conditions = [
+    eq(schema.messagesMeta.tenantId, tenantId),
+    inArray(schema.messagesMeta.recipientAgentId, myAgentIds),
+  ]
+  if (cursor) {
+    conditions.push(lt(schema.messagesMeta.createdAt, cursor))
+  }
+
+  const rows = await db
+    .select({
+      id: schema.messagesMeta.id,
+      threadId: schema.messagesMeta.threadId,
+      senderAgentId: schema.messagesMeta.senderAgentId,
+      recipientAgentId: schema.messagesMeta.recipientAgentId,
+      type: schema.messagesMeta.type,
+      summary: schema.messagesMeta.summary,
+      createdAt: schema.messagesMeta.createdAt,
+    })
+    .from(schema.messagesMeta)
+    .where(and(...conditions))
+    .orderBy(desc(schema.messagesMeta.createdAt))
+    .limit(limit + 1)
+
+  const hasMore = rows.length > limit
+  const data = hasMore ? rows.slice(0, limit) : rows
+  const nextCursor = hasMore ? data[data.length - 1]!.createdAt : null
+
+  return c.json({ data, meta: { nextCursor } })
+})
 
 // GET /api/tenants/:id/invitations
 tenants.get("/:id/invitations", async (c) => {

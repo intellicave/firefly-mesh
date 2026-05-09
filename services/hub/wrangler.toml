@@ -21,6 +21,13 @@ class_name = "TenantHub"
 tag = "v1"
 new_sqlite_classes = ["TenantHub"]
 
+[triggers]
+# Scheduled cleanup tasks — see services/hub/src/cron/cleanup.ts
+crons = [
+  "0 * * * *",  # hourly: drain expired pending_messages
+  "0 3 * * *",  # daily 03:00 UTC: truncate audit_log to last 90 days
+]
+
 # Secrets — set via: wrangler secret put <NAME>
 # BETTER_AUTH_SECRET   (random 32-byte string, e.g. openssl rand -hex 32)
 # GOOGLE_CLIENT_ID     (Google OAuth app)

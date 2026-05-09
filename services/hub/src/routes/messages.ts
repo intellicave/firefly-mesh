@@ -113,6 +113,8 @@ messages.post(
     })
 
     // Try real-time delivery via Durable Object (encrypted blob — hub never decrypts)
+    // Deliver to both the recipient agent AND the recipient owner's PWA session
+    // (so the inbox UI updates without a refresh).
     const doId = c.env.TENANT_HUB.idFromName(tenantId)
     const tenantHub = c.env.TENANT_HUB.get(doId)
     const deliverRes = await tenantHub.fetch(
@@ -120,15 +122,23 @@ messages.post(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agentId: recipientAgentId,
+          recipientAgentId,
+          recipientUserId: recipient.ownerUserId,
           message: wireEnvelope,
         }),
       }),
     )
-    const { delivered } = await deliverRes.json<{ delivered: boolean }>()
+    const { delivered, agentDelivered } = await deliverRes.json<{
+      delivered: boolean
+      agentDelivered: boolean
+      userDelivered: boolean
+    }>()
+    // pending_messages is the agent's queue — only mark delivered when the
+    // agent itself received it (PWA notification doesn't drain the queue).
+    void delivered
 
-    if (delivered) {
-      // Message delivered in real-time; remove from pending queue
+    if (agentDelivered) {
+      // Agent received it in real-time; drain from pending queue
       await db
         .delete(schema.pendingMessages)
         .where(eq(schema.pendingMessages.id, pendingId))

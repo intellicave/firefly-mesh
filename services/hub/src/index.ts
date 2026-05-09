@@ -10,6 +10,7 @@ import { messagesRouter } from "./routes/messages.ts"
 import { a2aRouter } from "./routes/a2a.ts"
 import { meRouter } from "./routes/me.ts"
 import { TenantHub } from "./durable-objects/TenantHub.ts"
+import { runScheduled, pickTask } from "./cron/cleanup.ts"
 
 export { TenantHub }
 
@@ -32,37 +33,73 @@ app.on(["GET", "POST"], "/api/auth/**", (c) => {
   return auth.handler(c.req.raw)
 })
 
-// WebSocket endpoint — /ws?token=<agentJwt>
+// WebSocket endpoint — Agent JWT (/ws?token=<jwt>) OR session cookie (/ws?tenantId=<id>)
 app.get("/ws", async (c) => {
   if (c.req.header("Upgrade") !== "websocket") {
     return c.json({ error: { code: "UPGRADE_REQUIRED", message: "WebSocket upgrade required" } }, 426)
   }
 
-  const token =
-    c.req.query("token") ?? c.req.header("Authorization")?.slice(7)
+  const token = c.req.query("token") ?? c.req.header("Authorization")?.slice(7)
 
-  if (!token) {
-    return c.json({ error: { code: "UNAUTHORIZED", message: "token required" } }, 401)
+  let kind: "agent" | "user"
+  let tenantId: string
+  let userId: string
+  let agentId: string | null = null
+
+  if (token) {
+    const payload = await verifyAgentJwt(token, c.env.JWT_SECRET)
+    if (!payload) {
+      return c.json({ error: { code: "UNAUTHORIZED", message: "Invalid token" } }, 401)
+    }
+    kind = "agent"
+    agentId = payload.sub
+    tenantId = payload.tenantId
+    userId = payload.userId
+  } else {
+    // PWA session-based connection
+    const auth = createAuth(c.env)
+    const session = await auth.api.getSession({ headers: c.req.raw.headers })
+    if (!session?.user?.id) {
+      return c.json({ error: { code: "UNAUTHORIZED", message: "Session required" } }, 401)
+    }
+    const requestedTenant = c.req.query("tenantId")
+    if (!requestedTenant) {
+      return c.json({ error: { code: "BAD_REQUEST", message: "tenantId query required" } }, 400)
+    }
+    // Verify membership
+    const { drizzle } = await import("drizzle-orm/d1")
+    const { eq, and } = await import("drizzle-orm")
+    const schema = await import("./db/schema.ts")
+    const db = drizzle(c.env.DB, { schema })
+    const member = await db
+      .select({ role: schema.memberships.role })
+      .from(schema.memberships)
+      .where(
+        and(
+          eq(schema.memberships.tenantId, requestedTenant),
+          eq(schema.memberships.userId, session.user.id),
+        ),
+      )
+    if (member.length === 0) {
+      return c.json({ error: { code: "NOT_FOUND", message: "Tenant not found" } }, 404)
+    }
+    kind = "user"
+    tenantId = requestedTenant
+    userId = session.user.id
   }
 
-  const payload = await verifyAgentJwt(token, c.env.JWT_SECRET)
-  if (!payload) {
-    return c.json({ error: { code: "UNAUTHORIZED", message: "Invalid token" } }, 401)
-  }
-
-  const doId = c.env.TENANT_HUB.idFromName(payload.tenantId)
+  const doId = c.env.TENANT_HUB.idFromName(tenantId)
   const tenantHub = c.env.TENANT_HUB.get(doId)
 
-  const modifiedRequest = new Request(c.req.url, {
-    method: "GET",
-    headers: {
-      ...Object.fromEntries(c.req.raw.headers),
-      "X-Verified-Agent-Id": payload.sub,
-      "X-Verified-Tenant-Id": payload.tenantId,
-      "X-Verified-User-Id": payload.userId,
-    },
-  })
+  const headers: Record<string, string> = {
+    ...Object.fromEntries(c.req.raw.headers),
+    "X-Verified-Kind": kind,
+    "X-Verified-Tenant-Id": tenantId,
+    "X-Verified-User-Id": userId,
+  }
+  if (agentId) headers["X-Verified-Agent-Id"] = agentId
 
+  const modifiedRequest = new Request(c.req.url, { method: "GET", headers })
   return tenantHub.fetch(modifiedRequest)
 })
 
@@ -79,5 +116,13 @@ app.route("/api/me", meRouter)
 export default {
   fetch(request: Request, env: Bindings, ctx: ExecutionContext) {
     return app.fetch(request, env, ctx)
+  },
+  async scheduled(controller, env, ctx) {
+    const task = pickTask(controller.cron)
+    ctx.waitUntil(
+      runScheduled(task, env).then((r) => {
+        console.log(`[cron ${controller.cron}] ${r.task}: ${r.outcome}`)
+      }),
+    )
   },
 } satisfies ExportedHandler<Bindings>

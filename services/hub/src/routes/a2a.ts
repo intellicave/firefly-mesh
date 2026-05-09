@@ -119,6 +119,12 @@ a2a.post("/message", async (c) => {
   }
 
   // Step 5: route via TenantHub for real-time delivery
+  // Look up the recipient's owner so PWA sessions also get pushed
+  const [recipient] = await db
+    .select({ ownerUserId: schema.agents.ownerUserId })
+    .from(schema.agents)
+    .where(eq(schema.agents.id, envelope.receiver.agentId))
+
   const doId = c.env.TENANT_HUB.idFromName(sender.tenantId)
   const tenantHub = c.env.TENANT_HUB.get(doId)
   await tenantHub.fetch(
@@ -126,7 +132,8 @@ a2a.post("/message", async (c) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        agentId: envelope.receiver.agentId,
+        recipientAgentId: envelope.receiver.agentId,
+        recipientUserId: recipient?.ownerUserId ?? null,
         message: envelope,
       }),
     }),
