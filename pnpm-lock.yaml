@@ -133,6 +133,12 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20260508.1
         version: 4.20260508.1
+      '@firefly-mesh/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
+      tsx:
+        specifier: ^4.20.4
+        version: 4.21.0
       wrangler:
         specifier: ^4.90.0
         version: 4.90.0(@cloudflare/workers-types@4.20260508.1)

@@ -51,7 +51,16 @@ export function createAuth(env: Bindings, requestOrigin?: string) {
     secret: env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
     socialProviders,
-    trustedOrigins: [env.APP_URL, env.PWA_URL],
+    // In production: only the configured hub + PWA origins are trusted (CSRF).
+    // In wrangler dev: also trust the localhost origin we're actually serving on,
+    // otherwise Better Auth's CSRF check 403s sign-up calls.
+    trustedOrigins: [
+      env.APP_URL,
+      env.PWA_URL,
+      ...(requestOrigin && /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(requestOrigin)
+        ? [requestOrigin]
+        : []),
+    ],
   })
 }
 
