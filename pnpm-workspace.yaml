@@ -1,5 +1,11 @@
 packages:
-  - "packages/*"
+  # packages/web is intentionally excluded — it holds the scene/* code only
+  # (the rest moved to legacy/v0/packages/web/) and is awaiting rescue into a
+  # dedicated package; it has no package.json yet.
+  - "packages/client"
+  - "packages/crypto"
+  - "packages/proto"
+  - "packages/shared"
   - "services/hub"
   - "services/pwa"
   - "scripts/scene"
