@@ -19,24 +19,38 @@ export type Bindings = {
   JWT_SECRET: string
 }
 
-export function createAuth(env: Bindings) {
+export function createAuth(env: Bindings, requestOrigin?: string) {
   const db = drizzle(env.DB, { schema })
+
+  // Only enable a social provider when its credentials are real — wrangler dev
+  // ships dummy values via .dev.vars to keep email/password flow testable.
+  const isReal = (v: string | undefined) =>
+    !!v && !v.startsWith("local-dummy") && !v.startsWith("dummy")
+
+  const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {}
+  if (isReal(env.GOOGLE_CLIENT_ID) && isReal(env.GOOGLE_CLIENT_SECRET)) {
+    socialProviders.google = {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    }
+  }
+  if (isReal(env.GITHUB_CLIENT_ID) && isReal(env.GITHUB_CLIENT_SECRET)) {
+    socialProviders.github = {
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+    }
+  }
+
   return betterAuth({
     database: drizzleAdapter(db, { provider: "sqlite" }),
-    baseURL: env.APP_URL,
+    // baseURL must match the incoming request's origin so Better Auth resolves
+    // the basePath correctly. In wrangler dev we pass http://localhost:8787;
+    // in production we fall back to the configured hub URL.
+    baseURL: requestOrigin ?? env.APP_URL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
-    socialProviders: {
-      google: {
-        clientId: env.GOOGLE_CLIENT_ID,
-        clientSecret: env.GOOGLE_CLIENT_SECRET,
-      },
-      github: {
-        clientId: env.GITHUB_CLIENT_ID,
-        clientSecret: env.GITHUB_CLIENT_SECRET,
-      },
-    },
+    socialProviders,
     trustedOrigins: [env.APP_URL, env.PWA_URL],
   })
 }

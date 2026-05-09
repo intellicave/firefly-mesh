@@ -16,7 +16,7 @@ export const sessionMiddleware = createMiddleware<{
 }>(async (c, next) => {
   c.set("agentId", null)
   c.set("agentTenantId", null)
-  const auth = createAuth(c.env)
+  const auth = createAuth(c.env, new URL(c.req.url).origin)
   const session = await auth.api.getSession({ headers: c.req.raw.headers })
   c.set("userId", session?.user?.id ?? null)
   c.set("userName", session?.user?.name ?? null)

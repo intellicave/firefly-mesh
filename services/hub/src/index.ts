@@ -27,9 +27,10 @@ app.use("*", (c, next) =>
 
 app.get("/", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
-// Better Auth — /api/auth/*
-app.on(["GET", "POST"], "/api/auth/**", (c) => {
-  const auth = createAuth(c.env)
+// Better Auth — handles /api/auth/sign-up/email, /sign-in/email, /sign-out, /get-session, /callback/*, etc.
+// Hono uses '*' as a splat that matches the remaining path (including slashes).
+app.on(["GET", "POST"], "/api/auth/*", (c) => {
+  const auth = createAuth(c.env, new URL(c.req.url).origin)
   return auth.handler(c.req.raw)
 })
 
@@ -57,7 +58,7 @@ app.get("/ws", async (c) => {
     userId = payload.userId
   } else {
     // PWA session-based connection
-    const auth = createAuth(c.env)
+    const auth = createAuth(c.env, new URL(c.req.url).origin)
     const session = await auth.api.getSession({ headers: c.req.raw.headers })
     if (!session?.user?.id) {
       return c.json({ error: { code: "UNAUTHORIZED", message: "Session required" } }, 401)

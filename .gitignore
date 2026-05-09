@@ -19,6 +19,11 @@ coverage/
 .env.development.local
 .env.production.local
 .env.test.local
+.dev.vars
+.dev.vars.local
+
+# Wrangler local dev state (miniflare D1, DO, cache snapshots)
+.wrangler/
 
 # Logs
 *.log

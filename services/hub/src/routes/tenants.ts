@@ -221,16 +221,27 @@ tenants.post(
       createdAt: now.toISOString(),
     })
 
-    await sendInvitationEmail({
-      apiKey: c.env.RESEND_API_KEY,
-      fromEmail: c.env.RESEND_FROM_EMAIL,
-      to: email,
-      inviterName: c.get("userName") ?? "A team member",
-      tenantName: tenant!.displayName,
-      tenantSlug: tenant!.slug,
-      token,
-      appUrl: c.env.PWA_URL,
-    })
+    // Email send is best-effort: the invitation row + token are already
+    // persisted, so the inviter can copy the link manually if delivery fails
+    // (e.g. Resend domain not yet verified, or running with a dummy key in dev).
+    let emailDeliveredAt: string | null = null
+    let emailError: string | null = null
+    try {
+      await sendInvitationEmail({
+        apiKey: c.env.RESEND_API_KEY,
+        fromEmail: c.env.RESEND_FROM_EMAIL,
+        to: email,
+        inviterName: c.get("userName") ?? "A team member",
+        tenantName: tenant!.displayName,
+        tenantSlug: tenant!.slug,
+        token,
+        appUrl: c.env.PWA_URL,
+      })
+      emailDeliveredAt = new Date().toISOString()
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : "unknown send failure"
+      console.warn(`[invite] email send failed for ${email}: ${emailError}`)
+    }
 
     await db.insert(schema.auditLog).values({
       id: nanoid(21),
@@ -241,7 +252,21 @@ tenants.post(
       createdAt: now.toISOString(),
     })
 
-    return c.json({ data: { id: invId, email, role, expiresAt } }, 201)
+    const inviteLink = `${c.env.PWA_URL}/invite?token=${token}`
+    return c.json(
+      {
+        data: {
+          id: invId,
+          email,
+          role,
+          expiresAt,
+          inviteLink,
+          emailDeliveredAt,
+          emailError,
+        },
+      },
+      201,
+    )
   },
 )
 
