@@ -3,6 +3,17 @@ main = "src/index.ts"
 compatibility_date = "2025-05-09"
 compatibility_flags = ["nodejs_compat"]
 
+# Production hardening — disable the auto-generated workers.dev URL and
+# per-version preview URLs. The hub is only reachable via the custom domain
+# hub.firefly-mesh.com (configured in the Cloudflare dashboard).
+# Rationale:
+#   - workers.dev opens a second public attack surface
+#   - Better Auth's trustedOrigins is keyed on hub.firefly-mesh.com, so any
+#     request hitting workers.dev gets CSRF-rejected anyway
+#   - Preview URLs leak per-version snapshots publicly with no value in prod
+workers_dev = false
+preview_urls = false
+
 [vars]
 APP_URL = "https://hub.firefly-mesh.com"
 PWA_URL = "https://firefly-mesh.com"

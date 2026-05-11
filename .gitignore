@@ -50,3 +50,5 @@ deploy/seed/*/tokens-out.csv
 
 # Claude Code worktrees + skills cache (per-machine, not source)
 .claude/
+secrets-bulk.json
+.secrets-bulk.json
