@@ -95,9 +95,21 @@ jobs:
             services/ --include='package.json' \
             | grep -v 'hub-selfhost'
 
-      # R16: Ban UPDATE/DELETE on audit_log
+      # R16: Ban UPDATE/DELETE on audit_log everywhere EXCEPT lines that
+      # carry the explicit `cron.truncate(audit_log)` marker comment.
+      #
+      # Whitelist evolution:
+      #   v1 (original): `cron.*truncate` — too loose; any symbol containing
+      #     both words bypassed (Schneier P0-4 finding).
+      #   v2 (path-based): `^services/hub/src/cron/cleanup.ts:` — better but
+      #     still allows any NEW destructive line inside that file to slip in
+      #     unreviewed (discriminator follow-up).
+      #   v3 (this): exact inline marker `cron.truncate(audit_log)` REQUIRED
+      #     on the offending line. Any code adding UPDATE/DELETE on audit_log
+      #     anywhere — including future additions inside cleanup.ts — must
+      #     declare itself with the marker, forcing reviewer awareness.
       - name: R16 audit_log append-only (no UPDATE/DELETE)
         run: |
           ! grep -rn -E '(update|delete).*audit_log' \
             services/hub/ --include='*.ts' -i \
-            | grep -v -E '(\.test\.|cron.*truncate)'
+            | grep -v -E '(\.test\.|cron\.truncate\(audit_log\))'
