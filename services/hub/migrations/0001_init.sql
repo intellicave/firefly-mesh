@@ -77,7 +77,13 @@ CREATE TABLE IF NOT EXISTS invitations (
   created_at  TEXT NOT NULL
 );
 
--- audit_log (append-only enforced by trigger)
+-- audit_log (append-only)
+-- Append-only is enforced by SQLite triggers, but those live OUTSIDE this
+-- migration file: wrangler's `d1 migrations apply` splits SQL on `;`, which
+-- breaks any BEGIN/END trigger body. The triggers are installed by the
+-- post-migration script `scripts/install-audit-triggers.mjs` instead, which
+-- uses `wrangler d1 execute --command` (single-statement API).
+-- See docs/deploy/edge.md §1.4.
 CREATE TABLE IF NOT EXISTS audit_log (
   id         TEXT PRIMARY KEY,
   tenant_id  TEXT REFERENCES tenants(id),
@@ -86,15 +92,3 @@ CREATE TABLE IF NOT EXISTS audit_log (
   target_id  TEXT,
   created_at TEXT NOT NULL
 );
-
-CREATE TRIGGER IF NOT EXISTS audit_log_no_update
-  BEFORE UPDATE ON audit_log
-BEGIN
-  SELECT RAISE(ABORT, 'audit_log is append-only');
-END;
-
-CREATE TRIGGER IF NOT EXISTS audit_log_no_delete
-  BEFORE DELETE ON audit_log
-BEGIN
-  SELECT RAISE(ABORT, 'audit_log is append-only');
-END;

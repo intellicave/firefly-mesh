@@ -11,7 +11,7 @@ RESEND_FROM_EMAIL = "no-reply@cyberautonomy.io"
 [[d1_databases]]
 binding = "DB"
 database_name = "firefly-mesh-hub-db"
-database_id = "placeholder-replace-before-deploy"
+database_id = "522b31e6-7693-4cbf-a784-e5d86f9bf51c"
 
 [[durable_objects.bindings]]
 name = "TENANT_HUB"

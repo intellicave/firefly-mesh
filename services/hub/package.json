@@ -7,7 +7,8 @@
     "dev": "wrangler dev --port 8787 --local",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "migrate:local": "wrangler d1 migrations apply firefly-mesh-hub-db --local",
+    "migrate:local": "wrangler d1 migrations apply firefly-mesh-hub-db --local && node scripts/install-audit-triggers.mjs --local",
+    "migrate:remote": "wrangler d1 migrations apply firefly-mesh-hub-db --remote && node scripts/install-audit-triggers.mjs --remote",
     "test:e2e": "tsx test/e2e.ts"
   },
   "dependencies": {
