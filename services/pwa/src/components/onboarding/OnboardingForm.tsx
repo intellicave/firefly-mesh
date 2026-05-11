@@ -129,7 +129,7 @@ export function OnboardingForm() {
               />
               {teamSlug && (
                 <p className="text-xs text-muted-foreground">
-                  URL: firefly-mesh.io/app/{teamSlug}
+                  URL: firefly-mesh.com/app/{teamSlug}
                 </p>
               )}
             </div>

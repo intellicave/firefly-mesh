@@ -7,15 +7,15 @@ step has a verifiable success signal.
 
 - Cloudflare account with Workers Paid plan (Durable Objects + D1 production
   require it; free plan is fine for early dev/preview)
-- Domain pointed at Cloudflare DNS (`firefly-mesh.io` and a hub subdomain such
-  as `hub-dev.firefly-mesh.io`)
+- Domain pointed at Cloudflare DNS (`firefly-mesh.com` and a hub subdomain such
+  as `hub.firefly-mesh.com`)
 - Local toolchain (verified `pnpm install` succeeds at repo root):
   - Node 24+
   - pnpm 10.30+
   - wrangler 4.90+ (already a workspace devDep — invoke via
     `pnpm --filter @firefly-mesh/hub exec wrangler …`)
 - Service accounts:
-  - Resend account + verified sender domain (`cyberautonomy.io` per current
+  - Resend account + verified sender domain (`firefly-mesh.com` per current
     config; change `RESEND_FROM_EMAIL` in `services/hub/wrangler.toml` if you
     use a different domain)
   - Google OAuth app + GitHub OAuth app (callbacks: `https://<hub>/api/auth/callback/google` and `…/callback/github`)
@@ -95,13 +95,13 @@ Wrangler prints the deploy URL (something like
 
 In the Cloudflare dashboard, **Workers & Pages → firefly-mesh-hub → Settings →
 Triggers → Custom Domains → Add Custom Domain** and bind
-`hub-dev.firefly-mesh.io` (preview) or `hub.firefly-mesh.io` (prod). DNS
+`hub.firefly-mesh.com` (preview) or `hub.firefly-mesh.com` (prod). DNS
 records are created automatically.
 
 ### 1.7 Smoke test the live hub
 
 ```bash
-curl https://hub-dev.firefly-mesh.io/
+curl https://hub.firefly-mesh.com/
 # → {"status":"ok","version":"0.1.0"}
 ```
 
@@ -118,21 +118,21 @@ Build configuration:
 - Build output directory: `services/pwa/dist`
 - Root directory: `/` (the build script handles workspace context)
 - Environment variables:
-  - `PUBLIC_HUB_URL` = `https://hub-dev.firefly-mesh.io` (preview env)
-  - `PUBLIC_HUB_URL` = `https://hub.firefly-mesh.io` (production env)
+  - `PUBLIC_HUB_URL` = `https://hub.firefly-mesh.com` (preview env)
+  - `PUBLIC_HUB_URL` = `https://hub.firefly-mesh.com` (production env)
   - `NODE_VERSION` = `24`
 
 ### 2.2 Bind the apex domain
 
-In the Pages project → Custom Domains → add `firefly-mesh.io`.
+In the Pages project → Custom Domains → add `firefly-mesh.com`.
 
 ### 2.3 Verify CORS
 
 ```bash
-curl -i -X OPTIONS https://hub-dev.firefly-mesh.io/api/tenants \
-  -H "Origin: https://firefly-mesh.io" \
+curl -i -X OPTIONS https://hub.firefly-mesh.com/api/tenants \
+  -H "Origin: https://firefly-mesh.com" \
   -H "Access-Control-Request-Method: GET"
-# → 204, Access-Control-Allow-Origin: https://firefly-mesh.io
+# → 204, Access-Control-Allow-Origin: https://firefly-mesh.com
 ```
 
 ## 3. OAuth callback URLs
@@ -140,10 +140,10 @@ curl -i -X OPTIONS https://hub-dev.firefly-mesh.io/api/tenants \
 In Google Cloud Console / GitHub Developer Settings, add these callback URLs
 to the OAuth apps:
 
-- `https://hub-dev.firefly-mesh.io/api/auth/callback/google`
-- `https://hub-dev.firefly-mesh.io/api/auth/callback/github`
-- `https://hub.firefly-mesh.io/api/auth/callback/google` (when going to prod)
-- `https://hub.firefly-mesh.io/api/auth/callback/github`
+- `https://hub.firefly-mesh.com/api/auth/callback/google`
+- `https://hub.firefly-mesh.com/api/auth/callback/github`
+- `https://hub.firefly-mesh.com/api/auth/callback/google` (when going to prod)
+- `https://hub.firefly-mesh.com/api/auth/callback/github`
 
 ## 4. Resend domain verification
 
@@ -162,7 +162,7 @@ step 1.5 registers them with Cloudflare automatically:
 To trigger manually for testing on a deployed worker:
 
 ```bash
-curl https://hub-dev.firefly-mesh.io/cdn-cgi/handler/scheduled
+curl https://hub.firefly-mesh.com/cdn-cgi/handler/scheduled
 ```
 
 ## 6. Local development

@@ -214,7 +214,7 @@ P0 达到 p50；V1 达到 p99。
 
 ### 5.4 S4 跨域
 
-- API CORS：仅允许 `firefly-mesh.io` 子域名 + 开发期 localhost
+- API CORS：仅允许 `firefly-mesh.com` 子域名 + 开发期 localhost
 - WebSocket origin check: 同上
 - PWA Service Worker scope: 限制到 `/app`
 

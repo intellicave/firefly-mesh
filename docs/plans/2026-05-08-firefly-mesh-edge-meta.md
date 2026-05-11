@@ -58,7 +58,7 @@ classic 没做端到端加密 → 隐私拿不到 vibe coder 信任 → 商业�
 classic 假设"自部署 Docker Compose（Next.js + Postgres）"。这对企业合规友好，但对 vibe coder 是劝退——他们不会自部署。
 
 edge 默认 **SaaS-first（Cloudflare 全栈）**：
-- 用户视角：访问 firefly-mesh.io 注册即可
+- 用户视角：访问 firefly-mesh.com 注册即可
 - 边际成本：每用户云费 $0.05-$0.15
 - 自部署作为 Enterprise 选项（Docker Compose: Hono + Postgres + ws）
 

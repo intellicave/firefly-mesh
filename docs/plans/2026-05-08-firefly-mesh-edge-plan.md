@@ -39,8 +39,8 @@ M0 工程初始化 ─▶ M1 身份层 ─▶ M2 投递层 ─▶ M3 加密层 �
 **Acceptance criteria**：
 
 - [ ] `wrangler` 安装配置：`services/hub/package.json` devDeps 加 wrangler，`pnpm exec wrangler --version` 输出版本号
-- [ ] `services/hub/` 用 Hono + Cloudflare Workers，部署到 `hub-dev.firefly-mesh.io` 返回 `{status:"ok"}`
-- [ ] `services/pwa/` 用 Astro 部署到 `firefly-mesh.io` 显示 placeholder 首页
+- [ ] `services/hub/` 用 Hono + Cloudflare Workers，部署到 `hub.firefly-mesh.com` 返回 `{status:"ok"}`
+- [ ] `services/pwa/` 用 Astro 部署到 `firefly-mesh.com` 显示 placeholder 首页
 - [ ] D1 数据库创建（`firefly-mesh-edge-dev` + `firefly-mesh-edge-prod`），跑了一次 hello migration
 - [ ] `packages/proto/`、`packages/crypto/`、`packages/shared/` 创建，最小 export
 - [ ] `packages/client/` 创建骨架:
@@ -80,7 +80,7 @@ M0 工程初始化 ─▶ M1 身份层 ─▶ M2 投递层 ─▶ M3 加密层 �
   - [ ] /signup /login(Better Auth UI)
   - [ ] /onboarding(创建/加入团队)
   - [ ] /app/:tenant/members(成员管理)
-- [ ] Resend 集成,真实邀请邮件发送(用 cyberautonomy.io 做发件域名)
+- [ ] Resend 集成,真实邀请邮件发送(用 firefly-mesh.com 做发件域名)
 - [ ] E2E:Carol 注册 → 创建 Acme → 邀请 alice@example.com → Alice 收到邮件 → 点击 → 注册 → 进入 Acme dashboard
 
 **人力**:1-2 人 / 5 天.
@@ -209,7 +209,7 @@ M0 工程初始化 ─▶ M1 身份层 ─▶ M2 投递层 ─▶ M3 加密层 �
   - [ ] Alice 关机 → Bob 24 小时内仍能收到消息
 - [ ] OpenClaw skill v2 真实可装(`pnpm publish` 到 npm 私有 registry 或 internal feed)
 - [ ] 所有 CI 检查全绿
-- [ ] 部署到 staging.firefly-mesh.io,5 个内测用户跑通
+- [ ] 部署到 staging.firefly-mesh.com,5 个内测用户跑通
 
 **风险点**:Web Push 在 iOS / 不同浏览器的兼容性问题,需要预留 buffer。
 
@@ -227,7 +227,7 @@ M0 工程初始化 ─▶ M1 身份层 ─▶ M2 投递层 ─▶ M3 加密层 �
 - [ ] 安全审计:第三方(或 internal)review 加密层实现
 - [ ] 错误处理:WebSocket 断线 / pairing 超时 / 邮件失败 / push 失败 都有 user-facing 提示
 - [ ] i18n 框架(简体中文 + 英文,vibe coder 多语言友好)
-- [ ] Docs site:用 Astro Starlight 部署到 docs.firefly-mesh.io
+- [ ] Docs site:用 Astro Starlight 部署到 docs.firefly-mesh.com
 - [ ] Self-host docker compose 跑通(`docker compose up` 起 hub + postgres + caddy + pwa)
 - [ ] MCP adapter 跑通（Cursor / Claude Desktop）:skill HTTP 路径直接兼容，`packages/client/src/adapters/mcp.ts` 实现同一 HTTP API 的 MCP transport 包装
 
@@ -244,7 +244,7 @@ M0 工程初始化 ─▶ M1 身份层 ─▶ M2 投递层 ─▶ M3 加密层 �
 - [ ] 移除 staging,启用生产域名
 - [ ] Stripe 集成 Team plan ($8/seat 月 / $6/seat 年)
 - [ ] Free tier 上限触发(第 6 人)弹付费墙
-- [ ] Status page (status.firefly-mesh.io)
+- [ ] Status page (status.firefly-mesh.com)
 - [ ] Privacy policy / Terms of Service / DPA(企业 GDPR)
 - [ ] Sentry 监控 + Cloudflare Analytics
 - [ ] HackerNews / Twitter / Reddit 发布
@@ -302,7 +302,7 @@ M1-M5 中,某些工作可以并行:
 | 找不到内测用户 | 中 | M6 | Cyberautonomy 自己人先试用 |
 | Stripe / 合规手续慢 | 低 | M8 | 提前 4 周开启业务流程 |
 | 网络层换 hub 模式后,SaaS 全栈断链(Cloudflare Mesh / Tailscale 不再相关) | 低 | 已经决策 | 设计 D1 / D7 已固化 |
-| Resend DNS 验证（DKIM/SPF/DMARC on cyberautonomy.io）耗时 | 低 | M1 邮件功能上线前 | 提前 3 天申请 Resend 域名验证；M1 email E2E 排在 DNS 通过后 |
+| Resend DNS 验证（DKIM/SPF/DMARC on firefly-mesh.com）耗时 | 低 | M1 邮件功能上线前 | 提前 3 天申请 Resend 域名验证；M1 email E2E 排在 DNS 通过后 |
 | M2-M3 出问题需回滚 | 低 | 任何 milestone | legacy-v0 分支保留 classic 可运行版本；M6 前 staging 可随时切回 legacy 域名指向 |
 
 ---

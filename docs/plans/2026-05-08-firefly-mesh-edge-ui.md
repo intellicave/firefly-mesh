@@ -39,7 +39,7 @@ firefly-mesh PWA
 
 ### 流程 1：Carol 创建团队
 
-触发：访问 firefly-mesh.io → 点 "Get Started"
+触发：访问 firefly-mesh.com → 点 "Get Started"
 
 1. 看到 `/signup`，选择 Google / GitHub 或邮箱注册
 2. 注册成功 → 自动跳转 `/onboarding`
@@ -225,7 +225,7 @@ firefly-mesh PWA
 
 数据需求：
 - GET `/api/messages/inbox?after=:lastSeq&tenantId=:id` → `[{ messageId, type, summary, senderName, senderAvatar, timestamp, hitlState, unread }]`
-- WebSocket `wss://hub.firefly-mesh.io/ws?tenantId=:id` + JWT
+- WebSocket `wss://hub.firefly-mesh.com/ws?tenantId=:id` + JWT
 
 ---
 

@@ -4,9 +4,9 @@ compatibility_date = "2025-05-09"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-APP_URL = "https://hub-dev.firefly-mesh.io"
-PWA_URL = "https://firefly-mesh.io"
-RESEND_FROM_EMAIL = "no-reply@cyberautonomy.io"
+APP_URL = "https://hub.firefly-mesh.com"
+PWA_URL = "https://firefly-mesh.com"
+RESEND_FROM_EMAIL = "no-reply@firefly-mesh.com"
 
 [[d1_databases]]
 binding = "DB"

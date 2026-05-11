@@ -47,10 +47,10 @@ vibe coder 团队没有专职 admin。"创建团队"这件事就是发起人自�
 ### 3.1 Carol 创建团队（管理员视角，5 分钟）
 
 ```
-1. 访问 firefly-mesh.io → 点 "Get Started"
+1. 访问 firefly-mesh.com → 点 "Get Started"
 2. 用邮箱+密码 / Google / GitHub 注册（Better Auth）
 3. 创建团队 "Acme"
-4. 拿到 invite link: firefly-mesh.io/join/acme-x9k2j
+4. 拿到 invite link: firefly-mesh.com/join/acme-x9k2j
 5. 复制，丢到群里
 ```
 
@@ -62,7 +62,7 @@ vibe coder 团队没有专职 admin。"创建团队"这件事就是发起人自�
 3. Dashboard 显示："Connect your OpenClaw"
    $ openclaw skill install firefly-mesh
 4. Alice 终端跑命令
-   skill 弹浏览器到 firefly-mesh.io/connect?code=AB-9X42-K7
+   skill 弹浏览器到 firefly-mesh.com/connect?code=AB-9X42-K7
 5. 浏览器（已登录）确认绑定 → 点 [Bind]
 6. skill 自动:
    - WebSocket 连 hub

@@ -486,7 +486,7 @@ D1（SQLite）schema，9 张核心表 + 1 张临时表。详细字段在 `api.md
 ### 8.1 SaaS（默认）
 
 ```
-firefly-mesh.io
+firefly-mesh.com
 ├── Cloudflare Pages              营销页 + PWA(静态)
 ├── Cloudflare Workers            API 路由(/api/*)
 │   ├── auth handler
