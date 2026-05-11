@@ -83,14 +83,39 @@ export function DevicesPage() {
       </div>
 
       {agents.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-lg border border-border px-6 py-12 text-center">
-          <Smartphone className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
-          <div>
-            <p className="text-sm font-medium">No devices connected</p>
-            <p className="text-xs text-muted-foreground">
-              Run <span className="font-mono text-foreground">openclaw skill install firefly-mesh</span> to pair an agent
-            </p>
+        <div className="flex flex-col gap-5 rounded-lg border border-border p-6">
+          <div className="flex items-start gap-3">
+            <Smartphone className="h-8 w-8 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <div>
+              <p className="text-sm font-medium">No agents connected</p>
+              <p className="text-xs text-muted-foreground">
+                Install the Firefly skill on any AI agent runtime to start sending and receiving messages.
+              </p>
+            </div>
           </div>
+
+          <div className="space-y-3 text-xs">
+            <RuntimeCard
+              label="OpenClaw / Claude Code"
+              hint="Skill-based runtimes (agentskills.io v1). Recommended for most users."
+              command="openclaw skill install firefly-mesh"
+            />
+            <RuntimeCard
+              label="Claude Desktop / Cursor"
+              hint="MCP-compatible clients. Add this to your settings.json:"
+              command={`"firefly-mesh": { "command": "npx", "args": ["-y", "@firefly-mesh/mcp"] }`}
+            />
+            <RuntimeCard
+              label="Anywhere else (HTTP)"
+              hint="Any runtime that can call HTTP APIs. Pair via:"
+              command="curl -X POST https://hub.firefly-mesh.com/api/agents/pair-init"
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            All three modes use the same{" "}
+            <code className="font-mono">/connect?code=…</code> pairing flow — no token pasting.
+          </p>
         </div>
       ) : (
         <div className="divide-y divide-border rounded-lg border border-border">
@@ -120,6 +145,45 @@ export function DevicesPage() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function RuntimeCard({
+  label,
+  hint,
+  command,
+}: {
+  label: string
+  hint: string
+  command: string
+}) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(command)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // older browsers / non-https — ignore silently
+    }
+  }
+  return (
+    <div className="rounded-md border border-border p-3">
+      <p className="text-xs font-medium">{label}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+      <div className="mt-2 flex items-center gap-2">
+        <code className="block flex-1 overflow-x-auto rounded bg-muted px-2 py-1 font-mono text-xs">
+          {command}
+        </code>
+        <button
+          type="button"
+          onClick={copy}
+          className="shrink-0 rounded border border-border px-2 py-1 text-xs hover:bg-accent"
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
     </div>
   )
 }
