@@ -57,3 +57,7 @@ deploy/seed/*/tokens-out.csv
 .claude/
 secrets-bulk.json
 .secrets-bulk.json
+
+# Subagent scratch files
+temp_*.html
+temp_*.txt
