@@ -11,6 +11,7 @@ import { a2aRouter } from "./routes/a2a.ts"
 import { meRouter } from "./routes/me.ts"
 import { TenantHub } from "./durable-objects/TenantHub.ts"
 import { runScheduled, pickTask } from "./cron/cleanup.ts"
+import { rateLimitByIp } from "./middleware/rateLimit.ts"
 
 export { TenantHub }
 
@@ -29,7 +30,8 @@ app.get("/", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
 // Better Auth — handles /api/auth/sign-up/email, /sign-in/email, /sign-out, /get-session, /callback/*, etc.
 // Hono uses '*' as a splat that matches the remaining path (including slashes).
-app.on(["GET", "POST"], "/api/auth/*", (c) => {
+// Rate-limited by IP (RL_AUTH = 5 req / 10s) — credential-stuffing defence.
+app.on(["GET", "POST"], "/api/auth/*", rateLimitByIp("RL_AUTH"), (c) => {
   const auth = createAuth(c.env, new URL(c.req.url).origin)
   return auth.handler(c.req.raw)
 })

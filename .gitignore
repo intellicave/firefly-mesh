@@ -25,6 +25,11 @@ coverage/
 # Wrangler local dev state (miniflare D1, DO, cache snapshots)
 .wrangler/
 
+# Playwright / chrome-devtools MCP scratch artifacts
+.playwright-mcp/
+*.png
+!packages/web/public/scene/assets/tiles/*.png
+
 # Logs
 *.log
 npm-debug.log*

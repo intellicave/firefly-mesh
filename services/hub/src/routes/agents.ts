@@ -8,13 +8,17 @@ import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireSession, requireAgentJwt, sessionMiddleware } from "../middleware/auth.ts"
+import { rateLimitByIp } from "../middleware/rateLimit.ts"
 import { signAgentJwt } from "../lib/jwt.ts"
 
 const agents = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
-// POST /api/agents/pair-init — skill creates a pairing code (public)
+// POST /api/agents/pair-init — skill creates a pairing code (public).
+// Rate-limited by IP (RL_PAIR = 10 req / 60s) to defeat pairing-code
+// enumeration probes.
 agents.post(
   "/pair-init",
+  rateLimitByIp("RL_PAIR"),
   zValidator("json", z.object({ deviceName: z.string().min(1).max(100) })),
   async (c) => {
     const { deviceName } = c.req.valid("json")
@@ -43,8 +47,10 @@ agents.post(
   },
 )
 
-// GET /api/agents/pair-status?code=X — skill polls pairing status
-agents.get("/pair-status", sessionMiddleware, async (c) => {
+// GET /api/agents/pair-status?code=X — skill polls pairing status.
+// Same rate-limit bucket as pair-init: an attacker who can't burn the
+// init quota also can't burn poll-status to enumerate active codes.
+agents.get("/pair-status", rateLimitByIp("RL_PAIR"), sessionMiddleware, async (c) => {
   const code = c.req.query("code")
   if (!code) {
     return c.json({ error: { code: "MISSING_CODE", message: "code query param required" } }, 400)

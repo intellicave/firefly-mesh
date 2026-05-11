@@ -4,6 +4,11 @@ import { drizzle } from "drizzle-orm/d1"
 import type { D1Database, DurableObjectNamespace } from "@cloudflare/workers-types"
 import * as schema from "./db/schema.ts"
 
+/** CF Workers Rate Limiting binding shape (stable API). */
+export interface RateLimit {
+  limit(opts: { key: string }): Promise<{ success: boolean }>
+}
+
 export type Bindings = {
   DB: D1Database
   TENANT_HUB: DurableObjectNamespace
@@ -17,6 +22,11 @@ export type Bindings = {
   APP_URL: string
   PWA_URL: string
   JWT_SECRET: string
+  // Rate limiting (see wrangler.toml [[ratelimits]] for limits per binding).
+  RL_AUTH: RateLimit
+  RL_PAIR: RateLimit
+  RL_MESSAGE: RateLimit
+  RL_A2A: RateLimit
 }
 
 export function createAuth(env: Bindings, requestOrigin?: string) {

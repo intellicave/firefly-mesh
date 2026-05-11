@@ -39,6 +39,47 @@ crons = [
   "0 3 * * *",  # daily 03:00 UTC: truncate audit_log to last 90 days
 ]
 
+# Rate limiting bindings (P0-6 — Schneier critical).
+# CF Workers stable rate-limit API — namespace_id is per-account; periods
+# must be 10 or 60 seconds.
+#
+# RL_AUTH    : credential stuffing on /api/auth/sign-up + /api/auth/sign-in/*
+# RL_PAIR    : pairing code enumeration on /api/agents/pair-init + pair-status
+# RL_MESSAGE : message spam / write DoS on /api/messages + /api/a2a/message
+
+[[ratelimits]]
+name = "RL_AUTH"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 5
+  period = 10
+
+[[ratelimits]]
+name = "RL_PAIR"
+namespace_id = "1002"
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
+[[ratelimits]]
+name = "RL_MESSAGE"
+namespace_id = "1003"
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
+# RL_A2A is intentionally a separate binding from RL_MESSAGE: the two endpoints
+# have different keying semantics (RL_MESSAGE keys per authenticated agent,
+# RL_A2A keys per source IP because A2A is unauthenticated until step 3 sig
+# verify). A single partner server fanning out for multiple agents needs more
+# headroom than a single agent's own quota.
+[[ratelimits]]
+name = "RL_A2A"
+namespace_id = "1004"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
 # Secrets — set via: wrangler secret put <NAME>
 # BETTER_AUTH_SECRET   (random 32-byte string, e.g. openssl rand -hex 32)
 # GOOGLE_CLIENT_ID     (Google OAuth app)

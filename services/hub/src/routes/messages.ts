@@ -8,6 +8,7 @@ import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireAgentJwt } from "../middleware/auth.ts"
+import { rateLimitByAgent } from "../middleware/rateLimit.ts"
 import { computeHitlFlags, type A2AMessageType } from "../hitl/engine.ts"
 
 const messages = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
@@ -15,8 +16,11 @@ const messages = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 messages.use("*", requireAgentJwt)
 
 // POST /api/messages — send a message (Agent JWT). Hub never sees plaintext body/structured.
+// Rate-limited per-sender-agent (RL_MESSAGE = 60 req / 60s) to defend against
+// write-DoS and spam from a single compromised agent token.
 messages.post(
   "/",
+  rateLimitByAgent("RL_MESSAGE"),
   zValidator(
     "json",
     z.object({
