@@ -1,8 +1,6 @@
 ---
-import '../../../styles/globals.css';
-import { InboxPage } from '../../../components/app/InboxPage';
-
-const { tenant } = Astro.params;
+import '../../styles/globals.css';
+import { InboxPage } from '../../components/app/InboxPage';
 ---
 
 <!doctype html>
@@ -13,6 +11,6 @@ const { tenant } = Astro.params;
     <title>Inbox — Firefly Mesh</title>
   </head>
   <body class="h-full bg-background text-foreground font-sans antialiased">
-    <InboxPage client:load tenant={tenant!} />
+    <InboxPage client:load />
   </body>
 </html>

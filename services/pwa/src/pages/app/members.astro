@@ -1,8 +1,6 @@
 ---
-import '../../../styles/globals.css';
-import { MembersPage } from '../../../components/app/MembersPage';
-
-const { tenant } = Astro.params;
+import '../../styles/globals.css';
+import { MembersPage } from '../../components/app/MembersPage';
 ---
 
 <!doctype html>
@@ -13,6 +11,6 @@ const { tenant } = Astro.params;
     <title>Members — Firefly Mesh</title>
   </head>
   <body class="h-full bg-background text-foreground font-sans antialiased">
-    <MembersPage client:load tenant={tenant!} />
+    <MembersPage client:load />
   </body>
 </html>

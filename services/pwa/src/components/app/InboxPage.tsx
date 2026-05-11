@@ -25,9 +25,13 @@ type WireDeliver = {
   }
 }
 
-type Props = { tenant: string }
+function readTenantFromUrl(): string | null {
+  if (typeof window === "undefined") return null
+  return new URLSearchParams(window.location.search).get("tenant")
+}
 
-export function InboxPage({ tenant }: Props) {
+export function InboxPage() {
+  const tenant = readTenantFromUrl()
   const [messages, setMessages] = useState<Message[]>([])
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -176,7 +180,7 @@ export function InboxPage({ tenant }: Props) {
           {messages.map((m) => (
             <a
               key={m.id}
-              href={`/app/${tenant}/threads/${m.threadId ?? ""}`}
+              href={`/app/thread?tenant=${encodeURIComponent(tenant ?? "")}&thread=${encodeURIComponent(m.threadId ?? "")}`}
               className="block px-4 py-3 hover:bg-accent"
             >
               <div className="flex items-baseline justify-between gap-2">

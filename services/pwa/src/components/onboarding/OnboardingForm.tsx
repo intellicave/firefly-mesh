@@ -48,7 +48,7 @@ export function OnboardingForm() {
       return
     }
 
-    window.location.href = `/app/${body.data.slug}/inbox`
+    window.location.href = `/app/inbox?tenant=${encodeURIComponent(body.data.slug)}`
   }
 
   async function handleJoin(e: React.FormEvent) {
@@ -77,7 +77,7 @@ export function OnboardingForm() {
       return
     }
 
-    window.location.href = `/app/${body.data.tenantSlug}/inbox`
+    window.location.href = `/app/inbox?tenant=${encodeURIComponent(body.data.tenantSlug)}`
   }
 
   return (
