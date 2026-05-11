@@ -14,13 +14,13 @@ export function SignupForm() {
   async function handleGoogleSignUp() {
     setLoading(true)
     setError(null)
-    await signIn.social({ provider: "google", callbackURL: "/onboarding" })
+    await signIn.social({ provider: "google", callbackURL: `${window.location.origin}/onboarding` })
   }
 
   async function handleGithubSignUp() {
     setLoading(true)
     setError(null)
-    await signIn.social({ provider: "github", callbackURL: "/onboarding" })
+    await signIn.social({ provider: "github", callbackURL: `${window.location.origin}/onboarding` })
   }
 
   async function handleEmailSignUp(e: React.FormEvent) {
@@ -31,7 +31,7 @@ export function SignupForm() {
       email,
       password,
       name,
-      callbackURL: "/onboarding",
+      callbackURL: `${window.location.origin}/onboarding`,
     })
     if (err) {
       setError(err.message ?? "Sign up failed")

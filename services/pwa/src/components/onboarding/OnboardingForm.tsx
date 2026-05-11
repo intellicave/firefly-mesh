@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Users, UserPlus } from "lucide-react"
 import { Button } from "../ui/button.tsx"
 import { Input } from "../ui/input.tsx"
@@ -16,6 +16,32 @@ export function OnboardingForm() {
   const [inviteToken, setInviteToken] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(true)
+
+  // If the user already belongs to a tenant (e.g. logging in again via OAuth),
+  // skip onboarding and go straight to their inbox. Only show the create/join
+  // UI for genuinely new accounts.
+  useEffect(() => {
+    let cancelled = false
+    async function check() {
+      const res = await fetch(`${HUB_URL}/api/tenants`, { credentials: "include" })
+      if (cancelled) return
+      if (res.ok) {
+        const body = (await res.json()) as { data: Array<{ slug: string }> }
+        if (body.data.length > 0) {
+          window.location.replace(
+            `/app/inbox?tenant=${encodeURIComponent(body.data[0]!.slug)}`,
+          )
+          return
+        }
+      }
+      setChecking(false)
+    }
+    check()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   function handleTeamNameChange(value: string) {
     setTeamName(value)
@@ -78,6 +104,14 @@ export function OnboardingForm() {
     }
 
     window.location.href = `/app/inbox?tenant=${encodeURIComponent(body.data.tenantSlug)}`
+  }
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    )
   }
 
   return (

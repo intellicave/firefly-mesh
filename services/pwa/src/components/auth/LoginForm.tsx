@@ -13,13 +13,13 @@ export function LoginForm() {
   async function handleGoogleSignIn() {
     setLoading(true)
     setError(null)
-    await signIn.social({ provider: "google", callbackURL: "/app" })
+    await signIn.social({ provider: "google", callbackURL: `${window.location.origin}/onboarding` })
   }
 
   async function handleGithubSignIn() {
     setLoading(true)
     setError(null)
-    await signIn.social({ provider: "github", callbackURL: "/app" })
+    await signIn.social({ provider: "github", callbackURL: `${window.location.origin}/onboarding` })
   }
 
   async function handleEmailSignIn(e: React.FormEvent) {
@@ -29,7 +29,7 @@ export function LoginForm() {
     const { error: err } = await signIn.email({
       email,
       password,
-      callbackURL: "/app",
+      callbackURL: `${window.location.origin}/onboarding`,
     })
     if (err) {
       setError("Invalid email or password")
