@@ -106,13 +106,37 @@ export class TenantHub {
     })
   }
 
-  webSocketMessage(_ws: WebSocket, message: string | ArrayBuffer): void {
-    const text = typeof message === "string" ? message : new TextDecoder().decode(message)
-    const data = JSON.parse(text) as { op: string }
-
-    if (data.op === "ping") {
-      _ws.send(JSON.stringify({ op: "pong" }))
+  webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void {
+    // Critical: a single malformed frame from ANY connected client must not
+    // throw out of this handler — under CF hibernated WebSocket DO model an
+    // unhandled exception kills the entire isolate, which simultaneously
+    // closes every other socket attached to this tenant. So we hard-isolate
+    // each frame: parse defensively, drop the offending socket with a clean
+    // close code (1008 = policy violation), keep the rest alive.
+    let data: unknown
+    try {
+      // fatal:true so non-UTF8 binary frames throw at decode time rather than
+      // producing replacement-character soup that the JSON parser then chokes on
+      const text =
+        typeof message === "string"
+          ? message
+          : new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(message)
+      data = JSON.parse(text)
+    } catch {
+      try { ws.close(1008, "Invalid frame") } catch { /* socket already closing */ }
+      return
     }
+
+    if (typeof data !== "object" || data === null || typeof (data as { op?: unknown }).op !== "string") {
+      try { ws.close(1008, "Invalid frame shape") } catch { /* socket already closing */ }
+      return
+    }
+
+    const op = (data as { op: string }).op
+    if (op === "ping") {
+      try { ws.send(JSON.stringify({ op: "pong" })) } catch { /* peer gone */ }
+    }
+    // unknown ops are silently ignored (forward-compat with future client versions)
   }
 
   webSocketClose(_ws: WebSocket, _code: number, _reason: string): void {
@@ -120,6 +144,9 @@ export class TenantHub {
   }
 
   webSocketError(ws: WebSocket, _error: unknown): void {
-    ws.close(1011, "Internal error")
+    // Same isolate-crash guard as webSocketMessage: if the socket is already
+    // closing, ws.close() throws and would propagate — killing every other
+    // socket on this DO. Swallow it.
+    try { ws.close(1011, "Internal error") } catch { /* already closing */ }
   }
 }
