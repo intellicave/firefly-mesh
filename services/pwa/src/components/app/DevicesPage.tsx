@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { Smartphone, Loader, Trash2 } from "lucide-react"
 import { Button } from "../ui/button.tsx"
+import { useT } from "../../i18n/store.ts"
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.tsx"
 
 const HUB_URL = import.meta.env.PUBLIC_HUB_URL as string
 
@@ -13,6 +15,7 @@ type Agent = {
 }
 
 export function DevicesPage() {
+  const t = useT()
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -25,7 +28,7 @@ export function DevicesPage() {
       const res = await fetch(`${HUB_URL}/api/me/agents`, { credentials: "include" })
       if (cancelled) return
       if (!res.ok) {
-        setError(res.status === 401 ? "Please sign in" : "Failed to load devices")
+        setError(res.status === 401 ? t("inbox_please_sign_in") : t("devices_error_load"))
         setLoading(false)
         return
       }
@@ -41,7 +44,7 @@ export function DevicesPage() {
   }, [])
 
   async function handleRevoke(agentId: string) {
-    if (!confirm("Revoke this device? It will no longer be able to send or receive messages.")) {
+    if (!confirm(t("devices_revoke_confirm"))) {
       return
     }
     setRevoking(agentId)
@@ -52,7 +55,7 @@ export function DevicesPage() {
     if (res.ok) {
       setAgents((prev) => prev.filter((a) => a.id !== agentId))
     } else {
-      setError("Failed to revoke device")
+      setError(t("devices_error_revoke_failed"))
     }
     setRevoking(null)
   }
@@ -76,10 +79,14 @@ export function DevicesPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-12 space-y-6">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">Your devices</h1>
-        <span className="text-xs text-muted-foreground">
-          {agents.length} {agents.length === 1 ? "agent" : "agents"}
-        </span>
+        <h1 className="text-xl font-semibold">{t("devices_title")}</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {agents.length}{" "}
+            {agents.length === 1 ? t("devices_count_singular") : t("devices_count_plural")}
+          </span>
+          <LanguageSwitcher />
+        </div>
       </div>
 
       {agents.length === 0 ? (
@@ -87,35 +94,36 @@ export function DevicesPage() {
           <div className="flex items-start gap-3">
             <Smartphone className="h-8 w-8 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             <div>
-              <p className="text-sm font-medium">No agents connected</p>
-              <p className="text-xs text-muted-foreground">
-                Install the Firefly skill on any AI agent runtime to start sending and receiving messages.
-              </p>
+              <p className="text-sm font-medium">{t("devices_empty_title")}</p>
+              <p className="text-xs text-muted-foreground">{t("devices_empty_intro")}</p>
             </div>
           </div>
 
           <div className="space-y-3 text-xs">
             <RuntimeCard
-              label="OpenClaw / Claude Code"
-              hint="Skill-based runtimes (agentskills.io v1). Recommended for most users."
+              label={t("devices_runtime_claude_code_label")}
+              hint={t("devices_runtime_claude_code_hint")}
               command="openclaw skill install firefly-mesh"
+              copyLabel={t("devices_copy")}
+              copiedLabel={t("devices_copied")}
             />
             <RuntimeCard
-              label="Claude Desktop / Cursor"
-              hint="MCP-compatible clients. Add this to your settings.json:"
+              label={t("devices_runtime_mcp_label")}
+              hint={t("devices_runtime_mcp_hint")}
               command={`"firefly-mesh": { "command": "npx", "args": ["-y", "@firefly-mesh/mcp"] }`}
+              copyLabel={t("devices_copy")}
+              copiedLabel={t("devices_copied")}
             />
             <RuntimeCard
-              label="Anywhere else (HTTP)"
-              hint="Any runtime that can call HTTP APIs. Pair via:"
+              label={t("devices_runtime_http_label")}
+              hint={t("devices_runtime_http_hint")}
               command="curl -X POST https://hub.firefly-mesh.com/api/agents/pair-init"
+              copyLabel={t("devices_copy")}
+              copiedLabel={t("devices_copied")}
             />
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            All three modes use the same{" "}
-            <code className="font-mono">/connect?code=…</code> pairing flow — no token pasting.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("devices_runtime_footer")}</p>
         </div>
       ) : (
         <div className="divide-y divide-border rounded-lg border border-border">
@@ -128,8 +136,8 @@ export function DevicesPage() {
                   <p className="text-xs text-muted-foreground">
                     {a.type} ·{" "}
                     {a.lastSeenAt
-                      ? `last seen ${new Date(a.lastSeenAt).toLocaleString()}`
-                      : "never connected"}
+                      ? `${t("devices_last_seen")} ${new Date(a.lastSeenAt).toLocaleString()}`
+                      : t("devices_never_connected")}
                   </p>
                 </div>
               </div>
@@ -153,10 +161,14 @@ function RuntimeCard({
   label,
   hint,
   command,
+  copyLabel,
+  copiedLabel,
 }: {
   label: string
   hint: string
   command: string
+  copyLabel: string
+  copiedLabel: string
 }) {
   const [copied, setCopied] = useState(false)
   async function copy() {
@@ -181,7 +193,7 @@ function RuntimeCard({
           onClick={copy}
           className="shrink-0 rounded border border-border px-2 py-1 text-xs hover:bg-accent"
         >
-          {copied ? "Copied" : "Copy"}
+          {copied ? copiedLabel : copyLabel}
         </button>
       </div>
     </div>

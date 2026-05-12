@@ -83,6 +83,84 @@ export interface Messages {
   login_submitting: string
   login_error_credentials: string
 
+  // -- Onboarding --
+  onboarding_loading: string
+  onboarding_title: string
+  onboarding_subtitle: string
+  onboarding_create_team: string
+  onboarding_join_team: string
+  onboarding_team_name_label: string
+  onboarding_team_name_placeholder: string
+  onboarding_url_preview_prefix: string
+  onboarding_create_submit: string
+  onboarding_creating: string
+  onboarding_invite_label: string
+  onboarding_invite_placeholder: string
+  onboarding_join_submit: string
+  onboarding_joining: string
+  onboarding_error_slug_taken: string
+  onboarding_error_invite_expired: string
+  onboarding_error_invite_used: string
+  onboarding_error_invite_invalid: string
+  onboarding_error_create_failed: string
+
+  // -- Connect / device pairing --
+  connect_loading: string
+  connect_expired_title: string
+  connect_expired_body: string
+  connect_error_title: string
+  connect_error_load_status: string
+  connect_error_load_teams: string
+  connect_error_network: string
+  connect_error_bind_failed: string
+  connect_success_title: string
+  connect_success_body: string
+  connect_bind_title: string
+  connect_code_expires_in: string
+  connect_team_label: string
+  connect_bind_button: string
+  connect_binding: string
+  connect_missing_code: string
+
+  // -- Inbox --
+  inbox_loading: string
+  inbox_error_load_teams: string
+  inbox_error_load_messages: string
+  inbox_error_team_not_found: string
+  inbox_please_sign_in: string
+  inbox_title: string
+  inbox_status_live: string
+  inbox_status_connecting: string
+  inbox_status_offline: string
+  inbox_count_singular: string
+  inbox_count_plural: string
+  inbox_empty_title: string
+  inbox_empty_body: string
+  inbox_empty_manage_devices: string
+  inbox_no_summary: string
+
+  // -- Devices --
+  devices_loading: string
+  devices_error_load: string
+  devices_error_revoke_failed: string
+  devices_revoke_confirm: string
+  devices_title: string
+  devices_count_singular: string
+  devices_count_plural: string
+  devices_empty_title: string
+  devices_empty_intro: string
+  devices_runtime_claude_code_label: string
+  devices_runtime_claude_code_hint: string
+  devices_runtime_mcp_label: string
+  devices_runtime_mcp_hint: string
+  devices_runtime_http_label: string
+  devices_runtime_http_hint: string
+  devices_runtime_footer: string
+  devices_copy: string
+  devices_copied: string
+  devices_last_seen: string
+  devices_never_connected: string
+
   // -- Language switcher --
   lang_switch_label: string
 }

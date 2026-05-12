@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Inbox, Loader } from "lucide-react"
+import { useT } from "../../i18n/store.ts"
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.tsx"
 
 const HUB_URL = import.meta.env.PUBLIC_HUB_URL as string
 
@@ -31,6 +33,7 @@ function readTenantFromUrl(): string | null {
 }
 
 export function InboxPage() {
+  const t = useT()
   const tenant = readTenantFromUrl()
   const [messages, setMessages] = useState<Message[]>([])
   const [tenantId, setTenantId] = useState<string | null>(null)
@@ -46,14 +49,14 @@ export function InboxPage() {
       const tenantsRes = await fetch(`${HUB_URL}/api/tenants`, { credentials: "include" })
       if (cancelled) return
       if (!tenantsRes.ok) {
-        setError(tenantsRes.status === 401 ? "Please sign in" : "Failed to load teams")
+        setError(tenantsRes.status === 401 ? t("inbox_please_sign_in") : t("inbox_error_load_teams"))
         setLoading(false)
         return
       }
       const tenantsBody = (await tenantsRes.json()) as { data: Array<{ id: string; slug: string }> }
       const found = tenantsBody.data.find((t) => t.slug === tenant)
       if (!found) {
-        setError("Team not found")
+        setError(t("inbox_error_team_not_found"))
         setLoading(false)
         return
       }
@@ -64,7 +67,7 @@ export function InboxPage() {
       })
       if (cancelled) return
       if (!msgRes.ok) {
-        setError("Failed to load messages")
+        setError(t("inbox_error_load_messages"))
         setLoading(false)
         return
       }
@@ -142,20 +145,22 @@ export function InboxPage() {
 
   const wsBadge =
     wsState === "open"
-      ? <span className="text-xs text-green-600">Live</span>
+      ? <span className="text-xs text-green-600">{t("inbox_status_live")}</span>
       : wsState === "connecting"
-        ? <span className="text-xs text-muted-foreground">Connecting...</span>
-        : <span className="text-xs text-muted-foreground">Offline</span>
+        ? <span className="text-xs text-muted-foreground">{t("inbox_status_connecting")}</span>
+        : <span className="text-xs text-muted-foreground">{t("inbox_status_offline")}</span>
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12 space-y-6">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">Inbox</h1>
+        <h1 className="text-xl font-semibold">{t("inbox_title")}</h1>
         <div className="flex items-center gap-3">
           {wsBadge}
           <span className="text-xs text-muted-foreground">
-            {messages.length} {messages.length === 1 ? "message" : "messages"}
+            {messages.length}{" "}
+            {messages.length === 1 ? t("inbox_count_singular") : t("inbox_count_plural")}
           </span>
+          <LanguageSwitcher />
         </div>
       </div>
 
@@ -163,16 +168,14 @@ export function InboxPage() {
         <div className="flex flex-col items-center gap-4 rounded-lg border border-border px-6 py-12 text-center">
           <Inbox className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
           <div>
-            <p className="text-sm font-medium">Your inbox is empty</p>
-            <p className="text-xs text-muted-foreground">
-              Connect an agent to start receiving messages
-            </p>
+            <p className="text-sm font-medium">{t("inbox_empty_title")}</p>
+            <p className="text-xs text-muted-foreground">{t("inbox_empty_body")}</p>
           </div>
           <a
             href="/me/devices"
             className="text-sm text-primary hover:underline"
           >
-            Manage devices
+            {t("inbox_empty_manage_devices")}
           </a>
         </div>
       ) : (
@@ -195,7 +198,7 @@ export function InboxPage() {
                 </div>
               </div>
               <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                {m.summary ?? "(no summary)"}
+                {m.summary ?? t("inbox_no_summary")}
               </p>
             </a>
           ))}

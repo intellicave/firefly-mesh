@@ -4,12 +4,15 @@ import { Button } from "../ui/button.tsx"
 import { Input } from "../ui/input.tsx"
 import { Label } from "../ui/label.tsx"
 import { cn } from "../../lib/cn.ts"
+import { useT } from "../../i18n/store.ts"
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.tsx"
 
 const HUB_URL = import.meta.env.PUBLIC_HUB_URL as string
 
 type Mode = "create" | "join" | null
 
 export function OnboardingForm() {
+  const t = useT()
   const [mode, setMode] = useState<Mode>(null)
   const [teamName, setTeamName] = useState("")
   const [teamSlug, setTeamSlug] = useState("")
@@ -69,7 +72,11 @@ export function OnboardingForm() {
 
     if (!res.ok || !body.data) {
       const code = body.error?.code
-      setError(code === "SLUG_TAKEN" ? "Name taken, try another" : (body.error?.message ?? "Failed to create team"))
+      setError(
+        code === "SLUG_TAKEN"
+          ? t("onboarding_error_slug_taken")
+          : (body.error?.message ?? t("onboarding_error_create_failed")),
+      )
       setLoading(false)
       return
     }
@@ -94,10 +101,10 @@ export function OnboardingForm() {
       const code = body.error?.code
       const msg =
         code === "INVITATION_EXPIRED"
-          ? "This invitation has expired"
+          ? t("onboarding_error_invite_expired")
           : code === "INVITATION_USED"
-            ? "This invitation has already been used"
-            : (body.error?.message ?? "Invalid invitation")
+            ? t("onboarding_error_invite_used")
+            : (body.error?.message ?? t("onboarding_error_invite_invalid"))
       setError(msg)
       setLoading(false)
       return
@@ -109,17 +116,20 @@ export function OnboardingForm() {
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("onboarding_loading")}</p>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6">
+    <div className="relative flex min-h-screen flex-col items-center justify-center px-6">
+      <div className="absolute right-4 top-4">
+        <LanguageSwitcher />
+      </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Get started</h1>
-          <p className="text-sm text-muted-foreground">Create a new team or join an existing one</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("onboarding_title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("onboarding_subtitle")}</p>
         </div>
 
         {mode === null && (
@@ -131,7 +141,7 @@ export function OnboardingForm() {
               )}
             >
               <Users className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-              <span className="text-sm font-medium">Create a team</span>
+              <span className="text-sm font-medium">{t("onboarding_create_team")}</span>
             </button>
 
             <button
@@ -141,7 +151,7 @@ export function OnboardingForm() {
               )}
             >
               <UserPlus className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-              <span className="text-sm font-medium">Join a team</span>
+              <span className="text-sm font-medium">{t("onboarding_join_team")}</span>
             </button>
           </div>
         )}
@@ -149,11 +159,11 @@ export function OnboardingForm() {
         {mode === "create" && (
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="teamName">Team name</Label>
+              <Label htmlFor="teamName">{t("onboarding_team_name_label")}</Label>
               <Input
                 id="teamName"
                 type="text"
-                placeholder="Acme Inc"
+                placeholder={t("onboarding_team_name_placeholder")}
                 value={teamName}
                 onChange={(e) => handleTeamNameChange(e.target.value)}
                 required
@@ -163,7 +173,8 @@ export function OnboardingForm() {
               />
               {teamSlug && (
                 <p className="text-xs text-muted-foreground">
-                  URL: firefly-mesh.com/app/{teamSlug}
+                  {t("onboarding_url_preview_prefix")}
+                  {teamSlug}
                 </p>
               )}
             </div>
@@ -171,7 +182,7 @@ export function OnboardingForm() {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button type="submit" className="w-full" disabled={loading || !teamSlug}>
-              {loading ? "Creating..." : "Continue"}
+              {loading ? t("onboarding_creating") : t("onboarding_create_submit")}
             </Button>
 
             <Button
@@ -181,7 +192,7 @@ export function OnboardingForm() {
               onClick={() => { setMode(null); setError(null) }}
               disabled={loading}
             >
-              Back
+              {t("cta_back")}
             </Button>
           </form>
         )}
@@ -189,11 +200,11 @@ export function OnboardingForm() {
         {mode === "join" && (
           <form onSubmit={handleJoin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="inviteLink">Invite link or token</Label>
+              <Label htmlFor="inviteLink">{t("onboarding_invite_label")}</Label>
               <Input
                 id="inviteLink"
                 type="text"
-                placeholder="Paste invite link here"
+                placeholder={t("onboarding_invite_placeholder")}
                 value={inviteToken}
                 onChange={(e) => setInviteToken(e.target.value)}
                 required
@@ -204,7 +215,7 @@ export function OnboardingForm() {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button type="submit" className="w-full" disabled={loading || !inviteToken.trim()}>
-              {loading ? "Joining..." : "Join team"}
+              {loading ? t("onboarding_joining") : t("onboarding_join_submit")}
             </Button>
 
             <Button
@@ -214,7 +225,7 @@ export function OnboardingForm() {
               onClick={() => { setMode(null); setError(null) }}
               disabled={loading}
             >
-              Back
+              {t("cta_back")}
             </Button>
           </form>
         )}

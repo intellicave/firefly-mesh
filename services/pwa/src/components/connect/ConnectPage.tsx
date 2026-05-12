@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { CircleCheck, CircleAlert, Loader } from "lucide-react"
 import { Button } from "../ui/button.tsx"
+import { useT } from "../../i18n/store.ts"
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.tsx"
 
 const HUB_URL = import.meta.env.PUBLIC_HUB_URL as string
 
@@ -25,11 +27,15 @@ type State =
 type Props = { code: string }
 
 export function ConnectPage({ code }: Props) {
-  const [state, setState] = useState<State>({ kind: "loading" })
+  const t = useT()
+  const [state, setState] = useState<State>(
+    code ? { kind: "loading" } : { kind: "error", message: t("connect_missing_code") },
+  )
   const [selectedTenantId, setSelectedTenantId] = useState<string>("")
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0)
 
   useEffect(() => {
+    if (!code) return  // empty code handled in initial state
     let cancelled = false
 
     async function load() {
@@ -48,7 +54,7 @@ export function ConnectPage({ code }: Props) {
           return
         }
         if (!statusRes.ok) {
-          setState({ kind: "error", message: "Failed to load pairing status" })
+          setState({ kind: "error", message: t("connect_error_load_status") })
           return
         }
         if (!tenantsRes.ok) {
@@ -56,7 +62,7 @@ export function ConnectPage({ code }: Props) {
             window.location.href = `/login?redirect=/connect?code=${encodeURIComponent(code)}`
             return
           }
-          setState({ kind: "error", message: "Failed to load teams" })
+          setState({ kind: "error", message: t("connect_error_load_teams") })
           return
         }
 
@@ -73,7 +79,7 @@ export function ConnectPage({ code }: Props) {
           setSelectedTenantId(tenantsBody.data[0]!.id)
         }
       } catch {
-        if (!cancelled) setState({ kind: "error", message: "Network error" })
+        if (!cancelled) setState({ kind: "error", message: t("connect_error_network") })
       }
     }
 
@@ -109,7 +115,7 @@ export function ConnectPage({ code }: Props) {
 
     if (!res.ok) {
       const body = (await res.json()) as { error?: { message: string } }
-      setState({ kind: "error", message: body.error?.message ?? "Failed to bind device" })
+      setState({ kind: "error", message: body.error?.message ?? t("connect_error_bind_failed") })
       return
     }
 
@@ -128,10 +134,8 @@ export function ConnectPage({ code }: Props) {
     return (
       <CenteredCard>
         <CircleAlert className="h-10 w-10 text-destructive" strokeWidth={1.5} />
-        <h1 className="text-lg font-semibold">Code expired</h1>
-        <p className="text-sm text-muted-foreground">
-          Run the install command again from your terminal to get a new code.
-        </p>
+        <h1 className="text-lg font-semibold">{t("connect_expired_title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("connect_expired_body")}</p>
       </CenteredCard>
     )
   }
@@ -140,7 +144,7 @@ export function ConnectPage({ code }: Props) {
     return (
       <CenteredCard>
         <CircleAlert className="h-10 w-10 text-destructive" strokeWidth={1.5} />
-        <h1 className="text-lg font-semibold">Something went wrong</h1>
+        <h1 className="text-lg font-semibold">{t("connect_error_title")}</h1>
         <p className="text-sm text-muted-foreground">{state.message}</p>
       </CenteredCard>
     )
@@ -150,8 +154,8 @@ export function ConnectPage({ code }: Props) {
     return (
       <CenteredCard>
         <CircleCheck className="h-10 w-10 text-green-600" strokeWidth={1.5} />
-        <h1 className="text-lg font-semibold">Device connected</h1>
-        <p className="text-sm text-muted-foreground">You can close this tab and return to your terminal.</p>
+        <h1 className="text-lg font-semibold">{t("connect_success_title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("connect_success_body")}</p>
       </CenteredCard>
     )
   }
@@ -162,7 +166,7 @@ export function ConnectPage({ code }: Props) {
 
   return (
     <CenteredCard>
-      <h1 className="text-xl font-semibold">Bind your agent</h1>
+      <h1 className="text-xl font-semibold">{t("connect_bind_title")}</h1>
       <p className="text-sm text-muted-foreground">
         {state.kind === "ready" && state.status.deviceName}
       </p>
@@ -172,13 +176,14 @@ export function ConnectPage({ code }: Props) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Expires in <span className="font-mono">{minutes}:{seconds}</span>
+        {t("connect_code_expires_in")}{" "}
+        <span className="font-mono">{minutes}:{seconds}</span>
       </p>
 
       {state.kind === "ready" && state.tenants.length > 1 && (
         <div className="mt-4 w-full text-left">
           <label htmlFor="tenant" className="mb-1.5 block text-sm font-medium">
-            Team
+            {t("connect_team_label")}
           </label>
           <select
             id="tenant"
@@ -186,9 +191,9 @@ export function ConnectPage({ code }: Props) {
             value={selectedTenantId}
             onChange={(e) => setSelectedTenantId(e.target.value)}
           >
-            {state.tenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.displayName}
+            {state.tenants.map((tenant) => (
+              <option key={tenant.id} value={tenant.id}>
+                {tenant.displayName}
               </option>
             ))}
           </select>
@@ -198,10 +203,10 @@ export function ConnectPage({ code }: Props) {
       <Button onClick={handleBind} disabled={isBinding || !selectedTenantId} className="mt-4 w-full">
         {isBinding ? (
           <>
-            <Loader className="h-4 w-4 animate-spin" strokeWidth={1.75} /> Binding...
+            <Loader className="h-4 w-4 animate-spin" strokeWidth={1.75} /> {t("connect_binding")}
           </>
         ) : (
-          "Bind device"
+          t("connect_bind_button")
         )}
       </Button>
     </CenteredCard>
@@ -210,7 +215,10 @@ export function ConnectPage({ code }: Props) {
 
 function CenteredCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6">
+    <div className="relative flex min-h-screen flex-col items-center justify-center px-6">
+      <div className="absolute right-4 top-4">
+        <LanguageSwitcher />
+      </div>
       <div className="flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-border p-8 text-center">
         {children}
       </div>

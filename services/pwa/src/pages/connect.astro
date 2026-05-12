@@ -11,14 +11,19 @@ const code = Astro.url.searchParams.get('code') ?? '';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Connect device — Firefly Mesh</title>
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('firefly-mesh.lang');
+          var lang = stored === 'zh' || stored === 'en'
+            ? stored
+            : (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+          document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
   </head>
   <body class="h-full bg-background text-foreground font-sans antialiased">
-    {code ? (
-      <ConnectPage client:load code={code} />
-    ) : (
-      <div class="flex min-h-screen items-center justify-center">
-        <p class="text-sm text-destructive">Missing pairing code in URL</p>
-      </div>
-    )}
+    <ConnectPage client:load code={code} />
   </body>
 </html>
