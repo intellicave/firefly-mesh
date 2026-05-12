@@ -155,6 +155,27 @@ export const zh: Messages = {
   devices_last_seen: "最近活跃",
   devices_never_connected: "从未连接",
 
+  // -- Members --
+  members_loading: "加载成员中…",
+  members_error_load_teams: "无法加载团队列表",
+  members_error_team_not_found: "找不到该团队",
+  members_error_load_members: "无法加载成员列表",
+  members_error_invite_failed: "发送邀请失败",
+  members_title: "团队成员",
+  members_invite_button: "邀请",
+  members_invite_card_title: "邀请队友",
+  members_invite_email_label: "邮箱地址",
+  members_invite_email_placeholder: "colleague@example.com",
+  members_invite_role_label: "角色",
+  members_role_member: "成员",
+  members_role_admin: "管理员",
+  members_role_owner: "所有者",
+  members_invite_submit: "发送邀请",
+  members_inviting: "发送中…",
+  members_invite_sent: "邀请发送成功",
+  members_invite_cancel: "取消",
+  members_empty: "暂无成员",
+
   // -- Language switcher --
   lang_switch_label: "语言",
 }

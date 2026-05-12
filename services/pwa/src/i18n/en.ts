@@ -158,6 +158,27 @@ export const en: Messages = {
   devices_last_seen: "last seen",
   devices_never_connected: "never connected",
 
+  // -- Members --
+  members_loading: "Loading members…",
+  members_error_load_teams: "Failed to load teams",
+  members_error_team_not_found: "Team not found",
+  members_error_load_members: "Failed to load members",
+  members_error_invite_failed: "Failed to send invitation",
+  members_title: "Team members",
+  members_invite_button: "Invite",
+  members_invite_card_title: "Invite a teammate",
+  members_invite_email_label: "Email address",
+  members_invite_email_placeholder: "colleague@example.com",
+  members_invite_role_label: "Role",
+  members_role_member: "Member",
+  members_role_admin: "Admin",
+  members_role_owner: "Owner",
+  members_invite_submit: "Send invite",
+  members_inviting: "Sending…",
+  members_invite_sent: "Invitation sent successfully",
+  members_invite_cancel: "Cancel",
+  members_empty: "No members yet",
+
   // -- Language switcher --
   lang_switch_label: "Language",
 }

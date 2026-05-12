@@ -161,6 +161,27 @@ export interface Messages {
   devices_last_seen: string
   devices_never_connected: string
 
+  // -- Members --
+  members_loading: string
+  members_error_load_teams: string
+  members_error_team_not_found: string
+  members_error_load_members: string
+  members_error_invite_failed: string
+  members_title: string
+  members_invite_button: string
+  members_invite_card_title: string
+  members_invite_email_label: string
+  members_invite_email_placeholder: string
+  members_invite_role_label: string
+  members_role_member: string
+  members_role_admin: string
+  members_role_owner: string
+  members_invite_submit: string
+  members_inviting: string
+  members_invite_sent: string
+  members_invite_cancel: string
+  members_empty: string
+
   // -- Language switcher --
   lang_switch_label: string
 }
