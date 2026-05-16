@@ -458,7 +458,19 @@ routes 调用 lib 函数，lib 函数操作 db。routes 不直接写复杂业务
 
 **新**：同时创建 `employees` 记录（同事务）+ 用 invitations 的 `email` 字段填 employee.email + 用 token 创建者的 role 反查（通常 admin 邀请普通员工，邀请时可附带 role 字段）。
 
-**本 sprint 不做**：因为完整邀请流改造涉及更多 UI 流（dashboard 还没搬过来），先把基础 CRUD 上线。注释 employees.ts 留 TODO。
+**本 sprint 不做**：因为完整邀请流改造涉及更多 UI 流（dashboard 还没搬过来），先把基础 CRUD 上线。
+
+### 7.1.bis tenants.ts 实施期增加 owner employee bootstrap（已实施）
+
+**实施时发现**：design 原计划"hub 现表 tenants 不动"。但跑 e2e 时发现新 tenant 的 owner 没有 employee 记录，所有 mutating 端点全部 403 NO_EMPLOYEE_PROFILE → 整个产品层瘫痪。
+
+**修正方案**：`POST /api/tenants` 在事务最后插入一条 `employees(role='owner', userId=ownerId, email=session.email, name=session.name)`。**5 行 insert**。
+
+**契约影响**：无。POST /api/tenants 的 response 字段、状态码、错误码全部不变。
+
+**红线**：rules.md J2 允许"内部实现可重构"，本修改属于内部实现叠加。Pass。
+
+**遗留**：现有生产 tenants 没有 owner employee 记录。M2 sprint 需要数据迁移脚本：`INSERT INTO employees (id, org_id, user_id, name, email, role, status, created_at) SELECT ... FROM tenants t JOIN memberships m ON m.tenant_id=t.id AND m.role='owner' JOIN "user" u ON u.id=m.user_id WHERE NOT EXISTS (SELECT 1 FROM employees e WHERE e.org_id=t.id AND e.user_id=m.user_id)`
 
 ### 7.2 tenants 路由共存
 

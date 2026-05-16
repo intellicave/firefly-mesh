@@ -20,7 +20,7 @@
 
 ### Task 1.1 — Schema 扩展 + Drizzle 更新
 
-**status**: pending
+**status**: completed
 **owner**: claude (sleep run)
 **files modified**:
 - `services/hub/src/db/schema.ts` （append 5 表 + 索引）
@@ -36,7 +36,7 @@
 
 ### Task 1.2 — Migration 0005
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/migrations/0005_product_layer.sql`
 
@@ -52,7 +52,7 @@
 
 ### Task 1.3 — 中间件 orgGuard
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/middleware/orgGuard.ts`
 
@@ -69,7 +69,7 @@
 
 ### Task 1.4 — 中间件 db helper
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/db/connect.ts` (可选 — 如果 hub 现有用 inline drizzle 多次，统一封装)
 
@@ -80,7 +80,7 @@
 
 ### Task 1.5 — 路由 organizations.ts
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/routes/organizations.ts`
 
@@ -95,7 +95,7 @@
 
 ### Task 1.6 — 路由 employees.ts
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/routes/employees.ts`
 - `services/hub/src/lib/employees.ts` (business logic)
@@ -112,7 +112,7 @@
 
 ### Task 1.7 — 路由 departments.ts
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/routes/departments.ts`
 - `services/hub/src/lib/departments.ts`
@@ -128,7 +128,7 @@
 
 ### Task 1.8 — 路由 projects.ts
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/routes/projects.ts`
 - `services/hub/src/lib/projects.ts`
@@ -143,7 +143,7 @@
 
 ### Task 1.9 — 挂载与冒烟
 
-**status**: pending
+**status**: completed
 **files modified**:
 - `services/hub/src/index.ts` (4 行新增 import + 4 行新增 app.route)
 
@@ -156,7 +156,7 @@
 
 ### Task 1.10 — E2E 测试
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/test/product-layer.e2e.ts`
 
@@ -173,7 +173,7 @@
 
 ### Task 1.11 — 文档同步 + 状态更新
 
-**status**: pending
+**status**: completed
 **files modified**:
 - `docs/pipeline/state.yaml` (new sprint progress)
 - `docs/plans/2026-05-16-firefly-mesh-product-layer-meta.md` (created)
@@ -258,16 +258,33 @@
 
 | Task | Status |
 |---|---|
-| 1.1 Schema 扩展 | pending |
-| 1.2 Migration 0005 | pending |
-| 1.3 中间件 orgGuard | pending |
-| 1.4 db helper | pending |
-| 1.5 路由 organizations | pending |
-| 1.6 路由 employees | pending |
-| 1.7 路由 departments | pending |
-| 1.8 路由 projects | pending |
-| 1.9 挂载与冒烟 | pending |
-| 1.10 E2E 测试 | pending |
-| 1.11 文档同步 | pending |
+| 1.1 Schema 扩展 | completed |
+| 1.2 Migration 0005 | completed |
+| 1.3 中间件 orgGuard | completed |
+| 1.4 db helper | completed |
+| 1.5 路由 organizations | completed |
+| 1.6 路由 employees | completed |
+| 1.7 路由 departments | completed |
+| 1.8 路由 projects | completed |
+| 1.9 挂载与冒烟 | completed |
+| 1.10 E2E 测试 | completed |
+| 1.11 文档同步 | completed |
 
-`autodev-sync` 调用时按上述 task ID 更新状态。
+**Sleep run 完成于** 2026-05-16。所有 acceptance_criteria 通过（typecheck 0 错误 / 11/11 e2e 子用例通过 / 现有 e2e 6/6 phase 无回归 / 跨租户注入 e2e 阻塞验证通过 / wrangler dev 本地启动正常）。
+
+---
+
+## 7. 实现偏离设计的说明（drift notes）
+
+实现过程中发现设计需要小调整，已就地修正：
+
+1. **tenants.ts 增加 owner employee 自动 bootstrap**（5 行 insert）
+   - 原计划：`tenants.ts | 无 | 不动`
+   - 实际：`POST /api/tenants` 在创建 tenant + memberships + auditLog 后，**新增**一条 owner employee 插入
+   - 原因：未做此 bootstrap 时，新 tenant 的 owner 没有 employee 记录 → `requireRole(['owner','admin'])` 全部 403 NO_EMPLOYEE_PROFILE → 整个产品层 mutating endpoint 无法使用
+   - 影响：API 契约不变（POST /api/tenants response 字段不变），只是内部多创建一行
+   - 红线 J2 合规："禁止改动 hub 现有 6 路由的对外契约（内部实现可重构）"
+   - 后续：M2 sprint 完成 invitation accept 时同步创建 employee 的流程
+
+2. **rules.md J2 自查**：本次修改 tenants.ts 属于"内部实现重构"，不改对外契约。Pass。
+

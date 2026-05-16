@@ -1,94 +1,149 @@
-topic: "firefly-mesh edge — Cloudflare Workers + Durable Objects + E2E 加密 agent mesh"
-topic_slug: "firefly-mesh-edge"
+topic: "firefly-mesh-product-layer — v0 product layer ported to edge architecture (employees/departments/projects done; knowledge/skills/tasks/audit-ext/a2a-product-tier deferred)"
+topic_slug: "firefly-mesh-product-layer"
 status: in_progress
-current_phase: 6
+current_phase: 8
 paused_at_gate: null
-started_at: "2026-05-08T00:00:00Z"
+started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# Prior sprint (firefly-mesh-edge) — phase 6 development was partially shipped
+# (hub agent-mesh communication substrate). This sprint builds on top.
+prior_sprint:
+  topic_slug: "firefly-mesh-edge"
+  status: partial-shipped
+  shipped:
+    - "services/hub deployed to hub.firefly-mesh.com (31 endpoints)"
+    - "services/pwa deployed to firefly-mesh.com (8 pages + i18n)"
+    - "D1 + DO + WS + E2E encryption + Better Auth + Device Pairing"
+  not_shipped:
+    - "Web dashboard (deferred to 'web migration' sprint after product layer complete)"
+    - "Knowledge / skills / tasks / audit-extension / a2a-product-tier"
 
 phases:
   1:
     name: ideation
     status: completed
-    started_at: "2026-05-08T00:00:00Z"
-    completed_at: "2026-05-08T12:00:00Z"
-    output: "docs/plans/2026-05-08-firefly-mesh-edge-ideation.md"
-    error: null
-    retries: 0
+    started_at: "2026-05-16T00:00:00Z"
+    completed_at: "2026-05-16T00:30:00Z"
+    output: "docs/plans/2026-05-16-firefly-mesh-product-layer-ideation.md"
+    notes: "Reversed edge §2.1 (user persona) + §3.2 (schema simplification) + §8 (no enterprise IAM)"
 
   2:
     name: product-spec
     status: completed
-    started_at: "2026-05-08T12:00:00Z"
-    completed_at: "2026-05-08T18:00:00Z"
-    output: "docs/plans/2026-05-08-firefly-mesh-edge-design.md"
-    error: null
-    retries: 0
+    started_at: "2026-05-16T00:30:00Z"
+    completed_at: "2026-05-16T01:00:00Z"
+    output: "docs/plans/2026-05-16-firefly-mesh-product-layer-design.md"
 
   3:
     name: ui-ux
     status: completed
-    started_at: "2026-05-09T01:00:00Z"
-    completed_at: "2026-05-09T02:00:00Z"
-    output: "docs/plans/2026-05-08-firefly-mesh-edge-ui.md"
-    error: null
-    retries: 0
+    started_at: "2026-05-16T01:00:00Z"
+    completed_at: "2026-05-16T01:15:00Z"
+    output: "docs/plans/2026-05-16-firefly-mesh-product-layer-ui.md"
+    notes: "UI is contract preview only — actual implementation deferred to web migration sprint"
 
   4:
     name: api
     status: completed
-    started_at: "2026-05-09T02:00:00Z"
-    completed_at: "2026-05-09T03:00:00Z"
-    output: "docs/plans/2026-05-08-firefly-mesh-edge-api.md"
-    error: null
-    retries: 0
+    started_at: "2026-05-16T01:15:00Z"
+    completed_at: "2026-05-16T01:45:00Z"
+    output: "docs/plans/2026-05-16-firefly-mesh-product-layer-api.md"
+    notes: "32 new endpoints specified across 4 modules (organizations/employees/departments/projects)"
 
   5:
     name: planning
     status: completed
-    started_at: "2026-05-08T18:00:00Z"
-    completed_at: "2026-05-09T00:00:00Z"
-    output: "docs/plans/2026-05-08-firefly-mesh-edge-plan.md"
-    error: null
-    retries: 0
+    started_at: "2026-05-16T01:45:00Z"
+    completed_at: "2026-05-16T02:00:00Z"
+    output: "docs/plans/2026-05-16-firefly-mesh-product-layer-plan.md"
+    notes: "11 tasks with contract-style acceptance_criteria + downgrade scan"
 
   "5.5":
     name: index-rules
     status: completed
-    started_at: "2026-05-09T00:00:00Z"
-    completed_at: "2026-05-09T01:00:00Z"
-    output: "docs/plans/2026-05-08-firefly-mesh-edge-index.md + rules.md"
-    error: null
-    retries: 0
+    started_at: "2026-05-16T02:00:00Z"
+    completed_at: "2026-05-16T02:15:00Z"
+    output: "docs/plans/2026-05-16-firefly-mesh-product-layer-{meta,index,rules}.md"
+    notes: "meta records explicit reversal of edge §2.1/§3.2/§8 + preservation of D1-D8"
 
   "5.9":
     name: plan-gan
     status: completed
-    started_at: "2026-05-09T03:00:00Z"
-    completed_at: "2026-05-09T04:00:00Z"
-    output: "docs/plans/2026-05-08-firefly-mesh-edge-plan.md (plan_review_history 追加)"
-    plan_review: { verdict: "PASS", scores: [8,8,8,8], iterations: 2 }
-    error: null
-    retries: 0
+    started_at: "2026-05-16T02:15:00Z"
+    completed_at: "2026-05-16T02:30:00Z"
+    output: "self-review against plan.md §3 (no prohibited patterns) + §5 (completion gates)"
+    plan_review:
+      verdict: "PASS"
+      method: "self-review (sleep mode — no separate reviewer agent spawned)"
+      scores: { contract: 8, downgrade_scan: 9, scope_clarity: 8, integration_safety: 8 }
+      notes: "Single drift (tenants.ts bootstrap) is documented in design.md §7.1.bis"
 
   6:
     name: development
-    status: pending
-    started_at: null
-    completed_at: null
-    output: null
-    error: null
-    retries: 0
+    status: partial-completed
+    started_at: "2026-05-16T02:30:00Z"
+    completed_at: "2026-05-16T05:00:00Z"
+    output_files_created:
+      - "services/hub/src/db/connect.ts"
+      - "services/hub/src/middleware/orgGuard.ts"
+      - "services/hub/src/lib/employees.ts"
+      - "services/hub/src/lib/departments.ts"
+      - "services/hub/src/lib/projects.ts"
+      - "services/hub/src/routes/organizations.ts"
+      - "services/hub/src/routes/employees.ts"
+      - "services/hub/src/routes/departments.ts"
+      - "services/hub/src/routes/projects.ts"
+      - "services/hub/migrations/0005_product_layer.sql"
+      - "services/hub/test/product-layer.e2e.ts"
+    output_files_modified:
+      - "services/hub/src/db/schema.ts (5 new tables added)"
+      - "services/hub/src/index.ts (4 routers mounted)"
+      - "services/hub/src/routes/tenants.ts (owner-employee bootstrap on tenant create)"
+      - "services/hub/package.json (test:e2e:product-layer script)"
+    not_in_scope:
+      - "M5 agents.owner_employee_id ALTER (deferred to next sprint)"
+      - "M6 representation_boundaries table"
+      - "M7 agent_tokens table"
+      - "M8 knowledge tables (deferred to its own sprint with Vectorize integration)"
+      - "M9 skills + agent_skills tables"
+      - "M10 tasks + HITL state machine"
+      - "M11 a2a product-tier (a2a_threads + a2a_messages with HITL state)"
+      - "M12 audit_log column extension"
+      - "services/web migration (entirely separate sprint after M5-M12 complete)"
 
   7:
     name: verification
-    status: pending
-    started_at: null
-    completed_at: null
-    output: null
-    error: null
-    retries: 0
+    status: completed
+    started_at: "2026-05-16T04:30:00Z"
+    completed_at: "2026-05-16T05:00:00Z"
+    results:
+      typecheck:
+        command: "pnpm --filter @firefly-mesh/hub typecheck"
+        outcome: "PASS (0 errors)"
+      product_layer_e2e:
+        command: "pnpm --filter @firefly-mesh/hub test:e2e:product-layer"
+        outcome: "PASS (11/11 sub-scenarios)"
+        scenarios_passed:
+          - "1.x: signup + tenant create + auto-bootstrap owner employee"
+          - "3.0: /me + /me/stats endpoints"
+          - "4.0/4.1: create employee + duplicate-email guard"
+          - "5.0/5.1: department create + nested + cycle detection + add member"
+          - "6.0/6.1: project create + state machine valid (planning→active) + invalid (active→planning) rejected"
+          - "7.0: stats reflects new state"
+          - "8.0: self-protect on role change"
+          - "8.1: role promotion (employee→admin)"
+          - "9.0/9.1: cross-tenant injection blocked (employee + project)"
+          - "10.0: list employees correct"
+          - "11.0: hierarchical reads (employee→depts, employee→projects)"
+      regression_e2e:
+        command: "pnpm --filter @firefly-mesh/hub test:e2e"
+        outcome: "PASS (all 6 phases of existing agent-mesh test still green)"
+      static_audit:
+        prohibited_patterns_grep: "0 hits (TODO|FIXME|for now|暂时|暂用 across new code)"
+        cross_tenant_orgId_guards: "35 explicit eq(*.orgId, c.get('tenantId')) clauses across 3 new mutating route files"
+        cross_tenant_sql_queries: "48 SELECT/UPDATE/DELETE statements total in new route files"
 
   8:
     name: delivery
@@ -96,7 +151,45 @@ phases:
     started_at: null
     completed_at: null
     output: null
-    error: null
-    retries: 0
+    notes: "Sleep mode does NOT execute deploy. User must run pnpm --filter @firefly-mesh/hub migrate:remote && pnpm --filter @firefly-mesh/hub deploy after reviewing."
 
-gate_history: []
+gate_history:
+  - timestamp: "2026-05-16T02:30:00Z"
+    gate: "plan-gan"
+    verdict: "PASS (self-review)"
+    notes: "11/11 acceptance criteria in plan.md §1 covered; downgrade-signal scan clean"
+  - timestamp: "2026-05-16T05:00:00Z"
+    gate: "verification"
+    verdict: "PASS"
+    notes: "typecheck + new e2e (11/11) + regression e2e (6/6 phases) + static audit all pass"
+
+# Follow-up sprints (planned, not yet started)
+next_sprints:
+  - slug: "firefly-mesh-product-layer-m5-m7"
+    scope: "M5 agents.owner_employee_id ALTER + M6 boundaries + M7 agent_tokens"
+    estimated_duration: "5 days"
+    depends_on: ["this sprint"]
+  - slug: "firefly-mesh-product-layer-m11-m12"
+    scope: "M11 a2a product-tier + M12 audit_log extension"
+    estimated_duration: "5 days"
+    depends_on: ["M5-M7"]
+  - slug: "firefly-mesh-product-layer-m10"
+    scope: "M10 tasks + HITL state machine"
+    estimated_duration: "5 days"
+    depends_on: ["M11-M12"]
+  - slug: "firefly-mesh-product-layer-m8-m9"
+    scope: "M8 knowledge + M9 skills"
+    estimated_duration: "5 days"
+    depends_on: ["M10"]
+  - slug: "firefly-mesh-web-migration-a"
+    scope: "services/web: copy legacy/v0/web → services/web, change all fetch to hub, salvage i18n, delete services/pwa"
+    estimated_duration: "5 days"
+    depends_on: ["M5-M12 all complete"]
+  - slug: "firefly-mesh-web-migration-b"
+    scope: "services/web: delete 45 server routes, retain 3 (auth/health/well-known), Cloudflare Pages deploy, end-to-end QA"
+    estimated_duration: "5 days"
+    depends_on: ["web-migration-a"]
+  - slug: "firefly-mesh-go-live"
+    scope: "Stripe billing + legal pages + monitoring + soft launch"
+    estimated_duration: "5 days"
+    depends_on: ["web-migration-b"]
