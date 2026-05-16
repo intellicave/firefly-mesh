@@ -79,6 +79,24 @@ tenants.post(
       joinedAt: now,
     })
 
+    // Product-layer bootstrap (sprint 2026-05-16): every tenant has at least
+    // one owner employee — the creator. Without this, the new product-layer
+    // routes (employees / departments / projects) reject every mutation
+    // because their `requireRole` check fails on missing employee profile.
+    // Email + name come from the Better Auth session.
+    const ownerName = c.get("userName") ?? c.get("userEmail") ?? "Owner"
+    const ownerEmail = c.get("userEmail") ?? `owner+${userId}@local`
+    await db.insert(schema.employees).values({
+      id: `emp_${nanoid(16)}`,
+      orgId: tenantId,
+      userId,
+      name: ownerName,
+      email: ownerEmail,
+      role: "owner",
+      status: "active",
+      createdAt: now,
+    })
+
     await db.insert(schema.auditLog).values({
       id: nanoid(21),
       tenantId,
