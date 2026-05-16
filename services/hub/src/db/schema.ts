@@ -1,4 +1,5 @@
-import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core"
+import { sqliteTable, text, integer, primaryKey, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { sql } from "drizzle-orm"
 
 // ---------------------------------------------------------------------------
 // Better Auth core tables
@@ -214,3 +215,112 @@ export const pushSubscriptions = sqliteTable("push_subscriptions", {
   auth: text("auth").notNull(),
   createdAt: text("created_at").notNull(),
 })
+
+// ---------------------------------------------------------------------------
+// Product layer — sprint 2026-05-16
+// Adds the v0 organization-collaboration product layer (employees, departments,
+// projects) on top of hub's agent-mesh communication substrate.
+// See docs/plans/2026-05-16-firefly-mesh-product-layer-design.md
+//
+// organizations API exposes /api/organizations but physically reuses `tenants`.
+// V1.1 may rename the physical table; not in this sprint's scope.
+// ---------------------------------------------------------------------------
+
+export const employees = sqliteTable(
+  "employees",
+  {
+    id: text("id").primaryKey(),
+    orgId: text("org_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    // Nullable: account_mode='none' supports non-login employees (admin-only audit personas).
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    title: text("title"),
+    avatarUrl: text("avatar_url"),
+    status: text("status", { enum: ["active", "archived"] })
+      .notNull()
+      .default("active"),
+    role: text("role", {
+      enum: ["owner", "admin", "manager", "employee", "auditor"],
+    })
+      .notNull()
+      .default("employee"),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => ({
+    orgEmailUq: uniqueIndex("employees_org_email_uq").on(t.orgId, t.email),
+    orgUserUq: uniqueIndex("employees_org_user_uq")
+      .on(t.orgId, t.userId)
+      .where(sql`${t.userId} IS NOT NULL`),
+  }),
+)
+
+export const departments = sqliteTable("departments", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  // Self-reference is soft (no FK) per rules.md §G2 — SQLite self-ref FK
+  // causes migration headaches; application layer enforces cycle prevention.
+  parentId: text("parent_id"),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdAt: text("created_at").notNull(),
+})
+
+export const departmentMembers = sqliteTable(
+  "department_members",
+  {
+    departmentId: text("department_id")
+      .notNull()
+      .references(() => departments.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["head", "member"] })
+      .notNull()
+      .default("member"),
+    joinedAt: text("joined_at").notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.departmentId, t.employeeId] }),
+  }),
+)
+
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status", {
+    enum: ["planning", "active", "done", "archived"],
+  })
+    .notNull()
+    .default("planning"),
+  startAt: text("start_at"),
+  endAt: text("end_at"),
+  createdAt: text("created_at").notNull(),
+})
+
+export const projectMembers = sqliteTable(
+  "project_members",
+  {
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    // Free-form role label (e.g. "lead", "contributor"); UI surfaces a "lead"
+    // marker for project-lead RBAC checks.
+    role: text("role"),
+    joinedAt: text("joined_at").notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.projectId, t.employeeId] }),
+  }),
+)
