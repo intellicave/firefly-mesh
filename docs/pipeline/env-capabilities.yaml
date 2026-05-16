@@ -1,9 +1,10 @@
-# AutoDev Pipeline — Environment Capabilities (edge run)
-# Probed: 2026-05-09 by autodev step 1.4  (supersedes 2026-04-29 classic run)
+# AutoDev Pipeline — Environment Capabilities
+# Probed: 2026-05-16 by /autodev-add pre-sleep check (supersedes 2026-05-09 edge run)
 # Platform: win32 / Windows 11 Home China 10.0.26200
-# Project: firefly-mesh edge (v1.0)
+# Current sprint: firefly-mesh-product-layer (hub product-layer rework)
+# Prior sprints: firefly-mesh-edge (2026-05-08), firefly-mesh-scene (2026-05-07), firefly-mesh (2026-04-28)
 
-probed_at: "2026-05-09T00:00:00Z"
+probed_at: "2026-05-16T00:00:00Z"
 platform: "win32"
 
 tools:
@@ -25,14 +26,12 @@ tools:
     evidence: "git rev-parse --is-inside-work-tree = true"
 
   wrangler:
-    available: false
+    available: true
+    version: "4.90.0"
     global: false
-    via_npx: false
-    evidence: "wrangler not in PATH; not in root package.json deps yet"
-    impact: "Cannot deploy to Cloudflare Workers until wrangler added to services/hub devDeps"
-    blocks:
-      - "M0: Cloudflare Workers actual deploy (code scaffold unblocked)"
-    workaround: "Add wrangler to services/hub/package.json devDeps; use pnpm exec wrangler"
+    via_pnpm_filter: true
+    evidence: "pnpm --filter @firefly-mesh/hub exec wrangler --version = 4.90.0 (exit 0)"
+    notes: "Installed as services/hub devDep; available via pnpm filter. Local D1 + miniflare ready."
 
   gh_cli:
     available: true
@@ -48,7 +47,7 @@ tools:
     available: false
     evidence: "not needed — edge uses Cloudflare Pages, not Vercel"
 
-# === Edge project docs status ===
+# === Prior sprint: firefly-mesh-edge — closed, all phase docs landed ===
 edge_docs_state:
   ideation_md: "done"    # 2026-05-08-firefly-mesh-edge-ideation.md
   design_md: "done"      # 2026-05-08-firefly-mesh-edge-design.md
@@ -56,10 +55,54 @@ edge_docs_state:
   plan_md: "done"        # 2026-05-08-firefly-mesh-edge-plan.md
   index_md: "done"       # 2026-05-08-firefly-mesh-edge-index.md
   rules_md: "done"       # 2026-05-08-firefly-mesh-edge-rules.md
-  ui_md: "missing"       # Phase 3 TODO
-  api_md: "missing"      # Phase 4 TODO
+  ui_md: "done"          # 2026-05-08-firefly-mesh-edge-ui.md
+  api_md: "done"         # 2026-05-08-firefly-mesh-edge-api.md
+  note: "Sprint output: services/hub (Hono + D1 + DO + WS + E2E) deployed to hub.firefly-mesh.com. Phase 6 development partially shipped — only agent-mesh communication primitives, no product-layer entities."
+
+# === Current sprint: firefly-mesh-product-layer — pre-flight (2026-05-16) ===
+current_sprint:
+  topic: "firefly-mesh-product-layer"
+  topic_slug: "firefly-mesh-product-layer"
+  goal: "Rework hub by porting v0 product-layer entities (employees, departments, projects, knowledge, skills, audit, tasks, tokens) to edge architecture (Hono + D1 + DO + Better Auth + E2E + WS). v0 product layer = authoritative source. Hub agent-mesh primitives = preserved as substrate."
+  decisions_locked:
+    - "v0 product layer is the authoritative semantic source (employees not agents-as-primary)"
+    - "hub's existing arch components (auth, encryption, DO, WS, Hono, Drizzle, D1) preserved as tech substrate"
+    - "hub's existing business entities (agents/tenants/threads/messages) will be re-modelled as agent-tier under product entities"
+    - "First module: employees + departments + projects (foundation triple)"
+    - "Sleep mode: design phases auto-run; development first module auto-impl; remaining modules planned"
+  pre_flight_checks_passed:
+    - "Environment probed (this file, 2026-05-16)"
+    - "Untracked docs (docs/dashboard, docs/pitch) committed for preservation"
+
+# === Inputs that the new sprint MUST read ===
+sprint_inputs:
+  v0_product_layer:
+    schema_indirect: "legacy/v0/packages/web/app/api/employee/route.ts imports from @firefly-mesh/core/db — core db lives at legacy/v0/packages/core/ (archived)"
+    api_routes: "48 route.ts under legacy/v0/packages/web/app/api/* (employees/departments/projects/knowledge/skills/audit/tasks/tokens/a2a/agent/me/auth/health/well-known/stream/onboarding/boundary/org)"
+    middlewares: "legacy/v0/packages/web/lib/middleware/{withAuth,withOrgGuard,withRBAC,withSenderSignature}.ts"
+    ui_pages: "14 pages under legacy/v0/packages/web/app (dashboard: audit, inbox, knowledge, organization, settings, skills; standalone: login, signup, onboarding/*)"
+  hub_arch_substrate:
+    auth: "services/hub/src/auth.ts (Better Auth + cross-domain cookie)"
+    durable_objects: "services/hub/src/durable-objects/"
+    encryption: "services/hub/src/lib/ (E2E, prekeys)"
+    websocket: "services/hub/src/ (WS handshake + DO subscription)"
+    framework: "Hono.js"
+    orm: "Drizzle"
+    storage: "D1 (SQLite), KV (rate limit), DO (state)"
+    migrations: "services/hub/migrations/000{1..4}_*.sql"
+  reference_docs_unverified:
+    note: "These reflect an earlier 'restore v0 dashboard' direction. Useful as semantic reference, NOT as authoritative spec for this sprint."
+    paths:
+      - "docs/dashboard/ (21 .md files, written 2026-05-12 to 2026-05-15, untracked but now committed)"
+      - "docs/plans/2026-05-08-firefly-mesh-edge-*.md (8 files, prior sprint outputs)"
 
 # === Sleep-mode policy ===
 sleep_mode_policy:
-  rule: "Per CLAUDE.md, any 'cannot do X because Y missing' claim must
-         reference a verified available=false row above."
+  rule: "Per CLAUDE.md, any 'cannot do X because Y missing' claim must reference a verified available=false row above."
+  scope_bound: "Sleep run scope = design phases (ideation→design→ui→api→plan→GAN) + scaffold + implement first module (employees+departments+projects). Remaining modules → planned but not implemented this run. Do NOT attempt to ship deploy from sleep."
+  destructive_actions_forbidden_in_sleep:
+    - "rm -rf on packages/*, legacy/*, services/* unless explicitly listed in this file"
+    - "git reset --hard"
+    - "git push --force"
+    - "any wrangler deploy / wrangler d1 execute against production"
+    - "modifying .env, .env.local, .dev.vars"
