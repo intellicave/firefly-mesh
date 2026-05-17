@@ -16,7 +16,7 @@
 
 ### Task 2.1 — Schema：agents ALTER + 2 新表 Drizzle
 
-**status**: pending
+**status**: completed
 **files modified**:
 - `services/hub/src/db/schema.ts`
 
@@ -29,7 +29,7 @@
 
 ### Task 2.2 — Migration 0006 (ALTER agents)
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/migrations/0006_agents_owner_employee.sql`
 
@@ -41,7 +41,7 @@
 
 ### Task 2.3 — Migration 0007 (boundaries + agent_tokens)
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/migrations/0007_boundaries_and_tokens.sql`
 
@@ -54,7 +54,7 @@
 
 ### Task 2.4 — lib/scopes.ts
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/lib/scopes.ts`
 
@@ -66,7 +66,7 @@
 
 ### Task 2.5 — lib/jwt.ts 扩展
 
-**status**: pending
+**status**: completed
 **files modified**:
 - `services/hub/src/lib/jwt.ts`
 
@@ -79,7 +79,7 @@
 
 ### Task 2.6 — agents.ts /register 内部 wiring
 
-**status**: pending
+**status**: completed
 **files modified**:
 - `services/hub/src/routes/agents.ts`
 
@@ -94,7 +94,7 @@
 
 ### Task 2.7 — routes/boundaries.ts
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/routes/boundaries.ts`
 
@@ -107,7 +107,7 @@
 
 ### Task 2.8 — routes/agent-tokens.ts
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/src/routes/agent-tokens.ts`
 
@@ -123,7 +123,7 @@
 
 ### Task 2.9 — 挂载
 
-**status**: pending
+**status**: completed
 **files modified**:
 - `services/hub/src/index.ts`
 
@@ -135,7 +135,7 @@
 
 ### Task 2.10 — E2E
 
-**status**: pending
+**status**: completed
 **files created**:
 - `services/hub/test/m5-m7.e2e.ts`
 
@@ -154,7 +154,7 @@
 
 ### Task 2.11 — 文档同步
 
-**status**: pending
+**status**: completed
 **files modified**:
 - `docs/pipeline/state.yaml`
 - 本 plan.md task statuses
@@ -205,14 +205,28 @@
 
 | Task | Status |
 |---|---|
-| 2.1 Schema | pending |
-| 2.2 Migration 0006 | pending |
-| 2.3 Migration 0007 | pending |
-| 2.4 lib/scopes.ts | pending |
-| 2.5 lib/jwt.ts 扩展 | pending |
-| 2.6 agents.ts wiring | pending |
-| 2.7 routes/boundaries.ts | pending |
-| 2.8 routes/agent-tokens.ts | pending |
-| 2.9 挂载 | pending |
-| 2.10 E2E | pending |
-| 2.11 文档同步 | pending |
+| 2.1 Schema | completed |
+| 2.2 Migration 0006 | completed |
+| 2.3 Migration 0007 | completed |
+| 2.4 lib/scopes.ts | completed |
+| 2.5 lib/jwt.ts 扩展 | completed |
+| 2.6 agents.ts wiring | completed |
+| 2.7 routes/boundaries.ts | completed |
+| 2.8 routes/agent-tokens.ts | completed |
+| 2.9 挂载 | completed |
+| 2.10 E2E | completed |
+| 2.11 文档同步 | completed |
+
+**Sleep run 完成于** 2026-05-17。验收结果：
+
+- ✅ typecheck 全绿
+- ✅ test:e2e:m5-m7 — 14/14 scenarios pass
+- ✅ test:e2e:product-layer 不回归 — 11/11 pass
+- ✅ test:e2e 不回归 — 6/6 phases pass
+- ✅ 7 个 atomic commit（docs 1 / schema+migrations 1 / scopes+jwt 1 / agents wiring 1 / routes 1 / tests 1 / state sync 1）
+
+---
+
+## 7. 实现偏离设计（drift notes）
+
+无 drift。design.md 全部 sections 实施时无需修订。**Sprint 端到端 clean**。

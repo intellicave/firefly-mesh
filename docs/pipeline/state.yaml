@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — v0 product layer ported to edge architecture (employees/departments/projects done; knowledge/skills/tasks/audit-ext/a2a-product-tier deferred)"
+topic: "firefly-mesh-product-layer — M1-M7 done (organizations/employees/departments/projects + agents reattached to employee + boundaries + agent_tokens admin issuance); M8-M12 deferred"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,44 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === M5-M7 sub-sprint (2026-05-17) ===
+sub_sprint_m5_m7:
+  topic_slug: "firefly-mesh-product-layer-m5-m7"
+  status: completed
+  started_at: "2026-05-17T00:00:00Z"
+  completed_at: "2026-05-17T05:00:00Z"
+  modules_implemented:
+    - "M5 — agents reattached to employees (owner_employee_id + runtime_kind + runtime_meta + activated_at)"
+    - "M6 — representation_boundaries + lib/scopes.ts + JWT scope claim (back-compatible)"
+    - "M7 — agent_tokens admin issuance (POST/GET/regenerate/DELETE); client-side activate-by-token deferred to V1.1"
+  files_created:
+    - "services/hub/migrations/0006_agents_owner_employee.sql"
+    - "services/hub/migrations/0007_boundaries_and_tokens.sql"
+    - "services/hub/src/lib/scopes.ts"
+    - "services/hub/src/routes/boundaries.ts"
+    - "services/hub/src/routes/agent-tokens.ts"
+    - "services/hub/test/m5-m7.e2e.ts"
+    - "docs/plans/2026-05-17-firefly-mesh-product-layer-m5-m7-{ideation,design,ui,api,plan,meta,index,rules}.md"
+  files_modified:
+    - "services/hub/src/db/schema.ts (agents +4 cols, +representation_boundaries, +agent_tokens)"
+    - "services/hub/src/lib/jwt.ts (AgentJwtPayload.scope + back-compat in verify)"
+    - "services/hub/src/routes/agents.ts (internal wiring; public contract unchanged)"
+    - "services/hub/src/index.ts (mount 2 new routers)"
+    - "services/hub/package.json (test:e2e:m5-m7 script)"
+  test_results:
+    typecheck: PASS
+    test_e2e_m5_m7: "PASS (14/14 scenarios)"
+    test_e2e_product_layer_regression: "PASS (11/11)"
+    test_e2e_regression: "PASS (6/6 phases)"
+  commits:
+    - "7ff563c — docs(plans): 8 design documents"
+    - "2b26f49 — feat(hub): M5+M6+M7 schema + migrations 0006/0007"
+    - "615290a — feat(hub): M6 scope catalog + JWT scope claim (back-compatible)"
+    - "c7f97fc — feat(hub): M5 wire agent register to employee + scope (internal-only)"
+    - "7f68919 — feat(hub): M6 boundaries route + M7 agent-tokens route (6 endpoints)"
+    - "51a741f — test(hub): M5+M6+M7 end-to-end (14 scenarios)"
+  notes: "No design drift. Sprint end-to-end clean."
 
 # Prior sprint (firefly-mesh-edge) — phase 6 development was partially shipped
 # (hub agent-mesh communication substrate). This sprint builds on top.
@@ -165,10 +203,6 @@ gate_history:
 
 # Follow-up sprints (planned, not yet started)
 next_sprints:
-  - slug: "firefly-mesh-product-layer-m5-m7"
-    scope: "M5 agents.owner_employee_id ALTER + M6 boundaries + M7 agent_tokens"
-    estimated_duration: "5 days"
-    depends_on: ["this sprint"]
   - slug: "firefly-mesh-product-layer-m11-m12"
     scope: "M11 a2a product-tier + M12 audit_log extension"
     estimated_duration: "5 days"
