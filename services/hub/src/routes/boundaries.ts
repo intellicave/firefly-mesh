@@ -17,6 +17,7 @@ import {
   SCOPE_IDS,
   defaultScopes,
 } from "../lib/scopes.ts"
+import { writeAudit } from "../lib/audit.ts"
 
 type Vars = AuthVariables & OrgGuardVariables
 
@@ -170,18 +171,14 @@ boundariesRouter.put(
       })
     }
 
-    // Audit: M12 will extend auditLog with payload; for now just record actor
-    // + action + target.
-    await db.insert(schema.auditLog).values({
-      id: nanoid(21),
+    // M12 sprint 2026-05-17: writeAudit now carries before/after diff.
+    await writeAudit(db, {
       tenantId,
-      actorId: requester.id,
+      actor: { type: "human", id: requester.id },
       action: "boundary.updated",
-      targetId: agentId,
-      createdAt: now,
+      resource: { type: "agent", id: agentId },
+      payload: { before, after: cleaned },
     })
-
-    void before // diff payload deferred to M12 auditLog extension
 
     return c.json({
       data: {

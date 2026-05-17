@@ -6,6 +6,7 @@ import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireSession } from "../middleware/auth.ts"
+import { auditValues } from "../lib/audit.ts"
 
 const invitations = new Hono<{ Bindings: Bindings; Variables: AuthVariables & { userId: string } }>()
 
@@ -179,14 +180,14 @@ invitations.post("/:token/accept", requireSession, async (c) => {
           joinedAt: now.toISOString(),
         })
         .onConflictDoNothing(),
-      db.insert(schema.auditLog).values({
-        id: nanoid(21),
-        tenantId: inv.tenantId,
-        actorId: userId,
-        action: "invitation.accepted",
-        targetId: inv.id,
-        createdAt: now.toISOString(),
-      }),
+      db.insert(schema.auditLog).values(
+        auditValues({
+          tenantId: inv.tenantId,
+          actor: { type: "human", id: userId },
+          action: "invitation.accepted",
+          resource: { type: "invitation", id: inv.id },
+        }),
+      ),
     ])
   } catch (err) {
     // Batch failed atomically — no membership row, no audit row. Release the

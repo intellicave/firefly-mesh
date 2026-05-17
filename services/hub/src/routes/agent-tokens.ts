@@ -12,6 +12,7 @@ import {
   requireRole,
   type OrgGuardVariables,
 } from "../middleware/orgGuard.ts"
+import { writeAudit } from "../lib/audit.ts"
 
 type Vars = AuthVariables & OrgGuardVariables
 
@@ -129,13 +130,12 @@ agentTokensRouter.post(
       createdBy: requester.id,
     })
 
-    await db.insert(schema.auditLog).values({
-      id: nanoid(21),
+    await writeAudit(db, {
       tenantId,
-      actorId: requester.id,
+      actor: { type: "human", id: requester.id },
       action: "agent_token.issued",
-      targetId: id,
-      createdAt: now.toISOString(),
+      resource: { type: "agent_token", id },
+      payload: { employeeId, expiresIn },
     })
 
     return c.json(
@@ -230,13 +230,12 @@ agentTokensRouter.post(
       createdBy: requester.id,
     })
 
-    await db.insert(schema.auditLog).values({
-      id: nanoid(21),
+    await writeAudit(db, {
       tenantId,
-      actorId: requester.id,
+      actor: { type: "human", id: requester.id },
       action: "agent_token.regenerated",
-      targetId: newId,
-      createdAt: now.toISOString(),
+      resource: { type: "agent_token", id: newId },
+      payload: { oldId: existing.id, employeeId: existing.employeeId },
     })
 
     return c.json(
@@ -286,13 +285,11 @@ agentTokensRouter.delete(
       .set({ status: "revoked", revokedAt: now.toISOString() })
       .where(eq(schema.agentTokens.id, id))
 
-    await db.insert(schema.auditLog).values({
-      id: nanoid(21),
+    await writeAudit(db, {
       tenantId,
-      actorId: requester.id,
+      actor: { type: "human", id: requester.id },
       action: "agent_token.revoked",
-      targetId: id,
-      createdAt: now.toISOString(),
+      resource: { type: "agent_token", id },
     })
 
     return c.json({ data: { id, revoked: true } })

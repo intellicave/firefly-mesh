@@ -11,6 +11,7 @@ import { requireSession, requireAgentJwt, sessionMiddleware } from "../middlewar
 import { rateLimitByIp } from "../middleware/rateLimit.ts"
 import { signAgentJwt } from "../lib/jwt.ts"
 import { defaultScopes } from "../lib/scopes.ts"
+import { writeAudit } from "../lib/audit.ts"
 
 const agents = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
@@ -276,13 +277,16 @@ agents.post(
       .set({ agentId, expiresAt: now.toISOString() })
       .where(eq(schema.devicePairingCodes.code, code))
 
-    await db.insert(schema.auditLog).values({
-      id: nanoid(21),
+    await writeAudit(db, {
       tenantId: pairing.tenantId,
-      actorId: pairing.userId,
+      actor: { type: "human", id: pairing.userId },
       action: "agent.registered",
-      targetId: agentId,
-      createdAt: now.toISOString(),
+      resource: { type: "agent", id: agentId },
+      payload: {
+        deviceName: pairing.deviceName,
+        runtimeKind: runtimeKind ?? "unknown",
+        ownerEmployeeId,
+      },
     })
 
     const token = await signAgentJwt(
@@ -399,13 +403,12 @@ agents.delete("/:agentId", requireSession, async (c) => {
 
   await db.delete(schema.agents).where(eq(schema.agents.id, agentId))
 
-  await db.insert(schema.auditLog).values({
-    id: nanoid(21),
+  await writeAudit(db, {
     tenantId: agent.tenantId,
-    actorId: userId,
+    actor: { type: "human", id: userId },
     action: "agent.revoked",
-    targetId: agentId,
-    createdAt: new Date().toISOString(),
+    resource: { type: "agent", id: agentId },
+    payload: { displayName: agent.displayName, runtimeKind: agent.runtimeKind },
   })
 
   return c.json({ data: { revoked: true } })

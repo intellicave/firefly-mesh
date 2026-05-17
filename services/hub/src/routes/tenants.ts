@@ -9,6 +9,7 @@ import type { Bindings } from "../auth.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireSession } from "../middleware/auth.ts"
 import { sendInvitationEmail } from "../email/invitation.ts"
+import { writeAudit } from "../lib/audit.ts"
 
 type Vars = AuthVariables & { userId: string }
 
@@ -97,13 +98,12 @@ tenants.post(
       createdAt: now,
     })
 
-    await db.insert(schema.auditLog).values({
-      id: nanoid(21),
+    await writeAudit(db, {
       tenantId,
-      actorId: userId,
+      actor: { type: "human", id: userId },
       action: "tenant.created",
-      targetId: tenantId,
-      createdAt: now,
+      resource: { type: "tenant", id: tenantId },
+      payload: { slug, displayName },
     })
 
     const [tenant] = await db
@@ -261,13 +261,12 @@ tenants.post(
       console.warn(`[invite] email send failed for ${email}: ${emailError}`)
     }
 
-    await db.insert(schema.auditLog).values({
-      id: nanoid(21),
+    await writeAudit(db, {
       tenantId,
-      actorId: userId,
+      actor: { type: "human", id: userId },
       action: "invitation.sent",
-      targetId: invId,
-      createdAt: now.toISOString(),
+      resource: { type: "invitation", id: invId },
+      payload: { email, role, emailDelivered: !!emailDeliveredAt },
     })
 
     const inviteLink = `${c.env.PWA_URL}/invite?token=${token}`

@@ -10,6 +10,7 @@ import type { AuthVariables } from "../middleware/auth.ts"
 import { requireAgentJwt } from "../middleware/auth.ts"
 import { rateLimitByAgent } from "../middleware/rateLimit.ts"
 import { computeHitlFlags, type A2AMessageType } from "../hitl/engine.ts"
+import { writeAudit } from "../lib/audit.ts"
 
 const messages = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
@@ -229,13 +230,11 @@ messages.post("/:id/accept", async (c) => {
       ),
     )
 
-  await db.insert(schema.auditLog).values({
-    id: nanoid(21),
+  await writeAudit(db, {
     tenantId,
-    actorId: agentId,
+    actor: { type: "agent", id: agentId },
     action: "message.accepted",
-    targetId: messageId,
-    createdAt: now,
+    resource: { type: "message", id: messageId },
   })
 
   return c.json({ data: { accepted: true, messageId } })
@@ -272,13 +271,11 @@ messages.post("/:id/reject", async (c) => {
       ),
     )
 
-  await db.insert(schema.auditLog).values({
-    id: nanoid(21),
+  await writeAudit(db, {
     tenantId,
-    actorId: agentId,
+    actor: { type: "agent", id: agentId },
     action: "message.rejected",
-    targetId: messageId,
-    createdAt: now,
+    resource: { type: "message", id: messageId },
   })
 
   return c.json({ data: { rejected: true, messageId } })
