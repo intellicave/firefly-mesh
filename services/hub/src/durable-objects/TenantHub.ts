@@ -31,6 +31,25 @@ export class TenantHub {
     }
 
     if (request.method === "POST" && url.pathname.endsWith("/internal/deliver")) {
+      // Round-3 security H2: gate internal RPC behind a shared-secret header
+      // so co-located Workers (or any future caller in the same CF account)
+      // can't bypass the HITL stack by directly invoking handleDeliver.
+      // Constant-time compare to defeat header-timing oracles.
+      const provided = request.headers.get("X-Internal-Auth") ?? ""
+      const expected = this.env.INTERNAL_SECRET ?? ""
+      if (!expected) {
+        // Strong fail: never allow this branch to silently pass through
+        // in case INTERNAL_SECRET wasn't configured. Surface visibly.
+        console.error(
+          "[TenantHub] INTERNAL_SECRET is not configured — refusing all internal deliveries.",
+        )
+        return new Response("Misconfigured: INTERNAL_SECRET missing", {
+          status: 500,
+        })
+      }
+      if (!constantTimeEquals(provided, expected)) {
+        return new Response("Forbidden", { status: 403 })
+      }
       return this.handleDeliver(request)
     }
 
@@ -149,4 +168,23 @@ export class TenantHub {
     // socket on this DO. Swallow it.
     try { ws.close(1011, "Internal error") } catch { /* already closing */ }
   }
+}
+
+function constantTimeEquals(a: string, b: string): boolean {
+  // Mismatched-length strings: still walk through `b` to keep the
+  // comparison time independent of the shorter input length.
+  if (a.length !== b.length) {
+    // Force iteration so the early-return doesn't reveal the length mismatch
+    // via timing on its own. The XOR result is unused.
+    let xor = 0
+    for (let i = 0; i < b.length; i++) {
+      xor |= b.charCodeAt(i) ^ (a.charCodeAt(i % Math.max(a.length, 1)) ?? 0)
+    }
+    return false
+  }
+  let xor = 0
+  for (let i = 0; i < a.length; i++) {
+    xor |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return xor === 0
 }

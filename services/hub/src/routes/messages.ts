@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { drizzle } from "drizzle-orm/d1"
 import { eq, and, gt } from "drizzle-orm"
+import { drizzleD1 } from "../db/connect.ts"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -42,7 +42,7 @@ messages.post(
       c.req.valid("json")
     const senderAgentId = c.get("agentId") as string
     const tenantId = c.get("agentTenantId") as string
-    const db = drizzle(c.env.DB, { schema })
+    const db = drizzleD1(c.env)
     const now = new Date()
 
     // Verify recipient exists and is in the same tenant
@@ -125,7 +125,11 @@ messages.post(
     const deliverRes = await tenantHub.fetch(
       new Request("https://do.internal/internal/deliver", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // sec H2: shared-secret gate on DO internal RPC.
+          "X-Internal-Auth": c.env.INTERNAL_SECRET,
+        },
         body: JSON.stringify({
           recipientAgentId,
           recipientUserId: recipient.ownerUserId,
@@ -133,6 +137,23 @@ messages.post(
         }),
       }),
     )
+    if (!deliverRes.ok) {
+      // DO failed (e.g. INTERNAL_SECRET misconfigured). Surface it loudly
+      // instead of letting an unparseable body explode the json() below.
+      const errBody = await deliverRes.text().catch(() => "<unreadable>")
+      console.error(
+        `[messages] DO deliver failed status=${deliverRes.status} body=${errBody}`,
+      )
+      return c.json(
+        {
+          error: {
+            code: "DELIVERY_INFRASTRUCTURE_FAILURE",
+            message: `DO delivery failed: ${deliverRes.status} ${errBody}`,
+          },
+        },
+        500,
+      )
+    }
     const { delivered, agentDelivered } = await deliverRes.json<{
       delivered: boolean
       agentDelivered: boolean
@@ -156,7 +177,7 @@ messages.post(
 // GET /api/messages/inbox — fetch pending messages (Agent JWT)
 messages.get("/inbox", async (c) => {
   const agentId = c.get("agentId") as string
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
   const now = new Date().toISOString()
 
   const pending = await db
@@ -176,7 +197,7 @@ messages.get("/inbox", async (c) => {
 messages.post("/:id/ack", async (c) => {
   const messageId = c.req.param("id")
   const agentId = c.get("agentId") as string
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
 
   const [pending] = await db
     .select()
@@ -204,7 +225,7 @@ messages.post("/:id/accept", async (c) => {
   const messageId = c.req.param("id")
   const agentId = c.get("agentId") as string
   const tenantId = c.get("agentTenantId") as string
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
   const now = new Date().toISOString()
 
   const [meta] = await db
@@ -245,7 +266,7 @@ messages.post("/:id/reject", async (c) => {
   const messageId = c.req.param("id")
   const agentId = c.get("agentId") as string
   const tenantId = c.get("agentTenantId") as string
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
   const now = new Date().toISOString()
 
   const [meta] = await db

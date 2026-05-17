@@ -18,6 +18,13 @@ preview_urls = false
 APP_URL = "https://hub.firefly-mesh.com"
 PWA_URL = "https://firefly-mesh.com"
 RESEND_FROM_EMAIL = "no-reply@firefly-mesh.com"
+# Round-3 security H2 fix — shared secret asserted on TENANT_HUB DO internal
+# RPC path. This placeholder is for local dev only; production MUST override
+# via `wrangler secret put INTERNAL_SECRET`. The placeholder is intentionally
+# committed (vs put in .dev.vars) because wrangler dev's secret loading for
+# new keys was observed to not propagate to all isolates without a clean
+# restart, while [vars] always reaches both Worker and DO.
+INTERNAL_SECRET = "local-dev-placeholder-do-internal-rpc-override-via-wrangler-secret-in-prod"
 
 [[d1_databases]]
 binding = "DB"

@@ -22,8 +22,10 @@ import {
   nextReceiverStatus,
   nextSenderStatus,
   resolveAgentEmployee,
+  scopeForA2aType,
 } from "../lib/a2a-messages.ts"
-import { writeAudit } from "../lib/audit.ts"
+import { auditValues, writeAudit } from "../lib/audit.ts"
+import { BoundaryViolationError, enforceScope } from "../lib/scopes.ts"
 
 type SessionVars = AuthVariables & OrgGuardVariables
 type AgentVars = AuthVariables
@@ -77,6 +79,22 @@ a2aMessagesRouter.post(
     const now = new Date()
     const nowIso = now.toISOString()
 
+    // Round-3 architecture C2 fix: enforce scope BEFORE any writes so a
+    // boundary-revoked agent can't even allocate IDs / spam the schema.
+    // The mapping (e.g. handoff/escalate/block → send_a2a_handoff) is
+    // documented in scopeForA2aType().
+    try {
+      enforceScope(c.get("agentScope") ?? [], scopeForA2aType(body.type))
+    } catch (err) {
+      if (err instanceof BoundaryViolationError) {
+        return c.json(
+          { error: { code: err.code, message: err.message } },
+          403,
+        )
+      }
+      throw err
+    }
+
     // Resolve sender + receiver agents → owner employees.
     const sender = await resolveAgentEmployee(db, senderAgentId, tenantId)
     if (!sender.agentExists) {
@@ -105,8 +123,12 @@ a2aMessagesRouter.post(
     // Compute HITL initial state.
     const initial = computeInitialA2aStatus(body.type)
 
-    // Step 1: resolve or create a2a_thread.
+    // Step 1: resolve a2a_thread (must exist) or prepare a new one.
+    // Round-3 sec H1: we postpone the actual INSERT into a2a_threads to the
+    // db.batch below so the whole write set is atomic. For an existing
+    // threadId we just verify it belongs to this tenant up front.
     let threadId = body.threadId
+    let threadIsNew = false
     if (threadId) {
       const existing = await db
         .select({ id: schema.a2aThreads.id })
@@ -130,43 +152,40 @@ a2aMessagesRouter.post(
       }
     } else {
       threadId = `athd_${nanoid(16)}`
-      await db.insert(schema.a2aThreads).values({
-        id: threadId,
-        orgId: tenantId,
-        topic: body.threadTopic ?? null,
-        relatedTaskId: body.relatedTaskId ?? null,
-        messageCount: 0,
-        createdAt: nowIso,
-      })
+      threadIsNew = true
     }
 
-    // Step 2: ensure an encryption-layer thread exists (hub's `threads` table).
-    // Hub's POST /api/messages auto-creates this; we mirror that behaviour by
-    // looking up the existing thread for this (sender, recipient) pair or
-    // creating one if none.
-    const encryptionThreadId = nanoid(21)
-    await db.insert(schema.threads).values({
-      id: encryptionThreadId,
-      tenantId,
-      participants: JSON.stringify([senderAgentId, body.receiverAgentId]),
-      createdAt: nowIso,
-      lastMessageAt: nowIso,
+    // Step 2: lookup-or-create encryption-layer thread. Round-3 architecture
+    // C1 fix: the prior code unconditionally inserted a new `threads` row on
+    // every send, which produced unbounded orphan threads for repeated
+    // sends between the same agent pair. Now we look up the existing thread
+    // for the (sender, recipient) participant set in this tenant and reuse
+    // it; only insert if none is found.
+    const participantKey = JSON.stringify(
+      [senderAgentId, body.receiverAgentId].sort(),
+    )
+    const existingEncThreads = await db
+      .select({ id: schema.threads.id, participants: schema.threads.participants })
+      .from(schema.threads)
+      .where(eq(schema.threads.tenantId, tenantId))
+    const existingEncThread = existingEncThreads.find((t) => {
+      // Defensive: normalise stored participants (sort to canonical form)
+      // before comparing because legacy threads may have inserted them in
+      // the original (unsorted) sender-first order.
+      try {
+        const parsed = JSON.parse(t.participants) as string[]
+        if (!Array.isArray(parsed)) return false
+        return JSON.stringify([...parsed].sort()) === participantKey
+      } catch {
+        return false
+      }
     })
+    const encryptionThreadId = existingEncThread?.id ?? nanoid(21)
+    const encryptionThreadIsNew = !existingEncThread
 
-    // Step 3: messages_meta (envelope metadata, non-encrypted)
+    // Compose the encrypted-wire envelope once so it's stable across the
+    // batch.
     const messageId = nanoid(21)
-    await db.insert(schema.messagesMeta).values({
-      id: messageId,
-      threadId: encryptionThreadId,
-      tenantId,
-      senderAgentId,
-      recipientAgentId: body.receiverAgentId,
-      type: body.type,
-      summary: body.summary ?? null,
-      createdAt: nowIso,
-    })
-
-    // Step 4: pending_messages (encrypted body, deliverable on accept)
     const expiresAt = new Date(now.getTime() + 72 * 60 * 60 * 1000).toISOString()
     const wireEnvelope = {
       messageId,
@@ -179,7 +198,49 @@ a2aMessagesRouter.post(
       ephemeralPk: body.ephemeralPk,
       oneTimePrekeyId: body.oneTimePrekeyId,
     }
-    await db.insert(schema.pendingMessages).values({
+
+    const a2aMessageId = `amsg_${nanoid(16)}`
+
+    // Round-3 sec H1 fix: bundle every cross-table insert into a single
+    // db.batch so either ALL of (a2a_threads if new, threads if new,
+    // messages_meta, pending_messages, a2a_messages, audit_log) succeed or
+    // none do. The previous sequential awaits could leave orphan
+    // messages_meta rows (encrypted body queued, summary visible to admin)
+    // with no product-layer counterpart, opening an unauthorised-delivery
+    // window if the recipient's polling path served pending_messages
+    // without checking a2a approval state.
+    // rules.md §Q4 sanctioned exception: db.batch() requires prepared
+    // statements, so writeAudit (which is async-only) can't be used. We use
+    // auditValues() to build the same row writeAudit would. This is the
+    // second permitted direct `db.insert(schema.auditLog)` call site
+    // outside lib/audit.ts itself (the first being invitations.ts
+    // invitation-accept).
+    const newA2aThreadStmt = db.insert(schema.a2aThreads).values({
+      id: threadId,
+      orgId: tenantId,
+      topic: body.threadTopic ?? null,
+      relatedTaskId: body.relatedTaskId ?? null,
+      messageCount: 0,
+      createdAt: nowIso,
+    })
+    const newEncThreadStmt = db.insert(schema.threads).values({
+      id: encryptionThreadId,
+      tenantId,
+      participants: participantKey,
+      createdAt: nowIso,
+      lastMessageAt: nowIso,
+    })
+    const metaStmt = db.insert(schema.messagesMeta).values({
+      id: messageId,
+      threadId: encryptionThreadId,
+      tenantId,
+      senderAgentId,
+      recipientAgentId: body.receiverAgentId,
+      type: body.type,
+      summary: body.summary ?? null,
+      createdAt: nowIso,
+    })
+    const pendingStmt = db.insert(schema.pendingMessages).values({
       id: nanoid(21),
       messageId,
       recipientAgentId: body.receiverAgentId,
@@ -192,10 +253,7 @@ a2aMessagesRouter.post(
       createdAt: nowIso,
       expiresAt,
     })
-
-    // Step 5: product-layer a2a_messages row.
-    const a2aMessageId = `amsg_${nanoid(16)}`
-    await db.insert(schema.a2aMessages).values({
+    const a2aStmt = db.insert(schema.a2aMessages).values({
       id: a2aMessageId,
       orgId: tenantId,
       threadId,
@@ -215,10 +273,48 @@ a2aMessagesRouter.post(
       relatedTaskId: body.relatedTaskId ?? null,
       createdAt: nowIso,
     })
+    const auditStmt = db.insert(schema.auditLog).values(
+      auditValues({
+        tenantId,
+        actor: { type: "agent", id: senderAgentId },
+        action: "a2a_message.sent",
+        resource: { type: "a2a_message", id: a2aMessageId },
+        payload: {
+          type: body.type,
+          threadId,
+          receiverAgentId: body.receiverAgentId,
+          senderApprovalStatus: initial.senderApprovalStatus,
+          receiverActionStatus: initial.receiverActionStatus,
+        },
+      }),
+    )
+
+    // Drizzle's batch needs at least one statement (`[BatchItem, ...]`); we
+    // always have at least messages_meta + pending + a2a + audit, so the
+    // mandatory tuple-typing is satisfied. New-thread inserts are tacked
+    // on when applicable.
+    if (threadIsNew && encryptionThreadIsNew) {
+      await db.batch([
+        newA2aThreadStmt,
+        newEncThreadStmt,
+        metaStmt,
+        pendingStmt,
+        a2aStmt,
+        auditStmt,
+      ])
+    } else if (threadIsNew) {
+      await db.batch([newA2aThreadStmt, metaStmt, pendingStmt, a2aStmt, auditStmt])
+    } else if (encryptionThreadIsNew) {
+      await db.batch([newEncThreadStmt, metaStmt, pendingStmt, a2aStmt, auditStmt])
+    } else {
+      await db.batch([metaStmt, pendingStmt, a2aStmt, auditStmt])
+    }
 
     // Step 6: bump message_count. D1 has no atomic INCREMENT via Drizzle;
-    // read-modify-write is acceptable here (low contention; RL_MESSAGE caps
-    // the per-agent write rate).
+    // we keep this outside the batch because (a) it's a read-modify-write
+    // (read happens after the batch lands so we observe the bump) and
+    // (b) treating it as best-effort is consistent with v0 semantics —
+    // counter drift is recoverable from a periodic resync.
     const [tRow] = await db
       .select({ messageCount: schema.a2aThreads.messageCount })
       .from(schema.a2aThreads)
@@ -230,19 +326,6 @@ a2aMessagesRouter.post(
         .where(eq(schema.a2aThreads.id, threadId))
     }
 
-    await writeAudit(db, {
-      tenantId,
-      actor: { type: "agent", id: senderAgentId },
-      action: "a2a_message.sent",
-      resource: { type: "a2a_message", id: a2aMessageId },
-      payload: {
-        type: body.type,
-        threadId,
-        receiverAgentId: body.receiverAgentId,
-        senderApprovalStatus: initial.senderApprovalStatus,
-        receiverActionStatus: initial.receiverActionStatus,
-      },
-    })
 
     return c.json(
       {

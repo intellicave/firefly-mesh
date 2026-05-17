@@ -109,6 +109,42 @@ export function nextReceiverStatus(
 }
 
 /**
+ * Map an A2A message type to the required boundary scope. Round-3 architecture
+ * C2 fix: until now POST /api/a2a-messages enforced no scope, so an agent
+ * whose admin had revoked send_a2a_request (for example) could still send
+ * `request` messages. We now map every type to a scope and reject unmatched
+ * agents up front.
+ *
+ * Sync types collapse onto send_a2a_inform (both are informational; no HITL
+ * reachable on receiver). Escalate and block collapse onto send_a2a_handoff
+ * because they both demand human action on the receiving side and "handoff"
+ * is the closest existing scope (M6 P5 deferred adding dedicated
+ * send_a2a_escalate / send_a2a_block scopes to a later sprint when the
+ * boundary editor UI matures).
+ */
+export function scopeForA2aType(type: A2AMessageType): string {
+  switch (type) {
+    case "inform":
+    case "sync":
+      return "send_a2a_inform"
+    case "request":
+      return "send_a2a_request"
+    case "commit":
+      return "send_a2a_commit"
+    case "handoff":
+    case "escalate":
+    case "block":
+      return "send_a2a_handoff"
+    default: {
+      // Force exhaustive — TypeScript catches unknown types at compile time;
+      // at runtime, refuse to send rather than silently fall back.
+      const _exhaustive: never = type
+      throw new Error(`scopeForA2aType: unknown message type "${_exhaustive}"`)
+    }
+  }
+}
+
+/**
  * Look up the employee that owns the given agent in the given tenant.
  * Returns null if the agent doesn't have owner_employee_id set (legacy
  * agent pre-M5 sprint) — caller decides whether to proceed.

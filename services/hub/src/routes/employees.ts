@@ -71,9 +71,21 @@ employeesRouter.get(
 
     let employeeIds: string[] | null = null
     if (dept) {
+      // Round-3 security M4: confirm the requested department actually
+      // lives in this tenant before consuming its membership rows.
+      // Without this, a caller can supply a cross-tenant departmentId and
+      // use the empty-result vs non-empty-result oracle to enumerate
+      // shared employee IDs across tenants.
       const deptRows = await db
         .select({ employeeId: schema.departmentMembers.employeeId })
         .from(schema.departmentMembers)
+        .innerJoin(
+          schema.departments,
+          and(
+            eq(schema.departments.id, schema.departmentMembers.departmentId),
+            eq(schema.departments.orgId, tenantId),
+          ),
+        )
         .where(eq(schema.departmentMembers.departmentId, dept))
       employeeIds = deptRows.map((r) => r.employeeId)
       if (employeeIds.length === 0) {

@@ -258,7 +258,12 @@ tenants.post(
       emailDeliveredAt = new Date().toISOString()
     } catch (err) {
       emailError = err instanceof Error ? err.message : "unknown send failure"
-      console.warn(`[invite] email send failed for ${email}: ${emailError}`)
+      // Round-3 security M2: don't log PII (invitee email) to the Workers
+      // log stream — it'd be visible to anyone with account-level log
+      // access. The invitation id + tenantId narrow it enough for ops.
+      console.warn(
+        `[invite] email send failed (invitation=${invId} tenant=${tenantId}): ${emailError}`,
+      )
     }
 
     await writeAudit(db, {

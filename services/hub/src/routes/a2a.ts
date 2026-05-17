@@ -15,12 +15,12 @@
  */
 
 import { Hono } from "hono"
-import { drizzle } from "drizzle-orm/d1"
 import { eq } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { verifySignature, A2AMessageWire } from "@firefly-mesh/proto"
 import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
+import { drizzleD1 } from "../db/connect.ts"
 import { rateLimitByIp } from "../middleware/rateLimit.ts"
 
 /** ±5 minute freshness window for A2A envelope timestamps. */
@@ -31,7 +31,7 @@ const a2a = new Hono<{ Bindings: Bindings }>()
 // GET /api/a2a/agent-card/:agentId — public Agent Card (A2A v1.0 spec)
 a2a.get("/agent-card/:agentId", async (c) => {
   const agentId = c.req.param("agentId")
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
 
   const [agent] = await db
     .select({
@@ -91,7 +91,7 @@ a2a.post("/message", rateLimitByIp("RL_A2A"), async (c) => {
   // Step 3: ed25519 signature verification (R12 — single permitted entry point).
   // Done BEFORE timestamp check so the timestamp comparison cannot serve as
   // an unauthenticated clock oracle.
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
   const [sender] = await db
     .select({ identityKey: schema.agents.identityKey, tenantId: schema.agents.tenantId })
     .from(schema.agents)
@@ -199,7 +199,11 @@ a2a.post("/message", rateLimitByIp("RL_A2A"), async (c) => {
   await tenantHub.fetch(
     new Request("https://do.internal/internal/deliver", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // sec H2: shared-secret gate on DO internal RPC.
+        "X-Internal-Auth": c.env.INTERNAL_SECRET,
+      },
       body: JSON.stringify({
         recipientAgentId: envelope.receiver.agentId,
         recipientUserId: recipient.ownerUserId ?? null,

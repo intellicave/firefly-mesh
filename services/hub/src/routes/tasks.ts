@@ -319,6 +319,7 @@ tasksRouter.post(
     // router (Vars = AuthVariables & OrgGuardVariables) is compatible.
     c.set("agentId", null)
     c.set("agentTenantId", null)
+    c.set("agentScope", null)
     c.set("userId", null)
     c.set("userName", null)
     c.set("userEmail", null)
@@ -335,6 +336,7 @@ tasksRouter.post(
       }
       c.set("agentId", payload.sub)
       c.set("agentTenantId", payload.tenantId)
+      c.set("agentScope", payload.scope)
       c.set("userId", payload.userId)
       await next()
       return
@@ -382,11 +384,14 @@ tasksRouter.post(
       actorType = "agent"
       actorId = agentId
 
-      // Re-verify scope from JWT (we stored sub+tenantId+userId; need scope).
-      const authHeader = c.req.header("Authorization")
-      const token = authHeader!.slice(7)
-      const payload = await verifyAgentJwt(token, c.env.JWT_SECRET)
-      if (!payload || !payload.scope.includes("submit_task")) {
+      // Round-3 architecture H2 + security H3 fix: scope is now cached on
+      // the context by the dual-auth middleware above (and by
+      // requireAgentJwt for routes that use the canonical middleware), so
+      // no second verifyAgentJwt call is needed. This also closes the
+      // fragility window where two verifies could diverge under clock skew
+      // / library upgrade.
+      const scope = c.get("agentScope") ?? []
+      if (!scope.includes("submit_task")) {
         return c.json(
           {
             error: {

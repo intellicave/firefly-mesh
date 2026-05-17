@@ -1,8 +1,8 @@
 import { Hono } from "hono"
-import { drizzle } from "drizzle-orm/d1"
 import { eq, and } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { zValidator } from "@hono/zod-validator"
+import { drizzleD1 } from "../db/connect.ts"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
@@ -13,10 +13,14 @@ const me = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
 me.use("*", requireSession)
 
-// GET /api/me/agents — list all agents owned by the current user across tenants
+// GET /api/me/agents — list agents owned by the current user, restricted to
+// tenants where the user still has an active membership. Round-2 security H4
+// fix: prior implementation joined only by ownerUserId, so agents in tenants
+// the user had been removed from were still returned (leaks tenantId +
+// agent metadata for tenants no longer accessible).
 me.get("/agents", async (c) => {
   const userId = c.get("userId") as string
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
 
   const rows = await db
     .select({
@@ -28,6 +32,13 @@ me.get("/agents", async (c) => {
       lastSeenAt: schema.agents.lastSeenAt,
     })
     .from(schema.agents)
+    .innerJoin(
+      schema.memberships,
+      and(
+        eq(schema.memberships.tenantId, schema.agents.tenantId),
+        eq(schema.memberships.userId, userId),
+      ),
+    )
     .where(eq(schema.agents.ownerUserId, userId))
 
   return c.json({ data: rows })
@@ -46,7 +57,7 @@ me.post(
   async (c) => {
     const userId = c.get("userId") as string
     const { endpoint, keys } = c.req.valid("json")
-    const db = drizzle(c.env.DB, { schema })
+    const db = drizzleD1(c.env)
 
     await db
       .insert(schema.pushSubscriptions)
@@ -71,7 +82,7 @@ me.delete("/push-subscription", async (c) => {
   if (!endpoint) {
     return c.json({ error: { code: "MISSING_ENDPOINT", message: "endpoint required" } }, 400)
   }
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
   await db
     .delete(schema.pushSubscriptions)
     .where(

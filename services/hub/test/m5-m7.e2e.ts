@@ -373,11 +373,15 @@ async function main() {
   assert.equal(cross.status, 404, "cross-tenant boundary lookup 404")
   log("9.0", "cross-tenant boundary blocked")
 
-  // ----- Phase 10: back-compat — JWT without scope claim ------------------
-  // Read the same JWT_SECRET wrangler dev uses (from .dev.vars) and sign
-  // a JWT without the 'scope' claim, simulating a pre-M6 agent token.
-  // If verifyAgentJwt rejects it, existing in-the-wild agents would lose
-  // access on upgrade — a hard rule.K1 violation.
+  // ----- Phase 10: pre-M6 JWTs are NOW rejected (round-3 sec C1 + M5) ------
+  // Original M6 spec accepted pre-M6 JWTs (no scope claim) with
+  // defaultScopes() as back-compat. Round-3 security review showed this is
+  // a policy-revocation bypass: an admin-revoked scope was silently
+  // re-granted on every legacy token verify. Combined with the new iss/aud
+  // enforcement (sec M5: cross-env JWT replay defense), pre-M6 JWTs are now
+  // intentionally rejected — agents must re-pair to obtain a properly
+  // scoped + iss/aud-claiming JWT. This test pins the new behaviour so a
+  // future "back-compat" re-introduction is flagged.
   const fs = await import("node:fs/promises")
   const path = await import("node:path")
   const devVars = await fs.readFile(
@@ -395,7 +399,7 @@ async function main() {
     tenantId,
     userId: carolUserId,
     type: "agent",
-    // intentionally NO scope claim — simulating pre-M6 token
+    // intentionally NO scope claim, NO iss/aud — simulating pre-M6 token
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(agentId)
@@ -403,22 +407,24 @@ async function main() {
     .setExpirationTime("1h")
     .sign(new TextEncoder().encode(secret))
 
-  // Hit an endpoint that uses requireAgentJwt. 200 / 404 / 422 all indicate
-  // the JWT was accepted by verifyAgentJwt; 401 means rejection (failure).
   const legacyResp = await fetch(
     `${HUB}/api/agents/${agentId}/prekey-bundle`,
     { headers: { Authorization: `Bearer ${legacyJwt}` } },
   )
-  assert.notEqual(
+  assert.equal(
     legacyResp.status,
     401,
-    `back-compat: pre-M6 JWT without scope claim must not be rejected (got ${legacyResp.status})`,
+    `pre-M6 JWT (no iss/aud) must be rejected (got ${legacyResp.status}) — sec M5 + C1`,
   )
-  log("10.0", `back-compat: legacy JWT verified (status ${legacyResp.status})`)
+  log(
+    "10.0",
+    `pre-M6 JWT correctly rejected (sec M5 + C1 — agent must re-pair)`,
+  )
 
   // -- DONE -----------------------------------------------------------------
   log("DONE", "")
   log("DONE", "M5+M6+M7 sprint acceptance PASS:")
+  log("DONE", "  ✓ Round-3 sec M5 + C1: pre-M6 JWT (no iss/aud, no scope) correctly rejected — forces re-pair")
   log("DONE", "  ✓ M5: agent register auto-fills owner_employee_id + runtime_kind + activated_at")
   log("DONE", "  ✓ M5: runtimeKind + runtimeMeta accepted from body")
   log("DONE", "  ✓ M6: representation_boundaries row created with default scopes")
@@ -432,7 +438,6 @@ async function main() {
   log("DONE", "  ✓ M7: regenerate on non-pending → 409")
   log("DONE", "  ✓ M7: DELETE soft revoke (status=revoked)")
   log("DONE", "  ✓ cross-tenant boundary lookup blocked")
-  log("DONE", "  ✓ back-compat: pre-M6 JWT (no scope claim) still verifies")
 }
 
 main().catch((err) => {

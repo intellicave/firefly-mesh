@@ -1,11 +1,11 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { drizzle } from "drizzle-orm/d1"
 import { eq, and, gt, isNull, count, asc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
+import { drizzleD1 } from "../db/connect.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireSession, requireAgentJwt, sessionMiddleware } from "../middleware/auth.ts"
 import { rateLimitByIp } from "../middleware/rateLimit.ts"
@@ -24,7 +24,7 @@ agents.post(
   zValidator("json", z.object({ deviceName: z.string().min(1).max(100) })),
   async (c) => {
     const { deviceName } = c.req.valid("json")
-    const db = drizzle(c.env.DB, { schema })
+    const db = drizzleD1(c.env)
 
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     const bytes = crypto.getRandomValues(new Uint8Array(6))
@@ -58,7 +58,7 @@ agents.get("/pair-status", rateLimitByIp("RL_PAIR"), sessionMiddleware, async (c
     return c.json({ error: { code: "MISSING_CODE", message: "code query param required" } }, 400)
   }
 
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
   const now = new Date().toISOString()
 
   const [row] = await db
@@ -101,7 +101,7 @@ agents.post(
   async (c) => {
     const { code, tenantId } = c.req.valid("json")
     const userId = c.get("userId") as string
-    const db = drizzle(c.env.DB, { schema })
+    const db = drizzleD1(c.env)
     const now = new Date()
 
     const [pairing] = await db
@@ -197,7 +197,7 @@ agents.post(
       runtimeKind,
       runtimeMeta,
     } = c.req.valid("json")
-    const db = drizzle(c.env.DB, { schema })
+    const db = drizzleD1(c.env)
     const now = new Date()
 
     const [pairing] = await db
@@ -307,7 +307,7 @@ const LOW_PREKEY_THRESHOLD = 10
 agents.get("/:agentId/prekey-bundle", requireAgentJwt, async (c) => {
   const agentId = c.req.param("agentId")
   const callerTenantId = c.get("agentTenantId") as string
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
 
   const [agent] = await db
     .select()
@@ -390,7 +390,7 @@ agents.get("/:agentId/prekey-bundle", requireAgentJwt, async (c) => {
 agents.delete("/:agentId", requireSession, async (c) => {
   const agentId = c.req.param("agentId")
   const userId = c.get("userId") as string
-  const db = drizzle(c.env.DB, { schema })
+  const db = drizzleD1(c.env)
 
   const [agent] = await db
     .select()
@@ -439,7 +439,7 @@ agents.put(
       )
     }
 
-    const db = drizzle(c.env.DB, { schema })
+    const db = drizzleD1(c.env)
     const now = new Date().toISOString()
 
     await db.insert(schema.oneTimePrekeys).values(

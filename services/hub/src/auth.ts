@@ -22,6 +22,12 @@ export type Bindings = {
   APP_URL: string
   PWA_URL: string
   JWT_SECRET: string
+  // Shared secret asserted on the Worker → TenantHub DO internal RPC path.
+  // Round-3 security H2 fix: without this, any co-located Worker in the same
+  // CF account could call TENANT_HUB.get(...).fetch("/internal/deliver")
+  // and inject forged WS frames, bypassing the entire HITL stack. Set via
+  // wrangler secret (prod) / .dev.vars (dev); must be ≥32 chars.
+  INTERNAL_SECRET: string
   // Rate limiting (see wrangler.toml [[ratelimits]] for limits per binding).
   RL_AUTH: RateLimit
   RL_PAIR: RateLimit

@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, desc, eq, inArray, like, lt, or, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, gt, inArray, like, lt, or, sql, type SQL } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -686,7 +686,11 @@ knowledgeRouter.get(
   zValidator(
     "query",
     z.object({
-      cursor: z.string().optional(),
+      // Round-2 architecture H3 + security C2 fix: cursor moved to chunkIndex
+      // (createdAt collides — every chunk of one doc has the same timestamp
+      // because they're inserted in one loop with `now`; cursor on createdAt
+      // never advances). Cursor + sort now both use chunkIndex.
+      cursor: z.coerce.number().int().nonnegative().optional(),
       limit: z.coerce.number().int().min(1).max(100).default(50),
       tenantId: z.string().optional(),
     }),
@@ -730,8 +734,16 @@ knowledgeRouter.get(
       return c.json({ error: { code: "FORBIDDEN", message: "x" } }, 403)
     }
 
-    const conditions: SQL[] = [eq(schema.knowledgeChunks.documentId, id)]
-    if (q.cursor) conditions.push(lt(schema.knowledgeChunks.createdAt, q.cursor))
+    // Round-2 security C2: explicit orgId filter on chunks too (defense in
+    // depth — documentId is globally unique but cross-tenant safety should
+    // not depend on nanoid uniqueness alone, plus prepares for an attack
+    // surface where attacker controls a documentId from another tenant).
+    const conditions: SQL[] = [
+      eq(schema.knowledgeChunks.orgId, tenantId),
+      eq(schema.knowledgeChunks.documentId, id),
+    ]
+    if (q.cursor !== undefined)
+      conditions.push(gt(schema.knowledgeChunks.chunkIndex, q.cursor))
 
     const rows = await db
       .select()
@@ -743,7 +755,7 @@ knowledgeRouter.get(
     const hasMore = rows.length > q.limit
     const chunks = hasMore ? rows.slice(0, q.limit) : rows
     const nextCursor =
-      hasMore && chunks.length > 0 ? chunks[chunks.length - 1]!.createdAt : null
+      hasMore && chunks.length > 0 ? chunks[chunks.length - 1]!.chunkIndex : null
 
     return c.json({ data: { chunks, nextCursor } })
   },
