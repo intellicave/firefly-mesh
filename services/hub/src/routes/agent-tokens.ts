@@ -285,6 +285,25 @@ agentTokensRouter.delete(
       )
     }
 
+    // Round-29 M2 fix: only `pending` tokens can be revoked. Previously the
+    // DELETE handler unconditionally overwrote status, which corrupted
+    // consumed/expired/already-revoked rows by stamping them with a fresh
+    // revokedAt — making the audit trail show "explicitly revoked
+    // post-consumption" for tokens the admin never actually revoked. Mirror
+    // the guard the regenerate handler uses.
+    const existing = existingRows[0]!
+    if (existing.status !== "pending") {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_STATUS",
+            message: `Cannot revoke token in status '${existing.status}'`,
+          },
+        },
+        409,
+      )
+    }
+
     await db
       .update(schema.agentTokens)
       .set({ status: "revoked", revokedAt: now.toISOString() })

@@ -161,25 +161,26 @@ a2aMessagesRouter.post(
     // sends between the same agent pair. Now we look up the existing thread
     // for the (sender, recipient) participant set in this tenant and reuse
     // it; only insert if none is found.
+    //
+    // Round-29 H1 fix: previously this loaded ALL threads for the tenant
+    // and did Array.find + JSON.parse in JS to canonicalize participants
+    // (O(N) memory fetch, risked 10MB D1 result-limit at scale). Migration
+    // 0014 normalized all existing rows to sorted JSON form and added the
+    // (tenant_id, participants) index, so the lookup is now a single
+    // indexed point query on the canonical participantKey.
     const participantKey = JSON.stringify(
       [senderAgentId, body.receiverAgentId].sort(),
     )
-    const existingEncThreads = await db
-      .select({ id: schema.threads.id, participants: schema.threads.participants })
+    const [existingEncThread] = await db
+      .select({ id: schema.threads.id })
       .from(schema.threads)
-      .where(eq(schema.threads.tenantId, tenantId))
-    const existingEncThread = existingEncThreads.find((t) => {
-      // Defensive: normalise stored participants (sort to canonical form)
-      // before comparing because legacy threads may have inserted them in
-      // the original (unsorted) sender-first order.
-      try {
-        const parsed = JSON.parse(t.participants) as string[]
-        if (!Array.isArray(parsed)) return false
-        return JSON.stringify([...parsed].sort()) === participantKey
-      } catch {
-        return false
-      }
-    })
+      .where(
+        and(
+          eq(schema.threads.tenantId, tenantId),
+          eq(schema.threads.participants, participantKey),
+        ),
+      )
+      .limit(1)
     const encryptionThreadId = existingEncThread?.id ?? nanoid(21)
     const encryptionThreadIsNew = !existingEncThread
 
