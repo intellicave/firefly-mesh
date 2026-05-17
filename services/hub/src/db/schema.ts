@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { sqliteTable, text, integer, primaryKey, uniqueIndex, blob } from "drizzle-orm/sqlite-core"
 import { sql } from "drizzle-orm"
 
 // ---------------------------------------------------------------------------
@@ -501,6 +501,119 @@ export const a2aMessages = sqliteTable("a2a_messages", {
 // assignee != reviewer is enforced at the API layer.
 // See docs/plans/2026-05-17-firefly-mesh-product-layer-m10-design.md
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Product layer M8 — sprint 2026-05-18 (knowledge base, three-tier scope)
+// 2 tables with three-tier scope (company / department / personal).
+// embedding column is BLOB nullable; populated by Vectorize binding in V1.1.
+// Inline-text only this sprint (md/txt); pdf/docx land in V1.1 with R2.
+// See docs/plans/2026-05-18-firefly-mesh-product-layer-m8-m9-design.md §2
+// ---------------------------------------------------------------------------
+
+export const knowledgeDocuments = sqliteTable("knowledge_documents", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  scope: text("scope", { enum: ["company", "department", "personal"] }).notNull(),
+  departmentId: text("department_id").references(() => departments.id, {
+    onDelete: "cascade",
+  }),
+  ownerEmployeeId: text("owner_employee_id").references(() => employees.id, {
+    onDelete: "cascade",
+  }),
+  title: text("title").notNull(),
+  description: text("description"),
+  tags: text("tags").notNull().default("[]"), // JSON string[]
+  fileType: text("file_type", {
+    enum: ["md", "txt", "pdf", "docx", "html"],
+  }).notNull(),
+  fileUrl: text("file_url"),
+  fileSize: integer("file_size"),
+  indexStatus: text("index_status", {
+    enum: ["pending", "indexing", "ready", "failed"],
+  })
+    .notNull()
+    .default("ready"),
+  chunkCount: integer("chunk_count").notNull().default(0),
+  embedModel: text("embed_model"),
+  lastIndexedAt: text("last_indexed_at"),
+  createdBy: text("created_by").references(() => employees.id, {
+    onDelete: "set null",
+  }),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const knowledgeChunks = sqliteTable("knowledge_chunks", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id")
+    .notNull()
+    .references(() => knowledgeDocuments.id, { onDelete: "cascade" }),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  // Denormalised — avoids JOIN in RAG hot path. Mirrors v0 behaviour.
+  scope: text("scope", { enum: ["company", "department", "personal"] }).notNull(),
+  departmentId: text("department_id"),
+  ownerEmployeeId: text("owner_employee_id"),
+  chunkIndex: integer("chunk_index").notNull(),
+  content: text("content").notNull(),
+  // Float32 serialised; null this sprint, populated by V1.1 Vectorize sprint.
+  embedding: blob("embedding"),
+  startOffset: integer("start_offset"),
+  endOffset: integer("end_offset"),
+  headingPath: text("heading_path"), // JSON string[]
+  createdAt: text("created_at").notNull(),
+})
+
+// ---------------------------------------------------------------------------
+// Product layer M9 — sprint 2026-05-18 (skills + agent_skills)
+// agentskills.io standard manifest stored as JSON. Three-tier scope per
+// kb (with same CHECK semantics). loader + execution engine → V1.1/V2.
+// ---------------------------------------------------------------------------
+
+export const skills = sqliteTable("skills", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  manifestId: text("manifest_id").notNull(), // e.g. "firefly-mesh/email-draft"
+  version: text("version").notNull(), // SemVer
+  manifest: text("manifest").notNull(), // JSON serialised SkillManifest
+  scope: text("scope", { enum: ["company", "department", "personal"] }).notNull(),
+  departmentId: text("department_id").references(() => departments.id, {
+    onDelete: "cascade",
+  }),
+  ownerEmployeeId: text("owner_employee_id").references(() => employees.id, {
+    onDelete: "cascade",
+  }),
+  status: text("status", { enum: ["active", "deprecated", "archived"] })
+    .notNull()
+    .default("active"),
+  createdBy: text("created_by").references(() => employees.id, {
+    onDelete: "set null",
+  }),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const agentSkills = sqliteTable(
+  "agent_skills",
+  {
+    agentId: text("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    skillId: text("skill_id")
+      .notNull()
+      .references(() => skills.id, { onDelete: "cascade" }),
+    enabled: integer("enabled").notNull().default(1),
+    assignedAt: text("assigned_at").notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.agentId, t.skillId] }),
+  }),
+)
 
 export const tasks = sqliteTable("tasks", {
   id: text("id").primaryKey(),
