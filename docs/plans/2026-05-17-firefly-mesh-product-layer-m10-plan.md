@@ -8,7 +8,7 @@
 
 ### Task 4.1 — Schema 扩展
 
-**status**: pending
+**status**: completed
 **files modified**: services/hub/src/db/schema.ts
 
 **acceptance_criteria**:
@@ -20,7 +20,7 @@
 
 ### Task 4.2 — Migration 0010
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/migrations/0010_tasks.sql
 
 **acceptance_criteria**:
@@ -31,7 +31,7 @@
 
 ### Task 4.3 — lib/tasks.ts
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/src/lib/tasks.ts
 
 **acceptance_criteria**:
@@ -44,7 +44,7 @@
 
 ### Task 4.4 — routes/tasks.ts
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/src/routes/tasks.ts
 
 **acceptance_criteria**:
@@ -59,7 +59,7 @@
 
 ### Task 4.5 — 挂载
 
-**status**: pending
+**status**: completed
 **files modified**: services/hub/src/index.ts
 
 **acceptance_criteria**:
@@ -69,7 +69,7 @@
 
 ### Task 4.6 — E2E
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/test/m10.e2e.ts + package.json script
 
 **acceptance_criteria**:
@@ -89,7 +89,7 @@
 
 ### Task 4.7 — 文档同步 + commits
 
-**status**: pending
+**status**: completed
 
 **acceptance_criteria**:
 - [ ] state.yaml 加 sub_sprint_m10 section
@@ -124,10 +124,30 @@
 
 | Task | Status |
 |---|---|
-| 4.1 Schema | pending |
-| 4.2 Migration 0010 | pending |
-| 4.3 lib/tasks.ts | pending |
-| 4.4 routes/tasks.ts | pending |
-| 4.5 挂载 | pending |
-| 4.6 E2E | pending |
-| 4.7 文档同步 | pending |
+| 4.1 Schema | completed |
+| 4.2 Migration 0010 | completed |
+| 4.3 lib/tasks.ts | completed |
+| 4.4 routes/tasks.ts | completed |
+| 4.5 挂载 | completed |
+| 4.6 E2E | completed |
+| 4.7 文档同步 | completed |
+
+**Sleep run 完成于** 2026-05-17。验收：
+
+- ✅ typecheck 全绿
+- ✅ test:e2e:m10 — 12/12 phases pass
+- ✅ test:e2e:m11-m12 不回归
+- ✅ test:e2e:m5-m7 不回归
+- ✅ test:e2e:product-layer 不回归
+- ✅ test:e2e 不回归
+- ✅ 4 个 atomic commit（schema+migration / lib / routes+mount / e2e）
+
+## 实现 drift（1 bug fix）
+
+实施期 e2e 抓出 1 个 bug：
+
+- `lib/tasks.ts::assertValidTransition()` 原写法 `if (from === to) return` 让"approve 已 approved" 静默通过 200（应 409 INVALID_STATUS）
+- 修复：删除 idempotent no-op，所有 state change 必须是真实转移；idempotency 由 caller 关心
+- 影响：rules.md §S1 隐含此约定，本次显式实施
+
+设计文档无需修订。

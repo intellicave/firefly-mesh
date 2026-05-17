@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — M1-M7 + M11 + M12 done (organizations/employees/departments/projects + agents-as-employee-runtime + boundary scopes + agent_tokens admin issuance + a2a product layer with HITL bidirectional state + audit_log extended); M8/M9/M10 deferred"
+topic: "firefly-mesh-product-layer — M1-M7 + M10 + M11 + M12 done (organizations/employees/departments/projects + agents-as-employee-runtime + boundary scopes + agent_tokens admin issuance + tasks with HITL 7-state machine + a2a product layer + audit_log extended); M8 (knowledge) + M9 (skills) deferred"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,48 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === M10 sub-sprint (2026-05-17) ===
+sub_sprint_m10:
+  topic_slug: "firefly-mesh-product-layer-m10"
+  status: completed
+  started_at: "2026-05-17T08:00:00Z"
+  completed_at: "2026-05-17T10:00:00Z"
+  modules_implemented:
+    - "M10 — Tasks + 7-state HITL machine + 3-party RBAC (creator/assignee/reviewer)"
+  endpoints_added:
+    - "POST   /api/tasks                   (session + owner/admin/manager)"
+    - "GET    /api/tasks                   (session; employee role auto-filter)"
+    - "GET    /api/tasks/:id               (session)"
+    - "POST   /api/tasks/:id/start         (session, assignee/admin)"
+    - "POST   /api/tasks/:id/submit        (session OR agent JWT w/ submit_task scope)"
+    - "POST   /api/tasks/:id/review        (session, reviewer/admin; SELF_REVIEW_FORBIDDEN)"
+  files_created:
+    - "services/hub/migrations/0010_tasks.sql"
+    - "services/hub/src/lib/tasks.ts"
+    - "services/hub/src/routes/tasks.ts"
+    - "services/hub/test/m10.e2e.ts"
+    - "docs/plans/2026-05-17-firefly-mesh-product-layer-m10-{ideation,design,ui,api,plan,meta,index,rules}.md"
+  files_modified:
+    - "services/hub/src/db/schema.ts (tasks table)"
+    - "services/hub/src/index.ts (mount /api/tasks)"
+    - "services/hub/package.json (test:e2e:m10 script)"
+  test_results:
+    typecheck: PASS
+    test_e2e_m10: "PASS (12/12 phases)"
+    test_e2e_m11_m12_regression: "PASS"
+    test_e2e_m5_m7_regression: "PASS"
+    test_e2e_product_layer_regression: "PASS"
+    test_e2e_regression: "PASS"
+  commits:
+    - "645da3e — docs(plans): M10 sprint — 8 design documents"
+    - "9669dc6 — feat(hub): M10 tasks schema + migration 0010"
+    - "60c5081 — feat(hub): M10 lib/tasks.ts — state machine + agent owner resolver"
+    - "ed5ea22 — feat(hub): M10 tasks route (6 endpoints) + mount"
+    - "bf04cf8 — test(hub): M10 end-to-end (12 phases)"
+  bugs_found_and_fixed_during_e2e_iteration:
+    - "lib/tasks.ts::assertValidTransition() idempotent no-op (from === to → silent 200) → removed; terminal/illegal moves now 409 INVALID_STATUS"
+  notes: "Only 1 bug, caught immediately by Phase 9 of e2e. Design docs unchanged."
 
 # === M11-M12 sub-sprint (2026-05-17) ===
 sub_sprint_m11_m12:
@@ -252,10 +294,6 @@ gate_history:
 
 # Follow-up sprints (planned, not yet started)
 next_sprints:
-  - slug: "firefly-mesh-product-layer-m10"
-    scope: "M10 tasks + HITL state machine"
-    estimated_duration: "5 days"
-    depends_on: ["M11-M12"]
   - slug: "firefly-mesh-product-layer-m8-m9"
     scope: "M8 knowledge + M9 skills"
     estimated_duration: "5 days"
