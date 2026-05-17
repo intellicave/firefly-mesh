@@ -494,3 +494,71 @@ export const a2aMessages = sqliteTable("a2a_messages", {
   relatedTaskId: text("related_task_id"),
   createdAt: text("created_at").notNull(),
 })
+
+// ---------------------------------------------------------------------------
+// Product layer M10 — sprint 2026-05-17 (tasks + HITL state machine)
+// 7-state task lifecycle with creator / assignee / reviewer trio.
+// assignee != reviewer is enforced at the API layer.
+// See docs/plans/2026-05-17-firefly-mesh-product-layer-m10-design.md
+// ---------------------------------------------------------------------------
+
+export const tasks = sqliteTable("tasks", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+
+  // Goal ancestry — fields ship now, traversal V1.1.
+  parentId: text("parent_id"),
+  rootId: text("root_id"),
+
+  // Nullable so ON DELETE SET NULL preserves task history when the creator
+  // employee record is removed. API layer enforces non-null at create time.
+  creatorEmployeeId: text("creator_employee_id").references(
+    () => employees.id,
+    { onDelete: "set null" },
+  ),
+  assigneeEmployeeId: text("assignee_employee_id").references(
+    () => employees.id,
+    { onDelete: "set null" },
+  ),
+  reviewerEmployeeId: text("reviewer_employee_id").references(
+    () => employees.id,
+    { onDelete: "set null" },
+  ),
+
+  title: text("title").notNull(),
+  description: text("description"),
+  output: text("output"),
+  deadline: text("deadline"),
+
+  status: text("status", {
+    enum: [
+      "pending_dispatch_approval",
+      "assigned",
+      "in_progress",
+      "pending_review",
+      "rejected",
+      "approved",
+      "cancelled",
+    ],
+  })
+    .notNull()
+    .default("assigned"),
+
+  // a2a linkage — populate in V1.1 when agent-triggered.
+  dispatchApprovalId: text("dispatch_approval_id").references(
+    () => a2aMessages.id,
+    { onDelete: "set null" },
+  ),
+  reviewApprovalId: text("review_approval_id").references(
+    () => a2aMessages.id,
+    { onDelete: "set null" },
+  ),
+
+  reviewRound: integer("review_round").notNull().default(0),
+  reviewComment: text("review_comment"),
+
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
