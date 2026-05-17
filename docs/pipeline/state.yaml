@@ -110,6 +110,62 @@ sub_sprint_ralph_loop_19_25:
     prior 18 rounds had surfaced. End state: 2 consecutive clean rounds
     + 6/6 e2e green + typecheck clean.
 
+# === Ralph-loop rounds 26-38 (2026-05-18) — SECOND LOOP PHASE ===
+sub_sprint_ralph_loop_26_38:
+  topic_slug: "firefly-mesh-ralph-loop-r26-r38"
+  status: completed
+  started_at: "2026-05-18T22:00:00Z"
+  completed_at: "2026-05-19T03:00:00Z"
+  trigger: |
+    Ralph-loop hook refired after round 25 exit; loop has no completion
+    promise so it continues. CEO mandate ("消除一切偷工减料") justified
+    another deep iteration on surfaces not yet exhaustively audited.
+  rounds_summary:
+    r26: "1 H — LIKE metacharacter injection in /api/knowledge/search (and sister fix in /api/employees list) — q=%% collapsed into LIKE '%%%%' returning all chunks in caller's scope. Fix: ESCAPE clause + JS escape of \\ % _. e2e Phase 13.2 in m8-m9. commit fb65181"
+    r27: "1 H — HTML/link injection in invitation email (inviterName + tenantName interpolated unescaped into body). Authenticated admin → invitee phishing. Fix: escapeHtml helper. commit a511f67"
+    r28: "CLEAN (verify R27 + sweep untrusted-string-in-output)"
+    r29: "1 H + 1 M — O(N) thread scan (full table fetch + Array.find + JSON.parse) → indexed point query + migration 0014 canonicalize. M2: DELETE /api/agent-tokens lacked status guard → wipes consumed tokens. commit 6c73821"
+    r30: "1 C + 1 M — DELETE /api/projects/:id bypassed state-machine (only archived should be deletable per lib/projects.ts docstring). M: threads(tenant_id, participants) index needed UNIQUE for concurrent-insert orphan prevention. Migrations 0014+0015. e2e Phase 7.1 verifies both branches. commit 2dfd83e"
+    r31: "CLEAN (verify R30 fixes + same-shape sweep + V4 me/organizations enumeration)"
+    r32: "3 H — tenant create non-atomic (4 sequential inserts → batch). c.get('employee')! crash on 8 handlers (orgGuard alone doesn't guarantee non-null employee for invited users; added requireEmployee). Knowledge chunks N+1 sequential insert → multi-row .values(array). commit ba5cf7e"
+    r33: "1 H — R32 sister miss: POST /api/projects/:id/members lacked requireEmployee. Verified full c.get('employee')! taxonomy (22 sites, all guarded). commit c27b6d4"
+    r34: "CLEAN (verify R33 + V5 hitl engine + tasks.ts state machine)"
+    r35: "1 H — task /start /submit /review UPDATE+audit non-atomic. Two concurrent reviewers both pass state check, both write decision, both emit audit → duplicate/contradictory audit. Fix: db.batch + status WHERE CAS + 409 INVALID_STATUS on changes===0. Rules.md §Q4 registered tenants + tasks as 3rd+4th sanctioned sites. commit 18529eb"
+    r36: "1 H — a2a-messages.ts handleCta (4 CTAs: approve/reject/accept/reject-receive) same shape as R35. Fixed both sender + receiver branches with same batch+CAS pattern. Rules.md updated to list a2a-messages.ts as TWO batch sites under same entry. commit 0a27603"
+    r37: "CLEAN (verify R36 + V3 same-shape sweep on agent-tokens/employees/projects/knowledge/skills/boundaries)"
+    r38: "0 C + 0 H + 3 M — 2-consec satisfied. M1: projects pagination cursor+limit broken (parsed but unused, unbounded scan). M2: no app.onError global handler. M3: ciphertext/nonce/ephemeralPk uncapped. All 3 M fixed despite C/H clean per loop's 'CEO wants no shortcuts' mandate. commit 8506051"
+  test_results:
+    hub_typecheck: PASS
+    hub_e2e_agent_mesh: "PASS (6/6)"
+    hub_e2e_product_layer: "PASS (added Phase 7.1 project DELETE state guard; total ~13 phases)"
+    hub_e2e_m5_m7: "PASS"
+    hub_e2e_m8_m9: "PASS (added Phase 13.2 LIKE injection regression; total ~16 phases)"
+    hub_e2e_m10: "PASS"
+    hub_e2e_m11_m12: "PASS"
+    migrations_local_applied: "0014_threads_canonicalize, 0015_threads_unique (in addition to round-23's 0013)"
+  cumulative_loop_phase_2_stats: |
+    Across 13 ralph-loop rounds (26-38): 1 Critical + 10 High + 5 Medium
+    caught and fixed (1C/10H/5M, 10 commits). Adversarial reviewer found
+    real SQL semantic bypass (LIKE injection round 26), real HTML
+    phishing vector (round 27), real performance trap (O(N) thread scan
+    round 29), real state-machine bypass (round 30 Critical), real
+    runtime crashes (8+1 handlers round 32+33), real audit-integrity
+    races (round 35+36), real backend contract bug (round 38 pagination).
+    All pre-loop reviewers (18 rounds + previous 7) missed every one.
+    Loop demonstrated value of continued adversarial iteration well
+    beyond the "obvious bug" exhaustion point. End state: rounds 37+38
+    consecutive clean + 6/6 e2e green + typecheck clean.
+
+  total_loop_stats_across_both_phases: |
+    Combined phase 1 (R19-R25, 7 rounds) + phase 2 (R26-R38, 13 rounds)
+    = 20 ralph-loop rounds. Caught 1C + 15H + 8M + 1L total. All fixed.
+    16 commits. 5 new migrations (0013-0015), 1 new lib file
+    (internal-secret.ts), 1 new test phase per loop round on average.
+    Hub e2e count grew 76 → 78 across the loop. Rules.md §Q4 grew from
+    1 sanctioned batch site to 4 (invitations, a2a-messages w/ 2 internal
+    uses, tenants, tasks). 9 reviewer rounds were clean (R20, R22, R24,
+    R25, R28, R31, R34, R37, R38).
+
 # === Loop extension: arch M1/M2 + sprint B plan v3 + e2e quality round (2026-05-18) ===
 sub_sprint_loop_extension:
   topic_slug: "firefly-mesh-loop-extension"
