@@ -398,9 +398,12 @@ projectsRouter.get("/:id/members", orgGuard, async (c) => {
 })
 
 // POST /api/projects/:id/members
+// Round-33 H: requireEmployee — sister of the Round-32 H2 fix
+// (PATCH/DELETE /:id/members already covered; POST was the missed one).
 projectsRouter.post(
   "/:id/members",
   orgGuard,
+  requireEmployee,
   zValidator(
     "json",
     z.object({
