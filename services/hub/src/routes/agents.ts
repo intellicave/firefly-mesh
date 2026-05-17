@@ -10,6 +10,7 @@ import type { AuthVariables } from "../middleware/auth.ts"
 import { requireSession, requireAgentJwt, sessionMiddleware } from "../middleware/auth.ts"
 import { rateLimitByIp } from "../middleware/rateLimit.ts"
 import { signAgentJwt } from "../lib/jwt.ts"
+import { defaultScopes } from "../lib/scopes.ts"
 
 const agents = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
@@ -145,6 +146,12 @@ agents.post(
 )
 
 // POST /api/agents/register — skill registers agent + uploads X3DH bundle + gets JWT
+//
+// M5 sprint 2026-05-17 added optional runtimeKind / runtimeMeta input fields
+// and internal wiring to populate agents.owner_employee_id from the current
+// user's employee record. Also creates a representation_boundaries row with
+// default scopes and includes those scopes in the issued JWT (M6). The
+// response shape ({ agentId, token, tenantId }) is unchanged.
 agents.post(
   "/register",
   zValidator(
@@ -161,6 +168,19 @@ agents.post(
         .array(z.object({ keyId: z.number().int(), publicKey: z.string() }))
         .min(1)
         .max(100),
+      // M5: optional runtime metadata
+      runtimeKind: z
+        .enum([
+          "openclaw",
+          "hermes",
+          "claude-code",
+          "cursor",
+          "claude-desktop",
+          "other-mcp",
+          "unknown",
+        ])
+        .optional(),
+      runtimeMeta: z.record(z.string(), z.unknown()).optional(),
     }),
   ),
   async (c) => {
@@ -173,6 +193,8 @@ agents.post(
       signedPrekey,
       signedPrekeySignature,
       oneTimePrekeys,
+      runtimeKind,
+      runtimeMeta,
     } = c.req.valid("json")
     const db = drizzle(c.env.DB, { schema })
     const now = new Date()
@@ -194,18 +216,37 @@ agents.post(
       )
     }
 
+    // M5: resolve the employee profile for this user in this tenant. May be
+    // null if the user has a membership but no employee record yet (only
+    // possible for legacy tenants that pre-date the tenants-bootstrap commit
+    // from sprint 2026-05-16). Modern flow always has an employee record.
+    const [emp] = await db
+      .select({ id: schema.employees.id })
+      .from(schema.employees)
+      .where(
+        and(
+          eq(schema.employees.orgId, pairing.tenantId),
+          eq(schema.employees.userId, pairing.userId),
+        ),
+      )
+    const ownerEmployeeId = emp?.id ?? null
+
     const agentId = nanoid(21)
 
     await db.insert(schema.agents).values({
       id: agentId,
       tenantId: pairing.tenantId,
       ownerUserId: pairing.userId,
+      ownerEmployeeId,
       displayName,
       type,
       identityKey,
       identityKeyX,
       signedPrekey,
       signedPrekeySig: signedPrekeySignature,
+      runtimeKind: runtimeKind ?? "unknown",
+      runtimeMeta: runtimeMeta ? JSON.stringify(runtimeMeta) : null,
+      activatedAt: now.toISOString(),
       createdAt: now.toISOString(),
     })
 
@@ -218,6 +259,16 @@ agents.post(
         createdAt: now.toISOString(),
       })),
     )
+
+    // M6: create the representation_boundaries row with default scopes.
+    // The JWT below carries the same scopes as a `scope` claim.
+    const scopes = defaultScopes()
+    await db.insert(schema.representationBoundaries).values({
+      id: nanoid(21),
+      agentId,
+      scopes: JSON.stringify(scopes),
+      updatedAt: now.toISOString(),
+    })
 
     // Invalidate the pairing code by expiring it
     await db
@@ -234,7 +285,13 @@ agents.post(
       createdAt: now.toISOString(),
     })
 
-    const token = await signAgentJwt(agentId, pairing.tenantId, pairing.userId, c.env.JWT_SECRET)
+    const token = await signAgentJwt(
+      agentId,
+      pairing.tenantId,
+      pairing.userId,
+      scopes,
+      c.env.JWT_SECRET,
+    )
 
     return c.json({ data: { agentId, token, tenantId: pairing.tenantId } }, 201)
   },
