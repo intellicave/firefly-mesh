@@ -328,12 +328,87 @@ async function main() {
   assert.equal(unwrap(promoteAlice.body, "promote").role, "admin")
   log("8.1", "Alice promoted to admin")
 
-  // Now from Carol's session, try to demote herself — already blocked above.
-  // Alice is admin but admin cannot demote owner.
-  // Sign in Alice would require us to set Alice's userId first, which is
-  // bootstrap mode. Skip: last-owner-from-other-account is covered by unit
-  // semantics; here we verify last-owner reasoning is wired via the
-  // bootstrap path's promotion check.
+  // -- Phase 8.2: M3 fix — LAST_OWNER guard end-to-end --------------------
+  // Carol is sole owner. Sign up Bob as a real admin, then from Bob's
+  // session attempt to ARCHIVE Carol via PATCH /status. This must fire
+  // LAST_OWNER 409. Why /status (not /role)? Because /role has an
+  // "admin-can't-touch-owner" guard that returns 403 FORBIDDEN before
+  // ever reaching the last-owner check — so LAST_OWNER is only reachable
+  // via /status (archive) and DELETE for an admin requester. We exercise
+  // /status here; DELETE follows the same code shape.
+  const stampB = `${stamp}b`
+  const bobEmail = `bob+${stampB}@example.com`
+  const bob = new Session("bob")
+  const bobUp = await bob.json<{ user: { id: string } }>(
+    "/api/auth/sign-up/email",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        email: bobEmail,
+        password: "pass1234",
+        name: "Bob",
+      }),
+    },
+  )
+  assert.ok(bobUp.status === 200 || bobUp.status === 201, "bob sign-up")
+  const bobInvRaw = unwrap(
+    (
+      await carol.json<Envelope<{ inviteLink: string }>>(
+        `/api/tenants/${acmeId}/invite`,
+        {
+          method: "POST",
+          body: JSON.stringify({ email: bobEmail, role: "admin" }),
+        },
+      )
+    ).body,
+    "invite Bob",
+  )
+  const bobInvToken = new URL(bobInvRaw.inviteLink).searchParams.get("token")!
+  await bob.json(`/api/invite/${bobInvToken}/accept`, { method: "POST" })
+  // Backfill Bob employee record with admin role + userId so the
+  // session→employee→role chain resolves.
+  const bobEmpRow = unwrap(
+    (
+      await carol.json<Envelope<{ id: string }>>(
+        `/api/employees?tenantId=${acmeId}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            email: bobEmail,
+            name: "Bob",
+            role: "admin",
+            userId: bobUp.body.user.id,
+          }),
+        },
+      )
+    ).body,
+    "bob employee",
+  )
+  log("8.2", `Bob admin signed up + employee created (${bobEmpRow.id})`)
+
+  // Bob (admin) attempts to ARCHIVE Carol (sole owner) → 409 LAST_OWNER
+  const bobArchiveCarol = await bob.json<Envelope<unknown>>(
+    `/api/employees/${carolEmployeeId}/status?tenantId=${acmeId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status: "archived" }),
+    },
+  )
+  assert.equal(
+    bobArchiveCarol.status,
+    409,
+    `last-owner archive attempt → 409 (got ${bobArchiveCarol.status})`,
+  )
+  if ("error" in bobArchiveCarol.body) {
+    assert.equal(
+      bobArchiveCarol.body.error.code,
+      "LAST_OWNER",
+      `expected LAST_OWNER (got ${bobArchiveCarol.body.error.code})`,
+    )
+  } else {
+    throw new Error("expected error body, got data")
+  }
+  log("8.3", "M3 fix: LAST_OWNER guard fires when admin tries to archive sole owner")
 
   // -- Phase 9: cross-tenant injection ----------------------------------
   // Try to GET employee from Acme using OtherCo tenantId — should 404
@@ -360,7 +435,8 @@ async function main() {
   >(`/api/employees?tenantId=${acmeId}`)
   assert.equal(listEmp.status, 200, "list employees 200")
   const empList = unwrap(listEmp.body, "list employees")
-  assert.equal(empList.length, 2, "2 employees listed")
+  // 3 = Carol (owner bootstrap) + Alice (Phase 4) + Bob (Phase 8.2 setup)
+  assert.equal(empList.length, 3, "3 employees listed (Carol+Alice+Bob)")
   log("10.0", "list employees correct")
 
   // -- Phase 11: hierarchical reads ----------------------------------------
@@ -390,6 +466,7 @@ async function main() {
   log("DONE", "  ✓ role promotion (employee → admin)")
   log("DONE", "  ✓ cross-tenant injection blocked")
   log("DONE", "  ✓ hierarchical reads (employee → depts, employee → projects)")
+  log("DONE", "  ✓ Test-quality round M3: LAST_OWNER guard (admin can't archive sole owner)")
 }
 
 main().catch((err) => {
