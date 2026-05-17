@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — 12/12 modules done + services/web sprint A done. Next: web sprint B (Cloudflare Pages deploy + delete v0 routes + delete pwa)"
+topic: "firefly-mesh-product-layer — 12/12 modules + services/web sprint A + hub round-3/round-7 reviewer all done (verdict A). Next: web sprint B (requires CEO approval to break loop red lines for delete + deploy)"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,89 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === hub round-3 + round-7 reviewer cycles (2026-05-18) — ARCH + SECURITY HARDEN ===
+sub_sprint_hub_review_round_3:
+  topic_slug: "firefly-mesh-hub-review-round-3"
+  status: completed
+  started_at: "2026-05-18T08:00:00Z"
+  completed_at: "2026-05-18T12:00:00Z"
+  trigger: |
+    Continued ralph-loop hub review per loop spec rounds 2 (architecture) +
+    round 3 (security). Earlier rounds (commits 04e41a9 / 7cae02c / 4d6212e)
+    addressed code-level orgId leaks; this cycle hits architecture + auth
+    hardening.
+  reviewer_rounds:
+    - "round 6a (architecture): verdict B, 2 Critical + 3 High + 3 Medium"
+    - "round 6b (security): verdict B, 2 Critical + 4 High + 5 Medium"
+    - "round 7 (fix verifier): verdict B, 0 Critical + 1 High (a2a deliver consistency)"
+    - "round 8 (final + broad sweep): verdict A, 0 Critical + 0 High — loop complete"
+  critical_fixes:
+    - "arch C1 — a2a-messages encryption thread lookup-or-create (was unconditional create → orphan proliferation)"
+    - "arch C2 — POST /api/a2a-messages enforce send_a2a_* scope from JWT claim"
+    - "sec C1 — pre-M6 JWT default scope changed from defaultScopes() to [] (admin-revoked scope bypass closed)"
+    - "sec C2 — GET /api/knowledge/:id/chunks: orgId condition added to chunk query"
+  high_fixes:
+    - "arch H1 — agents/messages/a2a/me routes use drizzleD1() helper (was inline drizzle())"
+    - "arch H2 + sec H3 — middleware/auth.ts cache agentScope in AuthVariables, tasks.ts uses c.get() instead of re-verifyAgentJwt"
+    - "arch H3 — knowledge /:id/chunks cursor + sort both on chunkIndex (was createdAt/index mismatch → pagination dead)"
+    - "sec H1 — POST /api/a2a-messages writes wrapped in db.batch (was 5 sequential awaits, partial-failure exploit)"
+    - "sec H2 — TenantHub.handleDeliver requires X-Internal-Auth (was unauth — any co-account Worker could forge WS delivery)"
+    - "sec H4 — /api/me/agents innerJoin memberships (was exposing agents from tenants user was removed from)"
+    - "sec M5 — JWT iss/aud enforcement (cross-env replay defense)"
+    - "round-7 H1 — a2a.ts DO deliver checks !deliverRes.ok + logs (was silently swallowing failures, inconsistent with messages.ts)"
+  medium_fixes:
+    - "sec M2 — tenants.ts invite-fail log no longer includes email PII"
+    - "sec M4 — /api/employees ?dept= filter joins departments + orgId guard"
+  deferred_medium:
+    - "arch M1 — duplicate resolveAgent helpers (cosmetic refactor; sprint B)"
+    - "arch M2 — knowledge_chunks denormalized scope columns (PATCH disallows scope change so safe; document constraint)"
+    - "arch M3 — agentSkills.enabled integer→boolean mode (next schema change)"
+    - "round-7 M1 — encryption thread lookup race (D1 single-writer makes rare; v1.1 add unique index)"
+    - "round-7 M2 — a2a.ts wire-format path messagesMeta.threadId null (pre-existing gap)"
+    - "round-7 M3 — tasks.ts actorId TS flow-narrowing (TS-only, runtime OK)"
+  deferred_low:
+    - "sec M1 — pairing code modulo bias 1.1% (attack window 10min, doc only)"
+    - "sec M3 — invite link token in response body (sprint B UI change)"
+    - "3 known design gaps — JWT revocation / x-forwarded-for / lastOwner race"
+    - "round-7 L1 — full-tenant thread scan on a2a send (v1.1 index)"
+    - "round-7 L2 — invitations.ts inline drizzle (cosmetic)"
+  files_modified:
+    - "services/hub/src/lib/jwt.ts (empty scope fallback + iss/aud claims)"
+    - "services/hub/src/lib/a2a-messages.ts (scopeForA2aType helper)"
+    - "services/hub/src/middleware/auth.ts (agentScope in AuthVariables)"
+    - "services/hub/src/routes/a2a-messages.ts (scope enforce + thread lookup + db.batch)"
+    - "services/hub/src/routes/a2a.ts (drizzleD1 + INTERNAL_SECRET header + DO !ok log)"
+    - "services/hub/src/routes/agents.ts (drizzleD1)"
+    - "services/hub/src/routes/employees.ts (dept filter orgId guard)"
+    - "services/hub/src/routes/knowledge.ts (chunks orgId + chunkIndex cursor)"
+    - "services/hub/src/routes/me.ts (innerJoin memberships)"
+    - "services/hub/src/routes/messages.ts (drizzleD1 + INTERNAL_SECRET header + !ok handling)"
+    - "services/hub/src/routes/tasks.ts (cached agentScope; remove re-verifyAgentJwt)"
+    - "services/hub/src/routes/tenants.ts (invite log no PII)"
+    - "services/hub/src/durable-objects/TenantHub.ts (X-Internal-Auth gate + constantTimeEquals)"
+    - "services/hub/src/auth.ts (INTERNAL_SECRET binding)"
+    - "services/hub/wrangler.toml (INTERNAL_SECRET [vars] dev placeholder)"
+    - "services/hub/.dev.vars (INTERNAL_SECRET added; gitignored)"
+    - "services/hub/test/m5-m7.e2e.ts (pre-M6 JWT rejection test, replaces back-compat test)"
+  test_results:
+    web_typecheck: PASS
+    hub_typecheck: PASS
+    hub_e2e_agent_mesh: "PASS (6/6 phases)"
+    hub_e2e_product_layer: "PASS (11/11)"
+    hub_e2e_m5_m7: "PASS (14/14)"
+    hub_e2e_m11_m12: "PASS (10/10)"
+    hub_e2e_m10: "PASS (13/13)"
+    hub_e2e_m8_m9: "PASS (14/14)"
+  commits:
+    - "55e6021 — fix(hub): round-3 architecture + security review — 4C + 7H + 2M (16 files)"
+    - "fd8ec47 — fix(hub): round-7 H1 — a2a.ts DO deliver consistency with messages.ts"
+  notes: |
+    Loop completion criterion "连续 2 轮 reviewer 报告 'no Critical/High'" met:
+    Round 7 (0C/1H, fixed) + Round 8 (0C/0H + comprehensive sweep verdict A).
+    Hub backend is operationally clean for sprint-B deploy (caveat: sprint B
+    must `wrangler secret put INTERNAL_SECRET` to replace dev placeholder
+    before exposing to production traffic).
 
 # === web migration sprint A (2026-05-18) — DASHBOARD LOCAL UP AGAINST HUB ===
 sub_sprint_web_migration_a:
