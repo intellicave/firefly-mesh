@@ -13,6 +13,8 @@ import { organizationsRouter } from "./routes/organizations.ts"
 import { employeesRouter } from "./routes/employees.ts"
 import { departmentsRouter } from "./routes/departments.ts"
 import { projectsRouter } from "./routes/projects.ts"
+import { boundariesRouter } from "./routes/boundaries.ts"
+import { agentTokensRouter } from "./routes/agent-tokens.ts"
 import { TenantHub } from "./durable-objects/TenantHub.ts"
 import { runScheduled, pickTask } from "./cron/cleanup.ts"
 import { rateLimitByIp } from "./middleware/rateLimit.ts"
@@ -123,6 +125,8 @@ app.route("/api/organizations", organizationsRouter)
 app.route("/api/employees", employeesRouter)
 app.route("/api/departments", departmentsRouter)
 app.route("/api/projects", projectsRouter)
+app.route("/api/boundaries", boundariesRouter)
+app.route("/api/agent-tokens", agentTokensRouter)
 
 export default {
   fetch(request: Request, env: Bindings, ctx: ExecutionContext) {
