@@ -179,7 +179,7 @@ export function KnowledgeUploadDialog({
             <div>
               <label className="text-sm font-medium">Content</label>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Max ~200 KB inline.
+                Max ~100 KB inline.
               </p>
             </div>
           </div>
