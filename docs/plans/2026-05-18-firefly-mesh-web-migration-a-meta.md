@@ -29,7 +29,7 @@
 | ID | 决策 |
 |---|---|
 | **W7** | `app/page.tsx` 必须替换为客户端 auth gate（v0 原文件是 RSC 直接调 Postgres，sprint A 跑不起来） |
-| **W8** | next.config.ts 删除 `transpilePackages: ["@firefly-mesh/core"]`（如有），避免 Next.js 试图编译 Postgres 代码 |
+| **W8'** | next.config.ts **保留** `transpilePackages: ["@firefly-mesh/core"]`，**推迟到 sprint B 删除**。实地实施时发现：v0 server routes（AC4 保留）+ 3 个 lib/middleware/* 文件都 import `@firefly-mesh/core`，删除 transpilePackages 会导致 `next dev` 启动时模块解析失败（next 默认不编译 node_modules 的 .ts 源码）。sprint B 删 v0 routes 后才能同步删 transpilePackages。Reviewer H3 "next build 会编译 Postgres 代码"成立但 sprint A 只需 `next dev`（dev 模式按需编译，没访问 server route 就不触发 Postgres 编译）|
 | **W9** | 缺失端点（audit read / multipart upload / SSE / dry-run / org graph / token batch / onboarding state）的 UI **必须显式禁用 + banner**，禁止 silent fail |
 
 v2 第二轮 reviewer 修订引入：
@@ -39,6 +39,14 @@ v2 第二轮 reviewer 修订引入：
 | **W10** | next.config.ts `rewrites()` 数组必须保留 v0 已有的 `/.well-known/agent-card.json` 规则（A2A 协议发现端点），不能直接替换为只含 hub proxy（H-NEW-1 reviewer fix）|
 | **W11** | next-intl 是从零 bootstrap（不是"集成已有"）。v0 虽含 next-intl@4.11.0 但从未激活：需新增 `i18n/request.ts`、修改 layout.tsx、采用 "without i18n routing" 模式。13 现有 page.tsx 的 `messages.x` 硬编码引用 sprint A 不迁移到 useTranslations（V0.2 sprint）。（M1 reviewer 澄清）|
 | **W12** | `/api/me` 路径冲突处理：v0 已有 `app/api/me/route.ts`（Postgres），hub 也有 `/api/me`（D1）。Next.js rewrites 优先级让 v0 route.ts 命中，sprint A 内**实际访问 v0 Postgres 而非 hub**。A.9 阶段决定方案（推荐：删除该 v0 route.ts；备选：route.ts 内部改 proxy 到 hub）。（M2 reviewer 澄清）|
+
+v2 第三轮（实施期）修订：
+
+| ID | 决策 |
+|---|---|
+| **W13** | `services/web/package.json` 中 `@firefly-mesh/core: workspace:*` 必须可解析。实施方案：把 `legacy/v0/packages/core` 加入 monorepo 根 `pnpm-workspace.yaml`（仅此一个，不全 legacy）。Reason：v0 server routes（AC4 保留）+ 3 lib/middleware/* 都 import core；移除 dep 会导致 pnpm install 失败。Sprint B 删 v0 routes 后可同步移除该 workspace 项 + 删 services/web 中的 dep |
+| **W14** | W8 推迟到 sprint B：保留 transpilePackages: ["@firefly-mesh/core"] in next.config.ts。Reason：删除会让 `next dev` 模块解析失败（详见 W8' 修订说明）|
+| **W15** | **AC4 部分例外**：sprint A 必须删除 5 个 v0 server route，因为 Next.js 路由优先级让 v0 route.ts 抢在 rewrites 之前命中同路径的请求 → 客户端 sees v0 Postgres 而非 hub D1：<br>1. `services/web/app/api/auth/[...all]/route.ts`（与 hub `/api/auth/*` 冲突；保留意味着 auth 流走 v0 Better Auth + Postgres，sprint A 不可用）<br>2. `services/web/app/api/me/route.ts`（与 hub `/api/me` 冲突）<br>3. `services/web/app/api/knowledge/route.ts`（与 hub `/api/knowledge` 冲突）<br>4. `services/web/app/api/knowledge/[id]/route.ts`（与 hub 冲突）<br>5. `services/web/app/api/knowledge/search/route.ts`（与 hub 冲突）<br><br>其他 43 个 v0 route.ts **保留**（AC4 仍生效；客户端在 A.9 rename 后不再触及）。sprint B 删全部剩余 v0 routes。M2 reviewer 推荐方案 A 落地。|
 
 ## 不可破坏（铁律）
 

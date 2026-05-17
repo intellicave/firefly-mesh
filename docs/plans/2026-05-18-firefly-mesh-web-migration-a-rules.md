@@ -36,13 +36,23 @@
 
 **AC3**：hooks/* — 同 AC2。
 
-**AC4**：48 个 app/api/*/route.ts — **不删不改**（保留，sprint B 删）。
+**AC4（修订 / W15 例外）**：48 个 app/api/*/route.ts 中 **43 个不删不改**（保留，sprint B 删）。**5 个例外必须在 sprint A 删除**（W15）：
+1. `services/web/app/api/auth/[...all]/route.ts`
+2. `services/web/app/api/me/route.ts`
+3. `services/web/app/api/knowledge/route.ts`
+4. `services/web/app/api/knowledge/[id]/route.ts`
+5. `services/web/app/api/knowledge/search/route.ts`
 
-**AC5（修订）**：next.config.ts 允许 **两处** 改动：
-- ✅ 加 `rewrites()` 代理 `/api/:path*` → hub
-- ✅ 删除 `transpilePackages` 中的 `@firefly-mesh/core` 项（如有，避免 Next.js 试图编译 Postgres 代码）
+原因：Next.js 路由优先级（FS 路由抢在 rewrites 前）+ 上述路径在 hub 同路径存在 → 不删则客户端永远 hit v0 Postgres，sprint A 目标不达成。删除是 sprint A 跑通的唯一路径，记录到 W15。
+
+**AC5（修订 → W14 推迟）**：next.config.ts 允许 **两处** 改动：
+- ✅ 加 `rewrites()` 代理 `/api/:path*` → hub（同时保留 v0 已有的 `/.well-known/agent-card.json` 规则）
+- ✅ 加 `withNextIntl` 包装 export（next-intl 接入需要）
+- ❌ **不**删除 `transpilePackages: ["@firefly-mesh/core"]`（W8 → W14 推迟到 sprint B；v0 server routes + middleware 都 import 此包，删了 next dev 模块解析失败）
 
 其他配置（experimental / images / headers 等）不改。tsconfig.json **不改**。
+
+**AC5 / W13 附录**：pnpm-workspace.yaml 允许加 `legacy/v0/packages/core` 一项（W13 required），不算违反"不删 legacy / 不动 legacy 源码"——这是 workspace 元配置，不修改 legacy 任何文件内容。
 
 ## AD. app/page.tsx 替换（C1 fix，新增）
 

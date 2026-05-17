@@ -8,4 +8,11 @@ packages:
   - "packages/shared"
   - "services/hub"
   - "services/pwa"
+  - "services/web"
+  # legacy/v0/packages/core — included temporarily so services/web's
+  # `@firefly-mesh/core: workspace:*` dep resolves while v0 server routes
+  # (AC4 keeps them in sprint A, sprint B deletes) still import this package.
+  # Sprint B: delete v0 routes + middleware → drop this entry + remove dep
+  # from services/web/package.json.
+  - "legacy/v0/packages/core"
   - "scripts/scene"

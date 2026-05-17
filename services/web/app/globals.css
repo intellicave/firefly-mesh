@@ -1,0 +1,187 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Claude 品牌色系（Anthropic 官方 2026-04，fork firefly tokens） */
+  --color-claude-orange: #d97757;
+  --color-claude-orange-hover: #c15f3c;
+  --color-claude-cream: #f4f3ee;
+  --color-claude-cream-light: #faf9f5;
+  --color-claude-ink: #141413;
+  --color-claude-gray-mid: #b0aea5;
+  --color-claude-gray-light: #e8e6dc;
+
+  --color-accent-blue: #6a9bcc;
+  --color-accent-green: #788c5d;
+  --color-accent-red: #c94f4f;
+  --color-accent-amber: #d9a44e;
+
+  /* shadcn 语义色 - light mode */
+  --color-background: var(--color-claude-cream-light);
+  --color-foreground: var(--color-claude-ink);
+
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-claude-ink);
+
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--color-claude-ink);
+
+  --color-primary: var(--color-claude-orange);
+  --color-primary-foreground: var(--color-claude-cream-light);
+
+  --color-secondary: var(--color-claude-cream);
+  --color-secondary-foreground: var(--color-claude-ink);
+
+  --color-muted: var(--color-claude-gray-light);
+  --color-muted-foreground: var(--color-claude-gray-mid);
+
+  --color-accent: var(--color-claude-cream);
+  --color-accent-foreground: var(--color-claude-ink);
+
+  --color-destructive: var(--color-accent-red);
+  --color-destructive-foreground: var(--color-claude-cream-light);
+
+  --color-border: var(--color-claude-gray-light);
+  --color-input: var(--color-claude-gray-light);
+  --color-ring: var(--color-claude-orange);
+
+  /* Chart colors for Recharts */
+  --color-chart-1: var(--color-claude-orange);
+  --color-chart-2: var(--color-accent-blue);
+  --color-chart-3: var(--color-accent-green);
+  --color-chart-4: var(--color-accent-amber);
+  --color-chart-5: var(--color-accent-red);
+
+  /* Typography */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgb(20 20 19 / 0.04);
+  --shadow-sm: 0 2px 4px rgb(20 20 19 / 0.06);
+  --shadow-md: 0 4px 8px rgb(20 20 19 / 0.08);
+  --shadow-lg: 0 8px 16px rgb(20 20 19 / 0.10);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+  }
+}
+
+/* React Flow 全局微调 */
+.react-flow__edge-path {
+  stroke: var(--color-claude-gray-mid);
+  stroke-width: 1.5;
+}
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: var(--color-claude-orange);
+  stroke-dasharray: 5;
+  animation: dashflow 0.6s linear infinite;
+}
+@keyframes dashflow {
+  to { stroke-dashoffset: -10; }
+}
+
+.react-flow__controls button {
+  background: #ffffff;
+  border-color: var(--color-border);
+  color: var(--color-claude-ink);
+}
+
+.react-flow__minimap {
+  background: var(--color-claude-cream);
+  border-radius: var(--radius-md);
+}
+
+/* Pulse animation (Sidebar pending dot) */
+@keyframes pulse-orange {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(217 119 87 / 0.5); }
+  50%      { box-shadow: 0 0 0 6px rgb(217 119 87 / 0); }
+}
+.pulse-orange {
+  animation: pulse-orange 2s infinite;
+}
+
+/*
+ * Mesh-in: fade + scale with a micro bounce. Applied to each OrgNode on its
+ * first mount so the first second of /organization shows the neural mesh
+ * materializing, rather than drawing a static tree. Delay is applied inline
+ * per-node so nodes light up in a staggered wave from root outward.
+ */
+@keyframes mesh-in {
+  0%   { opacity: 0; transform: scale(0.92); }
+  60%  { opacity: 1; transform: scale(1.015); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-mesh-in {
+  animation: mesh-in 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-mesh-in { animation: none; }
+}
+
+/*
+ * Save-flash: 3px full-width green ribbon at the top of the org chart that
+ * flashes for ~2.4s then fades. Visual beat for "save successful".
+ */
+@keyframes save-flash {
+  0%   { opacity: 0; transform: scaleX(0); }
+  12%  { opacity: 1; transform: scaleX(1); }
+  70%  { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1); }
+}
+.animate-save-flash {
+  transform-origin: left;
+  animation: save-flash 2.4s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-save-flash {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/*
+ * Message-flash: a 2s background pulse used on A2A message rows when SSE
+ * delivers a new message. Visual beat for inbox / audit live updates.
+ */
+@keyframes message-flash {
+  0%   { background-color: color-mix(in oklch, var(--color-primary) 18%, transparent); }
+  60%  { background-color: color-mix(in oklch, var(--color-primary) 10%, transparent); }
+  100% { background-color: transparent; }
+}
+.animate-message-flash {
+  animation: message-flash 2s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-message-flash { animation: none; }
+}

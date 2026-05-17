@@ -105,22 +105,23 @@ export default function RootPage() {
 - [ ] pnpm-workspace.yaml 加 `- "services/web"`
 - [ ] `pnpm install` 在 monorepo root 跑成功（接受版本警告，但必须有 lockfile）
 
-### Task A.3 — 解决 deps 冲突 + 删 transpilePackages（W8 修订）
+### Task A.3 — 解决 deps 冲突（W13 实施修订）
 
 **status**: pending
-**files modified**: services/web/package.json, services/web/next.config.ts (部分)
+**files modified**: services/web/package.json, pnpm-workspace.yaml
+
+**关键（W13 / W14 实施修订）**：v0 server routes（AC4 保留）+ 3 个 lib/middleware/* 都 import `@firefly-mesh/core`。如果移除 dep，pnpm install 报 ERR_PNPM_NO_MATCHING_VERSION；如果删 transpilePackages，next dev 模块解析失败。结论：
+- **保留** services/web/package.json 中 `@firefly-mesh/core: workspace:*`
+- **加** `legacy/v0/packages/core` 到 monorepo 根 `pnpm-workspace.yaml`（仅此一个 legacy 项）
+- **保留** transpilePackages: ["@firefly-mesh/core"] in next.config.ts（W8 → W8'/W14：sprint B 删 v0 routes 后再删）
 
 **acceptance**:
 - [ ] `pnpm install` 无 ERROR（warning 可接受）
 - [ ] services/web 的 next / better-auth / drizzle / shadcn 版本独立，不污染其他包
 - [ ] 如果有 peerDep conflict，记录到 sprint A risks 文档 + 选最稳妥处理
-- [ ] **next.config.ts 中 `transpilePackages` 删除 `@firefly-mesh/core` 项**（如有；其他项保留）。Reason：避免 Next.js 试图编译 Postgres 代码
-
-**验证**：
-```bash
-grep '@firefly-mesh/core' services/web/next.config.ts
-# 应该零 hit
-```
+- [ ] pnpm-workspace.yaml 加 `- "legacy/v0/packages/core"`（W13）
+- [ ] services/web/package.json `@firefly-mesh/core` 保持 workspace:*
+- [ ] **next.config.ts 中 `transpilePackages` 保留 `@firefly-mesh/core`**（W8 → W14 推迟到 sprint B）
 
 ### Task A.4 — next.config.ts 加 rewrites（W2'，替换原 A.4）
 

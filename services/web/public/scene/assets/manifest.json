@@ -1,0 +1,926 @@
+{
+  "version": "3.0.0",
+  "generatedAt": "2026-05-08T18:25:34.463Z",
+  "palette": "scene/assets/palette.png",
+  "iso_grid_reference": "scene/assets/iso-grid-reference.png",
+  "atlases": {},
+  "foundation": {},
+  "characters": {
+    "char/firefly-ceo": {
+      "pixellab_id": "2866ca4f-895d-4acc-af34-e061b767855e",
+      "size": {
+        "w": 116,
+        "h": 116
+      },
+      "pivot": {
+        "x": 58,
+        "y": 87
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "owner"
+      ],
+      "department": null,
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-ceo",
+        "pixellab_id": "2866ca4f-895d-4acc-af34-e061b767855e",
+        "downloaded_at": "2026-05-08",
+        "sha256": "eb8eee5e15253fda7e96883987301f1e20b3acb982b1cf033ecc39b2803e8d7f",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-coo": {
+      "pixellab_id": "90d6b48f-79b3-49d4-bb9b-dd42b3eddc80",
+      "size": {
+        "w": 120,
+        "h": 120
+      },
+      "pivot": {
+        "x": 60,
+        "y": 89
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "admin"
+      ],
+      "department": null,
+      "role_branch": "operations",
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-coo",
+        "pixellab_id": "90d6b48f-79b3-49d4-bb9b-dd42b3eddc80",
+        "downloaded_at": "2026-05-08",
+        "sha256": "a401605d1dff3eb801264b82cd78b7f0fad2dc3068cb52b0fb0ac6c61bcf8ad5",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-cto": {
+      "pixellab_id": "f70de1f0-1d65-4728-9ea0-9d1183e3fb77",
+      "size": {
+        "w": 120,
+        "h": 120
+      },
+      "pivot": {
+        "x": 60,
+        "y": 88
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "admin"
+      ],
+      "department": null,
+      "role_branch": "technology",
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-cto",
+        "pixellab_id": "f70de1f0-1d65-4728-9ea0-9d1183e3fb77",
+        "downloaded_at": "2026-05-08",
+        "sha256": "5600ac2ccbbbf97818ba1bc892728964747a75b80f573b81a749c8cc62cd9ce9",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-pm": {
+      "pixellab_id": "6ea5b633-87c9-4afb-a9bb-2ba1502d2e68",
+      "size": {
+        "w": 120,
+        "h": 120
+      },
+      "pivot": {
+        "x": 60,
+        "y": 89
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "manager"
+      ],
+      "department": "Product",
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-pm",
+        "pixellab_id": "6ea5b633-87c9-4afb-a9bb-2ba1502d2e68",
+        "downloaded_at": "2026-05-08",
+        "sha256": "b372554e5b00b29aa7c5a1cb8c5fda35d8f88e77ad34262785d92628ebb1ebe3",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-marketer": {
+      "pixellab_id": "c38ea2f6-ae3c-4d68-bc87-c2f1fe6d6854",
+      "size": {
+        "w": 120,
+        "h": 120
+      },
+      "pivot": {
+        "x": 61,
+        "y": 89
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "manager"
+      ],
+      "department": "Marketing",
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-marketer",
+        "pixellab_id": "c38ea2f6-ae3c-4d68-bc87-c2f1fe6d6854",
+        "downloaded_at": "2026-05-08",
+        "sha256": "fbc52dfb2306840c54b576120a6873f1a386d367af83fafda8739b52756278dc",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-service-lead": {
+      "pixellab_id": "48d8b75b-27ab-4d50-a24a-f60e67bc1186",
+      "size": {
+        "w": 124,
+        "h": 124
+      },
+      "pivot": {
+        "x": 63,
+        "y": 93
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "manager"
+      ],
+      "department": "Service",
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-service-lead",
+        "pixellab_id": "48d8b75b-27ab-4d50-a24a-f60e67bc1186",
+        "downloaded_at": "2026-05-08",
+        "sha256": "f99f88cda97a3a204a10f24599826e5bac3b91df774e91f74f87355e00fca66d",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-warehouse-lead": {
+      "pixellab_id": "c67a7a3e-7e0b-46e0-8167-91e829207037",
+      "size": {
+        "w": 124,
+        "h": 124
+      },
+      "pivot": {
+        "x": 62,
+        "y": 92
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "manager"
+      ],
+      "department": "Operations",
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-warehouse-lead",
+        "pixellab_id": "c67a7a3e-7e0b-46e0-8167-91e829207037",
+        "downloaded_at": "2026-05-08",
+        "sha256": "9f00e204ea6e723a78b348b687be521736c6ed27e14a2e142b9c8603b96c99af",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-ops": {
+      "pixellab_id": "e12b7b85-151b-409a-bd0a-703f13f6fe13",
+      "size": {
+        "w": 120,
+        "h": 120
+      },
+      "pivot": {
+        "x": 60,
+        "y": 89
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "employee",
+        "auditor"
+      ],
+      "department": "Operations",
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-ops",
+        "pixellab_id": "e12b7b85-151b-409a-bd0a-703f13f6fe13",
+        "downloaded_at": "2026-05-08",
+        "sha256": "bf50b25c9d3796829bb325af60343582695e44d7a85b7ad6b868ad9bfdea43be",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-engineer": {
+      "pixellab_id": "90839f68-2169-4ee7-80a7-b383f3e350e1",
+      "size": {
+        "w": 124,
+        "h": 124
+      },
+      "pivot": {
+        "x": 62,
+        "y": 91
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "employee"
+      ],
+      "department": "Engineering",
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-engineer",
+        "pixellab_id": "90839f68-2169-4ee7-80a7-b383f3e350e1",
+        "downloaded_at": "2026-05-08",
+        "sha256": "d693550f98a17a05b73396c5b292e64f5e4694c2d26565c94aa96cba87f7663a",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    },
+    "char/firefly-designer": {
+      "pixellab_id": "43832c49-1875-4e73-b5f2-f1ea5c6df9ed",
+      "size": {
+        "w": 124,
+        "h": 124
+      },
+      "pivot": {
+        "x": 62,
+        "y": 91
+      },
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "role_mapping": [
+        "employee"
+      ],
+      "department": "Design",
+      "role_branch": null,
+      "frames": {
+        "rotation": {
+          "e": [
+            "rotations/east.png"
+          ],
+          "ne": [
+            "rotations/north-east.png"
+          ],
+          "nw": [
+            "rotations/north-west.png"
+          ],
+          "n": [
+            "rotations/north.png"
+          ],
+          "se": [
+            "rotations/south-east.png"
+          ],
+          "sw": [
+            "rotations/south-west.png"
+          ],
+          "s": [
+            "rotations/south.png"
+          ],
+          "w": [
+            "rotations/west.png"
+          ]
+        }
+      },
+      "total_frames": 8,
+      "shadow_baked": true,
+      "lantern_palette": [
+        "#7a5a1a",
+        "#c89a3a",
+        "#f0c75e",
+        "#fae8a8"
+      ],
+      "source": {
+        "char_id": "char/firefly-designer",
+        "pixellab_id": "43832c49-1875-4e73-b5f2-f1ea5c6df9ed",
+        "downloaded_at": "2026-05-08",
+        "sha256": "9e79770aa31c47fed2d9fcbb3f364eb40621746ca93bd87e18a5be1efb2c0f3c",
+        "png_count": 8,
+        "note": "Rotations-only stage (CDN, no PIXELLAB_SECRET). Animations require authenticated ZIP."
+      }
+    }
+  },
+  "tiles": {
+    "tile/floor-office": {
+      "file": "scene/assets/floor/tile__floor-office.png",
+      "size": {
+        "w": 64,
+        "h": 64
+      },
+      "anchor": {
+        "x": 32,
+        "y": 32
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/floor-hallway": {
+      "file": "scene/assets/floor/tile__floor-hallway.png",
+      "size": {
+        "w": 64,
+        "h": 64
+      },
+      "anchor": {
+        "x": 32,
+        "y": 32
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/wall-back": {
+      "file": "scene/assets/wall/tile__wall-back.png",
+      "size": {
+        "w": 64,
+        "h": 64
+      },
+      "anchor": {
+        "x": 32,
+        "y": 64
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/wall-side-w": {
+      "file": "scene/assets/wall/tile__wall-side-w.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 32,
+        "y": 32
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/wall-side-e": {
+      "file": "scene/assets/wall/tile__wall-side-e.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 0,
+        "y": 32
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/wall-corner-nw": {
+      "file": "scene/assets/wall/tile__wall-corner-nw.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 32,
+        "y": 32
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/wall-corner-ne": {
+      "file": "scene/assets/wall/tile__wall-corner-ne.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 32,
+        "y": 32
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/wall-doorway-s": {
+      "file": "scene/assets/wall/tile__wall-doorway-s.png",
+      "size": {
+        "w": 64,
+        "h": 64
+      },
+      "anchor": {
+        "x": 32,
+        "y": 64
+      },
+      "attached": null,
+      "animations": null,
+      "directions": null
+    },
+    "tile/desk-ceo": {
+      "file": "scene/assets/furniture/tile__desk-ceo.png",
+      "size": {
+        "w": 64,
+        "h": 64
+      },
+      "anchor": {
+        "x": 32,
+        "y": 64
+      },
+      "attached": "floor",
+      "animations": null,
+      "directions": null
+    },
+    "tile/desk-employee": {
+      "file": "scene/assets/furniture/tile__desk-employee.png",
+      "size": {
+        "w": 64,
+        "h": 64
+      },
+      "anchor": {
+        "x": 32,
+        "y": 64
+      },
+      "attached": "floor",
+      "animations": null,
+      "directions": null
+    },
+    "tile/chair": {
+      "file": "scene/assets/furniture/tile__chair.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 16,
+        "y": 32
+      },
+      "attached": "floor",
+      "animations": null,
+      "directions": null
+    },
+    "tile/bulletin": {
+      "file": "scene/assets/furniture/tile__bulletin.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 16,
+        "y": 32
+      },
+      "attached": "back",
+      "animations": null,
+      "directions": null
+    },
+    "tile/cooler": {
+      "file": "scene/assets/furniture/tile__cooler.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 16,
+        "y": 32
+      },
+      "attached": "floor",
+      "animations": null,
+      "directions": null
+    },
+    "tile/plant": {
+      "file": "scene/assets/furniture/tile__plant.png",
+      "size": {
+        "w": 32,
+        "h": 32
+      },
+      "anchor": {
+        "x": 16,
+        "y": 32
+      },
+      "attached": "floor",
+      "animations": null,
+      "directions": null
+    },
+    "tile/whiteboard": {
+      "file": "scene/assets/furniture/tile__whiteboard.png",
+      "size": {
+        "w": 48,
+        "h": 48
+      },
+      "anchor": {
+        "x": 24,
+        "y": 48
+      },
+      "attached": "back",
+      "animations": null,
+      "directions": null
+    }
+  },
+  "effects": {},
+  "icons": {},
+  "checksum": "76c0c8d97b596a2cf1561855972ff3aed54d5a6cbc29a7a7fe626fae275a829f"
+}
