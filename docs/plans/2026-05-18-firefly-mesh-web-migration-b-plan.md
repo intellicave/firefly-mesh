@@ -1,6 +1,8 @@
-# Web Migration B — Plan (pre-CEO approval)
+# Web Migration B — Plan (pre-CEO approval, v2 post-reviewer)
 
 > **状态**：仅设计，未执行。本 sprint 包含 ralph-loop 红线禁止的操作（部署 + 删 legacy/services/pwa），需 CEO 显式批准后才执行。
+>
+> **v2 修订**：独立 reviewer 抓出 v1 plan 的 2 Critical + 4 High + 3 Medium 真实漏洞（B.4 WS 协议假设错 / B.4 audit 自相矛盾 / next.config standalone vs next-on-pages 冲突 / INTERNAL_SECRET 旋转窗口风险 / CF Pages cookie 转发未验证 等）。已修订到本版。
 >
 > **依赖**：Sprint A 已 done（commit 7287099 → bec5a12 + hub round-3 加固 55e6021 → 4f48650）。Hub + web typecheck 全绿，6/6 hub e2e 全绿。
 
@@ -20,24 +22,47 @@
 
 ## 1. B.0 — Hub 加补缺失端点（按 sprint A AE1 表）
 
-| 端点 | 估时 | 优先级 |
-|---|---|---|
-| GET `/api/agents`（tenant-wide list，给 org-graph 用）| 1h | 高 |
-| POST `/api/employees/bulk-import`（multipart CSV）| 4h | 高 |
-| POST `/api/knowledge/upload`（multipart file，触发解析+分块）| 6h | 中 |
-| GET `/api/audit/threads` + GET `/api/audit/log`（读端）| 4h | 中 |
-| GET `/api/org/graph`（聚合 employees+departments+projects+agents）| 2h | 低（客户端 fan-out 替代可接受）|
-| POST `/api/agent-tokens/batch`（N 次合一）| 1h | 低 |
-| GET `/api/onboarding/state`（替代客户端聚合）| 1h | 低 |
+v2 修订：明确分 "Sprint B 必做高优" vs "V1.1 推迟"。原 v1 表里 "中/低" 混淆 + 11h 数学错位（reviewer M1），重写。
 
-合计 ~19h（2.5 天）。**仅做高优先级 3 个**（~11h, 1.5 天）即可解锁 sprint A 的 50% 禁用 UI；中/低留 V1.1。
+### Sprint B 必做（解锁 sprint A 禁用 UI 的最小集合）
+
+| 端点 | 估时 | 解锁的 UI |
+|---|---|---|
+| GET `/api/agents`（tenant-wide list）| 1h | organization page agent 状态 badge（取代 sprint A `agents=[]` banner） |
+| POST `/api/employees/bulk-import`（multipart CSV）| 4h | /onboarding/import multipart 上传 |
+| POST `/api/knowledge/upload`（multipart file，触发解析+分块）| 6h | /knowledge upload-dialog 文件上传 |
+| **小计** | **11h（1.5 天）** | 3/5 sprint A 禁用 UI 恢复 |
+
+### V1.1 / audit-read sprint 推迟（不在 sprint B 范围）
+
+| 端点 | 推迟原因 |
+|---|---|
+| GET `/api/audit/threads` + `/api/audit/log` | audit-read sprint 独立做（V1.1）|
+| TenantHub channel-based pub/sub（C1 fix）| sprint B 不做 SSE→WS 替换；channel 路由协议 V1.1 |
+| GET `/api/org/graph`（聚合）| 客户端 fan-out 替代可接受（sprint A 已实现 lib/org-graph.ts）|
+| POST `/api/agent-tokens/batch` | 客户端 N 次 POST 可接受（sprint A 已实现）|
+| GET `/api/onboarding/state` | 客户端聚合可接受（sprint A lib/onboarding.ts）|
 
 **红线突破**：动 hub 路由（增加端点，不动现有 6 路由对外契约）— 与 sprint A 红线一致，**不需要额外 CEO 批准**。
 
 **验收**：
-- 新端点都有 e2e test
-- 5/5 hub e2e + 2 个新 suite（agents-list-tenant-wide + bulk-import）全绿
+- 3 个新端点（agents tenant-wide / bulk-import / multipart upload）都有 e2e test
+- 6/6 现有 hub e2e + 3 个新 suite 全绿
 - typecheck 全绿
+- 接下来 hub 需要 prod 部署 — 见 **B.0.1**
+
+### B.0.1 — hub `wrangler deploy --remote`（reviewer M2 fix）
+
+B.0 加完的 3 个新端点要让 sprint B 后续步骤（B.6 playwright e2e against prod）能用，必须先部署到 prod hub。
+
+**🚨 CEO 批准点 0**：hub `wrangler deploy --remote`（部署到 hub.firefly-mesh.com）。和 web 部署是不同的 deploy 动作但同样属于"红线"范畴。批准理由：
+- 这是 hub 端的 prod 部署，必须在 web 端 prod 部署之前完成
+- 否则 web prod 用户调 multipart upload / bulk-import 会 404
+- 部署内容仅是新加的端点 + 现有路由（hub 现有 6 路由对外契约不变）
+
+**验收**：
+- `hub.firefly-mesh.com/api/agents` 返回 401（未认证），不是 404
+- `curl -F file=@small.csv https://hub.firefly-mesh.com/api/employees/bulk-import` 返回 401（已部署），不是 404
 
 ## 2. B.1 — 删 v0 死代码（红线突破）
 
@@ -72,10 +97,13 @@
 新增 dep：
 - `@cloudflare/next-on-pages` (devDep)
 
-配置：
-- `next.config.ts` 加 `export const runtime = 'edge'` 标记（或在每个 page.tsx）
+配置（v2 修订 — reviewer H2 fix）：
+- **删除** `next.config.ts` 中的 `output: "standalone"` 和 `outputFileTracingRoot`（这两个是 standalone-mode 专用配置，与 next-on-pages 不兼容；保留会导致 build 失败或产出 broken 输出）
+- `next.config.ts` 加 `export const runtime = 'edge'` 标记（或在每个 page.tsx 加）
 - 加 build script: `npx @cloudflare/next-on-pages`
 - 配置 `pages_build_output_dir = ".vercel/output/static"` 在 `wrangler.toml`
+
+**前置实测验证**：在动 next.config.ts 之前，先 `cd services/web && npx @cloudflare/next-on-pages --help`，确认 next-on-pages 对 next@16 + react@19 的 compat note。如有阻塞 issue，必须先解决再继续 B.2。
 
 潜在问题：
 - v0 dashboard 用到的 Node API（`fs`, `path`, `crypto.subtle` 兼容等）需要审
@@ -87,9 +115,11 @@
 - 替代方案（Vercel 部署）违反 hub 在 Cloudflare Workers 的架构一致性
 
 **验收**：
-- `npx @cloudflare/next-on-pages` 成功生成 .vercel/output
+- `services/web/next.config.ts` 不再含 `output: "standalone"` 或 `outputFileTracingRoot`
+- `npx @cloudflare/next-on-pages` 成功生成 .vercel/output（exit 0 + 无 warning）
 - 本地用 `wrangler pages dev .vercel/output/static` 跑起来
 - 浏览器访问 localhost:8788 → 看到 dashboard
+- /api/* 通过 next-on-pages 内部 rewrites 转到 hub（local mode 应等同 `next dev`）
 
 ## 4. B.3 — 部署 + cookieDomain prod
 
@@ -104,9 +134,33 @@
   - `PWA_URL=https://app.firefly-mesh.com`
 - Better Auth `cookieDomain: ".firefly-mesh.com"`（hub 端配置，第一次真的部署 prod）
 
+**INTERNAL_SECRET 旋转窗口（v2 reviewer H3 fix）**：
+
+⚠️ TenantHub 在 INTERNAL_SECRET 缺失或不匹配时 hard-fail（500/403）。生产 cutover 期间如果有 in-flight HITL 流程（pending approval 的 a2a-messages，正在 WS-deliver 的消息），rotate 期间会 403。
+
+策略：
+- 选 maintenance window（dev 期间通知 0 用户 → 推荐 launch 前先 rotate）
+- 或接受 V1 traffic 低 → "in-flight 失败窗口约 1-2 分钟，可接受"
+- **不要在用户活跃时间 rotate**
+
+**CORS / trustedOrigins / cookie 跨子域（v2 reviewer H4 fix）**：
+
+⚠️ 当前 hub CORS `origin: env.PWA_URL` 是**单值字符串**，不是数组。如果选 sprint B option A（pwa 营销站保留），那 `https://firefly-mesh.com` 跟 `https://app.firefly-mesh.com` 不能同时被允许。
+
+需要：
+- 改 hub CORS 为 `origin: (origin) => [PWA_URL, MARKETING_URL].includes(origin) ? origin : null`（hub 代码改一处）
+- Better Auth `trustedOrigins` 必须含**两个** URL：`["https://app.firefly-mesh.com", "https://firefly-mesh.com"]`
+
+**Pages rewrites cookie 转发验证（v2 reviewer H4 fix）**：
+
+⚠️ `next dev` 本地模式 rewrites 转发 Cookie 是 well-tested 的。但 `@cloudflare/next-on-pages` 在 CF 边缘节点的 rewrites 实现可能与 next dev 不同 —— **必须实测**。
+
+B.3 验收必须含：
+- 注册 → 登录后 → 浏览器 DevTools → 检查 `/api/me` 请求的 Cookie header 是否真到达 hub（用 hub 端 `wrangler tail` 实时观察）
+
 注意：
-- Better Auth `trustedOrigins` 加 `https://app.firefly-mesh.com`
-- hub CORS `origin: env.PWA_URL` 应能自动覆盖（PWA_URL 改 prod 后）
+- Better Auth `trustedOrigins` 加 `https://app.firefly-mesh.com`（+ `https://firefly-mesh.com` 如选 A）
+- hub CORS 改为接受多 origin（见上）
 
 **🚨 CEO 批准点 3**：部署到 prod。违反 "不部署（wrangler deploy / --remote）" 红线。批准理由：
 - 这是 sprint B 的最终目标
@@ -116,31 +170,39 @@
 **验收**：
 - `https://app.firefly-mesh.com` 可访问
 - 注册 → 登录 → cookie 写入 `.firefly-mesh.com` domain
-- /api/me 通过 rewrites 调 hub.firefly-mesh.com，cookie 正确传递
+- /api/me 通过 rewrites 调 hub.firefly-mesh.com，cookie 正确传递（**实测验证 hub 端真的收到 cookie，via wrangler tail**）
 - GitHub OAuth callback 流程完整（这是 sprint A 留的 known risk）
+- INTERNAL_SECRET rotation 完成 + 验证 TenantHub deliver 不 403
 
-## 5. B.4 — Sprint A 禁用 UI 恢复
+## 5. B.4 — Sprint A 禁用 UI 恢复（v2 大幅 descope）
 
-按 sprint A AE1 表，配合 B.0 加补的端点，恢复禁用 UI：
+v1 reviewer 抓出 C1 (WS channel 不存在 — 完全错的假设) + C2 (audit endpoints 自相矛盾)。v2 删除这两类 deliverable，sprint B 只恢复 hub 端 B.0 真有的功能。
+
+### Sprint B 范围（2/5）
 
 | 禁用项 | 恢复条件 | 估时 |
 |---|---|---|
-| /onboarding/import banner | B.0 完成 bulk-import endpoint | 30m |
-| /knowledge upload-dialog multipart | B.0 完成 knowledge/upload endpoint | 1h |
-| /audit "Coming soon" | B.0 完成 audit read endpoints | 1h |
-| /knowledge SSE indexing | 替换为 WS 连 hub `/ws` channel | 2h |
-| /audit SSE Live | 同上 | 1h |
-| /skills loaded tab | hub /api/skills/loaded（V2 推迟，不在 sprint B 范围）| - |
-| /skills dry-run button | hub /api/skills/:id/dry-run（V2 推迟）| - |
+| /onboarding/import banner → CSV upload UI | B.0 已完成 bulk-import endpoint | 30m |
+| /knowledge upload-dialog multipart upload | B.0 已完成 knowledge/upload endpoint | 1h |
 
-SSE → WS 改造：
-- `useEffect` 中替换 `new EventSource(...)` 为 `new WebSocket(...)`
-- 订阅 channel name 通过 WS query string 传：`/ws?channel=knowledge.indexing.${docId}`
-- Hub `/ws` 已就绪，只需 server-side router to broadcast on channel
+合计 1.5h（半天的零头）。
+
+### Sprint B 不做 / 推迟（v2 修订）
+
+| 禁用项 | 推迟原因 | 推迟到 |
+|---|---|---|
+| /audit "Coming soon" | hub 无 audit read endpoint（B.0 未做）| audit-read sprint (V1.1) |
+| /knowledge SSE indexing 改 WS | hub TenantHub /ws 是 agent:/user: tag 点对点投递，**不支持 channel pub/sub**。需要 hub 加 channel-routing 协议 + broadcast 写路径 — 大改 | TenantHub channel sprint (V1.1) |
+| /audit SSE Live 改 WS | 同上 | 同上 |
+| /skills loaded tab + dry-run | hub V2 skill 执行引擎 | V2 |
+
+**Sprint A AE1 banner / silent fail 这 5 项**：
+- 2 恢复（multipart upload 2 处，sprint B 完成）
+- 3 保留 banner（audit, knowledge/audit SSE，sprint A 已 banner 化，无变化）
 
 **验收**：
-- 5 个 UI 恢复完成（除 skills 2 个 V2 项）
-- Sprint A AE1 banner 全部移除
+- 2 个 UI 恢复完成（multipart upload 2 处）
+- sprint A AE1 banner 保留 3 项（audit + 2 SSE silent fail），不动 — 这些 banner 准确反映"functionality 未到位"
 - 浏览器 console 无 unhandled error
 
 ## 6. B.5 — 删 services/pwa
@@ -178,23 +240,27 @@ SSE → WS 改造：
 
 `pnpm --filter @firefly-mesh/web e2e` 运行所有场景。
 
-**验收**：
-- 7/7 playwright 场景通过（against prod hub.firefly-mesh.com）
-- Lighthouse 评分 Performance ≥ 90, Accessibility ≥ 95
+**验收**（v2 修订 — reviewer M3 fix）：
+- 5/7 playwright 场景必须通过（against prod hub.firefly-mesh.com）：register-invite, pair-agent, a2a-inform, hitl-approve, task-lifecycle
+- 2/7 视 B.0 进度而定：knowledge-upload-search（依赖 B.0 multipart upload）+ audit-thread-view（依赖未做的 audit read，所以 actually 4/7 必过 + audit 那条改测 banner 显示正确）
+- Lighthouse 评分 **Performance ≥ 80**（goal ≥ 90，V1.1 优化到 95+），Accessibility ≥ 95
 - 0 console.error 在 happy path
 
-## 8. 总估时
+## 8. 总估时（v2 修订）
 
 | 阶段 | 估时 | CEO 批准点 |
 |---|---|---|
-| B.0 hub 加补端点 | 1.5 天 | 无（红线内）|
+| B.0 hub 加补端点（3 高优）| 1.5 天 | 无（红线内）|
+| B.0.1 hub `wrangler deploy --remote` | 0.25 天 | 批准点 0（hub prod 部署） |
 | B.1 删 v0 死代码 | 0.5 天 | 批准点 1（删 legacy/workspace 项）|
-| B.2 Cloudflare Pages 适配 | 0.5 天 | 批准点 2（加新 dep）|
-| B.3 部署 prod | 0.5 天 | 批准点 3（部署 + INTERNAL_SECRET 旋转）|
-| B.4 UI 恢复 | 0.5 天 | 无 |
+| B.2 Cloudflare Pages 适配 + 删 standalone | 0.5-1 天 | 批准点 2（加新 dep） |
+| B.3 部署 prod + cookieDomain + INTERNAL_SECRET 旋转 + CORS multi-origin | 1 天 | 批准点 3（web prod 部署 + secret rotation） |
+| B.4 UI 恢复（2 项 multipart upload，audit / SSE 推迟）| 0.25 天 | 无 |
 | B.5 删 pwa (如选 B) | 0.5 天 | 决策点 4（选 A 跳过）|
-| B.6 E2E QA | 1 天 | 无 |
-| **合计** | **4-4.5 天** | 3-4 个 CEO 批准点 |
+| B.6 E2E QA（4-5 场景，不含 audit / SSE） | 1 天 | 无 |
+| **合计** | **5-6 天** | 4 个 CEO 批准点 |
+
+v2 修订：v1 4-4.5 天 → v2 5-6 天（reviewer 准确指出 v1 估时漏 B.0.1 hub deploy + B.2 next-on-pages 可能踩坑 + B.3 cookie 实测）。
 
 ## 9. 红线突破汇总
 
@@ -214,26 +280,43 @@ SSE → WS 改造：
 - 营销页改造（如 B.5 选 B）
 - soft launch + 初批用户邀请
 
-## 11. 风险登记
+## 11. 风险登记（v2 扩充）
 
 | 风险 | 缓解 |
 |---|---|
-| `@cloudflare/next-on-pages` 仍 beta，next@16 + react@19 兼容性 | 先本地 build 验证；如挂选 Vercel 部署（违反架构一致性）|
+| `@cloudflare/next-on-pages` 仍 beta，next@16 + react@19 兼容性 | B.2 前先本地 build 验证；如挂选 Vercel 部署（违反架构一致性）|
 | Better Auth cookieDomain `.firefly-mesh.com` 第一次配置 prod，OAuth callback 流程未实测 | B.3 后第一时间 smoke test OAuth；如挂用 sprint A 的 redirect_uri fallback |
 | INTERNAL_SECRET 旋转后旧 dev placeholder 仍在 wrangler.toml [vars] — 优先级问题 | B.3 验证 `wrangler secret put` 真的覆盖 [vars]（应该会，secret 优先） |
+| **INTERNAL_SECRET 旋转期间 in-flight HITL 流程 403**（v2 reviewer H3） | 选 maintenance window 或接受 V1 低流量下短窗口失败 |
+| **CF Pages rewrites 是否在 prod 转发 Cookie header 到 hub**（v2 reviewer H4） | B.3 必做 `wrangler tail` 实测验证，否则用户登录但 /api/me 返回 401 |
+| **hub CORS 只允许单 origin，多子域（app + marketing）冲突**（v2 reviewer H4） | 改 hub CORS 为函数返回多 origin，列入 B.3 任务 |
 | 删 v0 routes 后某 page.tsx 调用没被 sprint A grep 覆盖到 → 上线后 404 | B.6 playwright 全覆盖 |
 | Playwright 找不到 element / 时机问题（async UI）| 标准 wait 模式，不接受 flaky |
-| Lighthouse 性能不达标（next-on-pages cold start） | 接受 ≥ 80 也可上线，95 留 V1.1 优化 |
+| Lighthouse 性能不达标（next-on-pages cold start） | 接受 ≥ 80 也可上线，90 是 goal，95 留 V1.1 优化 |
+| **B.2 next.config standalone vs next-on-pages 冲突**（v2 reviewer H2） | B.2 任务含删 `output: "standalone"` + `outputFileTracingRoot` |
+| **hub B.0 端点未部署 prod，web prod 用户 404**（v2 reviewer M2） | 加 B.0.1 hub deploy step，强制依赖 B.3 之前完成 |
 
 ---
 
 ## 下一步：CEO 决策
 
-请 CEO 在以下选项打勾：
+请 CEO 选择一项（默认推荐：**option A — B.5 keep pwa**）：
 
-- [ ] 批准 sprint B 全部 7 个 sub-step（含 4 个红线突破点）
-- [ ] 批准 sprint B 但暂缓 B.5（pwa 保留为 marketing 站）
-- [ ] 推迟 sprint B，先做某个独立任务（请说明）
-- [ ] 其他：
+**Option A（推荐）**：
+- [ ] 批准 sprint B = B.0 + B.0.1 + B.1 + B.2 + B.3 + B.4 + B.6（**B.5 跳过 — pwa 保留为 marketing 站**）
+- 估时 4.5-5 天
+- 含 4 批准点：B.0.1 hub deploy + B.1 删 legacy + B.2 新 dep + B.3 web prod deploy
+- 不含：audit endpoints / SSE→WS（推迟到 V1.1 audit-read sprint + TenantHub channel sprint）
 
-批准后我会按 autodev 流水线产出剩余 7 个设计文档（meta / ideation / design / ui / api / rules / index），随后执行 B.0 → B.6。
+**Option B**：
+- [ ] 批准 sprint B + 含 B.5 删 services/pwa（marketing 移到 web 内 / 或单独 marketing 改造 sprint）
+- 估时 5-6 天
+
+**Option C**：
+- [ ] 推迟 sprint B，先做：
+  - 独立 TenantHub channel sprint（解锁 audit / SSE→WS V1.1）
+  - 或 audit-read sprint
+  - 或营销页改造 sprint
+  - 或其他：
+
+批准 A/B 后我会按 autodev 流水线产出剩余 7 个设计文档（meta / ideation / design / ui / api / rules / index），随后执行 B.0 → B.6。
