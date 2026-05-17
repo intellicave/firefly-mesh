@@ -16,6 +16,7 @@ import { projectsRouter } from "./routes/projects.ts"
 import { boundariesRouter } from "./routes/boundaries.ts"
 import { agentTokensRouter } from "./routes/agent-tokens.ts"
 import { a2aMessagesRouter } from "./routes/a2a-messages.ts"
+import { tasksRouter } from "./routes/tasks.ts"
 import { TenantHub } from "./durable-objects/TenantHub.ts"
 import { runScheduled, pickTask } from "./cron/cleanup.ts"
 import { rateLimitByIp } from "./middleware/rateLimit.ts"
@@ -129,6 +130,7 @@ app.route("/api/projects", projectsRouter)
 app.route("/api/boundaries", boundariesRouter)
 app.route("/api/agent-tokens", agentTokensRouter)
 app.route("/api/a2a-messages", a2aMessagesRouter)
+app.route("/api/tasks", tasksRouter)
 
 export default {
   fetch(request: Request, env: Bindings, ctx: ExecutionContext) {
