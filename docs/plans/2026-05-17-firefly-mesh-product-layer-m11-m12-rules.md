@@ -24,7 +24,9 @@
 
 **Q2**：writeAudit 调用必须传 `actor.type`（human / agent / system）—— grep CI 检查可加。
 
-**Q3**：retrofit 后 grep 验证：`db.insert(schema.auditLog).values` hit 数 = 0。
+**Q3**：retrofit 后 grep 验证：`db.insert(schema.auditLog).values` hit 数 = 0，**唯一例外见 Q4**。
+
+**Q4（2026-05-18 修订）**：`db.batch([...])` 路径允许使用 `auditValues({...})` 构造 row 后直接 `db.insert(schema.auditLog).values(...)`，因为 `writeAudit` 是 async-only、不适用 batch。当前唯一被认可的例外是 `services/hub/src/routes/invitations.ts` 的 invitation-accept batch（membership + audit 原子写）。在该位置必须留显式注释引用本规则。任何新的 batch 调用必须先在本文档登记。
 
 ## R. 跨租户保护（再次强调）
 

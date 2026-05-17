@@ -180,6 +180,12 @@ invitations.post("/:token/accept", requireSession, async (c) => {
           joinedAt: now.toISOString(),
         })
         .onConflictDoNothing(),
+      // rules.md §Q4 sanctioned exception: db.batch() requires prepared
+      // statements, so writeAudit (which is async-only) can't be used.
+      // auditValues() builds the same row writeAudit would, preserving the
+      // §Q1 contract that audit_log columns are populated consistently —
+      // this is the ONLY permitted direct `db.insert(schema.auditLog)`
+      // call site outside lib/audit.ts itself.
       db.insert(schema.auditLog).values(
         auditValues({
           tenantId: inv.tenantId,
