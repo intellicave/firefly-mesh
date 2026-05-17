@@ -435,20 +435,37 @@ async function main() {
   )
   assert.equal(r2Reject.status, 200, `reject-receive happy 200 (got ${r2Reject.status})`)
   assert.equal(unwrap(r2Reject.body, "reject-receive").status, "rejected")
-  // duplicate reject-receive → 409 (terminal)
-  const r2RejectDup = await bob.json<Env<unknown>>(
+  // duplicate reject-receive → 409 (terminal) — pin error code (reviewer M)
+  const r2RejectDup = await bob.json<{ error?: { code?: string } }>(
     `/api/a2a-messages/${r2Body.id}/reject-receive?tenantId=${acmeId}`,
     { method: "POST" },
   )
   assert.equal(r2RejectDup.status, 409, "reject-receive terminal-state 409")
-  // wrong-side: Carol (sender) attempting receiver-side reject-receive → 403
-  const r2WrongSide = await carol.json<Env<unknown>>(
+  assert.equal(
+    r2RejectDup.body.error?.code,
+    "INVALID_STATUS",
+    `expected INVALID_STATUS (got ${r2RejectDup.body.error?.code})`,
+  )
+  // Carol attempts receiver-side reject-receive on already-rejected msg.
+  // Carol is owner (isAdmin=true in handleCta), so RBAC bypass applies —
+  // Carol's call goes through to the state machine, which throws because
+  // msg is already in terminal `rejected` state → 409 INVALID_STATUS.
+  // (If Carol were NOT admin we'd see 403 NOT_AUTHORIZED, but the test
+  // doesn't have a third non-admin/non-bob user available; that gap is
+  // documented in the e2e quality M-tier deferrals.)
+  const r2WrongSide = await carol.json<{ error?: { code?: string } }>(
     `/api/a2a-messages/${r2Body.id}/reject-receive?tenantId=${acmeId}`,
     { method: "POST" },
   )
-  assert.ok(
-    r2WrongSide.status === 403 || r2WrongSide.status === 409,
-    `Carol blocked from receiver-side reject-receive (${r2WrongSide.status})`,
+  assert.equal(
+    r2WrongSide.status,
+    409,
+    `Carol (admin) reject-receive on terminal msg → 409 (got ${r2WrongSide.status})`,
+  )
+  assert.equal(
+    r2WrongSide.body.error?.code,
+    "INVALID_STATUS",
+    `expected INVALID_STATUS (got ${r2WrongSide.body.error?.code})`,
   )
   log("9.1", "C1 fix: reject-receive happy + 409 terminal + RBAC negative all green")
 
@@ -468,12 +485,17 @@ async function main() {
   )
   assert.equal(r3Reject.status, 200, `sender reject 200 (got ${r3Reject.status})`)
   assert.equal(unwrap(r3Reject.body, "sender reject").status, "rejected")
-  // duplicate sender reject → 409
-  const r3RejectDup = await carol.json<Env<unknown>>(
+  // duplicate sender reject → 409, pin error code (reviewer M)
+  const r3RejectDup = await carol.json<{ error?: { code?: string } }>(
     `/api/a2a-messages/${r3Body.id}/reject?tenantId=${acmeId}`,
     { method: "POST" },
   )
   assert.equal(r3RejectDup.status, 409, "sender reject terminal 409")
+  assert.equal(
+    r3RejectDup.body.error?.code,
+    "INVALID_STATUS",
+    `expected INVALID_STATUS (got ${r3RejectDup.body.error?.code})`,
+  )
   log("9.2", "C3 fix: sender reject happy + terminal 409")
 
   // -- Phase 9.3: H1 fix — enforceScope wired into POST /api/a2a-messages ----

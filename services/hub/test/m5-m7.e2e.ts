@@ -397,8 +397,8 @@ async function main() {
   assert.equal(bobEmpResp.status, 201, "bob employee created")
   const bobEmpId = unwrap(bobEmpResp.body, "bob emp").id
 
-  // Bob (employee role) attempts to issue agent token → 403
-  const bobIssueToken = await bob.json<Env<unknown>>(
+  // Bob (employee role) attempts to issue agent token → 403, pin code
+  const bobIssueToken = await bob.json<{ error?: { code?: string } }>(
     `/api/agent-tokens?tenantId=${tenantId}`,
     {
       method: "POST",
@@ -410,9 +410,17 @@ async function main() {
     403,
     `employee can't issue agent token (got ${bobIssueToken.status})`,
   )
+  // Pin error code (reviewer M): must be FORBIDDEN from requireRole, NOT
+  // NO_EMPLOYEE_PROFILE (which would mean orgGuard failed for the wrong
+  // reason and we never tested requireRole).
+  assert.equal(
+    bobIssueToken.body.error?.code,
+    "FORBIDDEN",
+    `expected FORBIDDEN from requireRole (got ${bobIssueToken.body.error?.code})`,
+  )
 
-  // Bob attempts to PUT boundaries → 403
-  const bobPutBoundary = await bob.json<Env<unknown>>(
+  // Bob attempts to PUT boundaries → 403, pin code
+  const bobPutBoundary = await bob.json<{ error?: { code?: string } }>(
     `/api/boundaries/${agentId}?tenantId=${tenantId}`,
     {
       method: "PUT",
@@ -423,6 +431,11 @@ async function main() {
     bobPutBoundary.status,
     403,
     `employee can't PUT boundaries (got ${bobPutBoundary.status})`,
+  )
+  assert.equal(
+    bobPutBoundary.body.error?.code,
+    "FORBIDDEN",
+    `expected FORBIDDEN from requireRole (got ${bobPutBoundary.body.error?.code})`,
   )
   log(
     "8.0",

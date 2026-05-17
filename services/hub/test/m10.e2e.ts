@@ -345,7 +345,7 @@ async function main() {
   // We use a task already in pending_review (from Phase 4) — but submit
   // also runs RBAC before the state-machine check, so Dave (reviewer, NOT
   // assignee) attempting submit must 403 NOT_ASSIGNEE, NOT 409 state.
-  const daveSubmit = await dave.json<Env<unknown>>(
+  const daveSubmit = await dave.json<{ error?: { code?: string } }>(
     `/api/tasks/${taskId}/submit?tenantId=${acmeId}`,
     {
       method: "POST",
@@ -357,7 +357,15 @@ async function main() {
     403,
     `non-assignee submit → 403 (got ${daveSubmit.status})`,
   )
-  log("4.1", "C2 fix: non-assignee session submit correctly rejected 403")
+  // Pin error code (reviewer M): must be NOT_ASSIGNEE specifically — any
+  // other 403 (e.g. NO_EMPLOYEE_PROFILE) would mean a regression in the
+  // employee lookup that masks the RBAC check we're trying to exercise.
+  assert.equal(
+    daveSubmit.body.error?.code,
+    "NOT_ASSIGNEE",
+    `expected NOT_ASSIGNEE (got ${daveSubmit.body.error?.code})`,
+  )
+  log("4.1", "C2 fix: non-assignee session submit → 403 NOT_ASSIGNEE")
 
   // -- Phase 5: Bob attempts self-review ---------------------------------
   // (Bob is assignee, not reviewer, so this is also caught by FORBIDDEN
