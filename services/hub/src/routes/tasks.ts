@@ -23,7 +23,7 @@ import {
   resolveAgentOwnerEmployee,
   type TaskStatus,
 } from "../lib/tasks.ts"
-import { writeAudit } from "../lib/audit.ts"
+import { writeAudit, auditValues } from "../lib/audit.ts"
 import { verifyAgentJwt } from "../lib/jwt.ts"
 
 type Vars = AuthVariables & OrgGuardVariables
@@ -288,19 +288,52 @@ tasksRouter.post("/:id/start", requireSession, orgGuard, async (c) => {
     throw err
   }
 
+  // Round-35 H fix: UPDATE + audit must land together (batch) AND the
+  // UPDATE must guard on current status to detect concurrent writers.
+  // Without the batch, a crash between the UPDATE and writeAudit leaves
+  // the new state with no audit trail. Without the status guard, two
+  // concurrent /start calls would both pass the state-machine check
+  // (idempotent in this case but duplicates the audit row); /review's
+  // race could fire two contradictory audit rows.
   const now = new Date().toISOString()
-  await db
-    .update(schema.tasks)
-    .set({ status: "in_progress", updatedAt: now })
-    .where(and(eq(schema.tasks.id, id), eq(schema.tasks.orgId, tenantId)))
-
-  await writeAudit(db, {
-    tenantId,
-    actor: { type: "human", id: requester.id },
-    action: "task.started",
-    resource: { type: "task", id },
-    payload: { from: task.status, to: "in_progress" },
-  })
+  const result = await db.batch([
+    db
+      .update(schema.tasks)
+      .set({ status: "in_progress", updatedAt: now })
+      .where(
+        and(
+          eq(schema.tasks.id, id),
+          eq(schema.tasks.orgId, tenantId),
+          // Optimistic concurrency guard: only transition if status hasn't
+          // changed since we read it.
+          eq(schema.tasks.status, task.status),
+        ),
+      ),
+    // §Q4 sanctioned exception (fourth site): batch with audit.
+    db.insert(schema.auditLog).values(
+      auditValues({
+        tenantId,
+        actor: { type: "human", id: requester.id },
+        action: "task.started",
+        resource: { type: "task", id },
+        payload: { from: task.status, to: "in_progress" },
+      }),
+    ),
+  ])
+  // result[0] is the UPDATE result. If meta.changes === 0, another writer
+  // beat us — return 409 so the caller can re-fetch and retry.
+  const updateMeta = (result[0]?.meta as { changes?: number } | undefined)
+  if ((updateMeta?.changes ?? 0) === 0) {
+    return c.json(
+      {
+        error: {
+          code: "INVALID_STATUS",
+          message: "Task status changed concurrently; refetch and retry",
+        },
+      },
+      409,
+    )
+  }
 
   return c.json({ data: { id, status: "in_progress", updatedAt: now } })
 })
@@ -510,27 +543,50 @@ tasksRouter.post(
       throw err
     }
 
-    await db
-      .update(schema.tasks)
-      .set({
-        status: "pending_review",
-        output:
-          body.output !== undefined
-            ? typeof body.output === "string"
-              ? body.output
-              : JSON.stringify(body.output)
-            : null,
-        updatedAt: now,
-      })
-      .where(and(eq(schema.tasks.id, id), eq(schema.tasks.orgId, tenantId)))
-
-    await writeAudit(db, {
-      tenantId,
-      actor: { type: actorType, id: actorId },
-      action: "task.submitted",
-      resource: { type: "task", id },
-      payload: { from: task.status, to: "pending_review" },
-    })
+    // Round-35 H fix: batch UPDATE + audit with status-WHERE concurrency guard.
+    const submitResult = await db.batch([
+      db
+        .update(schema.tasks)
+        .set({
+          status: "pending_review",
+          output:
+            body.output !== undefined
+              ? typeof body.output === "string"
+                ? body.output
+                : JSON.stringify(body.output)
+              : null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(schema.tasks.id, id),
+            eq(schema.tasks.orgId, tenantId),
+            eq(schema.tasks.status, task.status),
+          ),
+        ),
+      // §Q4 sanctioned batch+audit pattern.
+      db.insert(schema.auditLog).values(
+        auditValues({
+          tenantId,
+          actor: { type: actorType, id: actorId },
+          action: "task.submitted",
+          resource: { type: "task", id },
+          payload: { from: task.status, to: "pending_review" },
+        }),
+      ),
+    ])
+    const submitMeta = (submitResult[0]?.meta as { changes?: number } | undefined)
+    if ((submitMeta?.changes ?? 0) === 0) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_STATUS",
+            message: "Task status changed concurrently; refetch and retry",
+          },
+        },
+        409,
+      )
+    }
 
     return c.json({ data: { id, status: "pending_review", updatedAt: now } })
   },
@@ -606,28 +662,57 @@ tasksRouter.post(
 
     const newRound = decision === "rejected" ? task.reviewRound + 1 : task.reviewRound
 
-    await db
-      .update(schema.tasks)
-      .set({
-        status: decision,
-        reviewRound: newRound,
-        reviewComment: comment ?? null,
-        updatedAt: now,
-      })
-      .where(and(eq(schema.tasks.id, id), eq(schema.tasks.orgId, tenantId)))
-
-    await writeAudit(db, {
-      tenantId,
-      actor: { type: "human", id: requester.id },
-      action: decision === "approved" ? "task.approved" : "task.rejected",
-      resource: { type: "task", id },
-      payload: {
-        from: task.status,
-        to: decision,
-        round: newRound,
-        comment: comment ?? null,
-      },
-    })
+    // Round-35 H fix: batch UPDATE + audit with status-WHERE concurrency
+    // guard. Without the guard, two concurrent reviewers (e.g. two admins)
+    // both reading 'pending_review' would both write the decision and
+    // both emit audit rows — the result is idempotent for the same
+    // decision but produces duplicate audit entries and is worse for
+    // approved-then-rejected race (last writer wins on row, both audit
+    // entries persist).
+    const reviewResult = await db.batch([
+      db
+        .update(schema.tasks)
+        .set({
+          status: decision,
+          reviewRound: newRound,
+          reviewComment: comment ?? null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(schema.tasks.id, id),
+            eq(schema.tasks.orgId, tenantId),
+            eq(schema.tasks.status, task.status),
+          ),
+        ),
+      // §Q4 sanctioned batch+audit pattern.
+      db.insert(schema.auditLog).values(
+        auditValues({
+          tenantId,
+          actor: { type: "human", id: requester.id },
+          action: decision === "approved" ? "task.approved" : "task.rejected",
+          resource: { type: "task", id },
+          payload: {
+            from: task.status,
+            to: decision,
+            round: newRound,
+            comment: comment ?? null,
+          },
+        }),
+      ),
+    ])
+    const reviewMeta = (reviewResult[0]?.meta as { changes?: number } | undefined)
+    if ((reviewMeta?.changes ?? 0) === 0) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_STATUS",
+            message: "Task status changed concurrently; refetch and retry",
+          },
+        },
+        409,
+      )
+    }
 
     return c.json({
       data: {
