@@ -128,7 +128,12 @@ projectsRouter.post(
     const rows = await db
       .select()
       .from(schema.projects)
-      .where(eq(schema.projects.id, id))
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] }, 201)
   },
 )
@@ -189,12 +194,25 @@ projectsRouter.patch(
       return c.json({ data: project })
     }
 
-    await db.update(schema.projects).set(patch).where(eq(schema.projects.id, id))
+    await db
+      .update(schema.projects)
+      .set(patch)
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.orgId, tenantId),
+        ),
+      )
 
     const rows = await db
       .select()
       .from(schema.projects)
-      .where(eq(schema.projects.id, id))
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] })
   },
 )
@@ -256,13 +274,23 @@ projectsRouter.patch(
       await db
         .update(schema.projects)
         .set({ status: newStatus })
-        .where(eq(schema.projects.id, id))
+        .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.orgId, tenantId),
+        ),
+      )
     }
 
     const rows = await db
       .select()
       .from(schema.projects)
-      .where(eq(schema.projects.id, id))
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] })
   },
 )
@@ -291,7 +319,14 @@ projectsRouter.delete(
     }
 
     // project_members cascade automatically.
-    await db.delete(schema.projects).where(eq(schema.projects.id, id))
+    await db
+      .delete(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.orgId, tenantId),
+        ),
+      )
     return c.json({ data: { id, deleted: true } })
   },
 )

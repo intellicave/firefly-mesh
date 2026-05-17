@@ -294,7 +294,7 @@ skillsRouter.post(
     const rows = await db
       .select()
       .from(schema.skills)
-      .where(eq(schema.skills.id, id))
+      .where(and(eq(schema.skills.id, id), eq(schema.skills.orgId, tenantId)))
     const row = rows[0]!
     return c.json(
       { data: { ...row, manifest: safeParseManifest(row.manifest) } },
@@ -392,7 +392,7 @@ skillsRouter.patch(
     await db
       .update(schema.skills)
       .set(patch)
-      .where(eq(schema.skills.id, id))
+      .where(and(eq(schema.skills.id, id), eq(schema.skills.orgId, tenantId)))
 
     await writeAudit(db, {
       tenantId,
@@ -405,7 +405,7 @@ skillsRouter.patch(
     const next = await db
       .select()
       .from(schema.skills)
-      .where(eq(schema.skills.id, id))
+      .where(and(eq(schema.skills.id, id), eq(schema.skills.orgId, tenantId)))
     const r = next[0]!
     return c.json({ data: { ...r, manifest: safeParseManifest(r.manifest) } })
   },
@@ -439,7 +439,9 @@ skillsRouter.delete("/:id", orgGuard, async (c) => {
     )
   }
 
-  await db.delete(schema.skills).where(eq(schema.skills.id, id))
+  await db
+    .delete(schema.skills)
+    .where(and(eq(schema.skills.id, id), eq(schema.skills.orgId, tenantId)))
 
   await writeAudit(db, {
     tenantId,

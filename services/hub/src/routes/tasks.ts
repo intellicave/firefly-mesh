@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, desc, eq, or } from "drizzle-orm"
+import { and, asc, desc, eq, or } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -137,7 +137,7 @@ tasksRouter.post(
     const rows = await db
       .select()
       .from(schema.tasks)
-      .where(eq(schema.tasks.id, id))
+      .where(and(eq(schema.tasks.id, id), eq(schema.tasks.orgId, tenantId)))
     return c.json({ data: rows[0] }, 201)
   },
 )
@@ -194,7 +194,7 @@ tasksRouter.get(
       .orderBy(
         q.sort === "desc"
           ? desc(schema.tasks.createdAt)
-          : desc(schema.tasks.createdAt), // simple — both ordered by created_at; full sort handling V1.1
+          : asc(schema.tasks.createdAt),
       )
       .limit(q.limit + 1)
 
@@ -213,6 +213,7 @@ tasksRouter.get(
 tasksRouter.get("/:id", requireSession, orgGuard, async (c) => {
   const db = drizzleD1(c.env)
   const tenantId = c.get("tenantId")
+  const requester = c.get("employee")
   const id = c.req.param("id")
 
   const rows = await db
@@ -226,6 +227,22 @@ tasksRouter.get("/:id", requireSession, orgGuard, async (c) => {
       404,
     )
   }
+
+  // Employee role: restrict visibility to own-related tasks (matches GET list
+  // filter in design.md §4). Higher roles see all tenant tasks.
+  if (requester && requester.role === "employee") {
+    const isMine =
+      task.assigneeEmployeeId === requester.id ||
+      task.reviewerEmployeeId === requester.id ||
+      task.creatorEmployeeId === requester.id
+    if (!isMine) {
+      return c.json(
+        { error: { code: "FORBIDDEN", message: "Task not visible to you" } },
+        403,
+      )
+    }
+  }
+
   return c.json({ data: task })
 })
 
@@ -275,7 +292,7 @@ tasksRouter.post("/:id/start", requireSession, orgGuard, async (c) => {
   await db
     .update(schema.tasks)
     .set({ status: "in_progress", updatedAt: now })
-    .where(eq(schema.tasks.id, id))
+    .where(and(eq(schema.tasks.id, id), eq(schema.tasks.orgId, tenantId)))
 
   await writeAudit(db, {
     tenantId,
@@ -499,7 +516,7 @@ tasksRouter.post(
             : null,
         updatedAt: now,
       })
-      .where(eq(schema.tasks.id, id))
+      .where(and(eq(schema.tasks.id, id), eq(schema.tasks.orgId, tenantId)))
 
     await writeAudit(db, {
       tenantId,
@@ -591,7 +608,7 @@ tasksRouter.post(
         reviewComment: comment ?? null,
         updatedAt: now,
       })
-      .where(eq(schema.tasks.id, id))
+      .where(and(eq(schema.tasks.id, id), eq(schema.tasks.orgId, tenantId)))
 
     await writeAudit(db, {
       tenantId,

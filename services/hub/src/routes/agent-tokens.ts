@@ -214,7 +214,12 @@ agentTokensRouter.post(
     await db
       .update(schema.agentTokens)
       .set({ status: "revoked", revokedAt: now.toISOString() })
-      .where(eq(schema.agentTokens.id, existing.id))
+      .where(
+        and(
+          eq(schema.agentTokens.id, existing.id),
+          eq(schema.agentTokens.orgId, tenantId),
+        ),
+      )
 
     // Issue a new token, preserving the original expires_at
     const { plain, hash } = await generateToken()
@@ -283,7 +288,12 @@ agentTokensRouter.delete(
     await db
       .update(schema.agentTokens)
       .set({ status: "revoked", revokedAt: now.toISOString() })
-      .where(eq(schema.agentTokens.id, id))
+      .where(
+        and(
+          eq(schema.agentTokens.id, id),
+          eq(schema.agentTokens.orgId, tenantId),
+        ),
+      )
 
     await writeAudit(db, {
       tenantId,

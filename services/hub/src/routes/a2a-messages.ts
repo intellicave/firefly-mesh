@@ -502,7 +502,12 @@ async function handleCta(c: CtaContext, cta: CtaAction): Promise<Response> {
           senderApprovalBy: employee.id,
           senderApprovalAt: now,
         })
-        .where(eq(schema.a2aMessages.id, id))
+        .where(
+          and(
+            eq(schema.a2aMessages.id, id),
+            eq(schema.a2aMessages.orgId, tenantId),
+          ),
+        )
       await writeAudit(db, {
         tenantId,
         actor: { type: "human", id: employee.id },
@@ -524,7 +529,12 @@ async function handleCta(c: CtaContext, cta: CtaAction): Promise<Response> {
         receiverActionBy: employee.id,
         receiverActionAt: now,
       })
-      .where(eq(schema.a2aMessages.id, id))
+      .where(
+        and(
+          eq(schema.a2aMessages.id, id),
+          eq(schema.a2aMessages.orgId, tenantId),
+        ),
+      )
     await writeAudit(db, {
       tenantId,
       actor: { type: "human", id: employee.id },

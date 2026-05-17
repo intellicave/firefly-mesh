@@ -152,7 +152,12 @@ departmentsRouter.post(
     const rows = await db
       .select()
       .from(schema.departments)
-      .where(eq(schema.departments.id, id))
+      .where(
+        and(
+          eq(schema.departments.id, id),
+          eq(schema.departments.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] }, 201)
   },
 )
@@ -254,12 +259,22 @@ departmentsRouter.patch(
     await db
       .update(schema.departments)
       .set(patch)
-      .where(eq(schema.departments.id, id))
+      .where(
+        and(
+          eq(schema.departments.id, id),
+          eq(schema.departments.orgId, tenantId),
+        ),
+      )
 
     const rows = await db
       .select()
       .from(schema.departments)
-      .where(eq(schema.departments.id, id))
+      .where(
+        and(
+          eq(schema.departments.id, id),
+          eq(schema.departments.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] })
   },
 )
@@ -308,7 +323,14 @@ departmentsRouter.delete(
       )
 
     // department_members rows cascade automatically.
-    await db.delete(schema.departments).where(eq(schema.departments.id, id))
+    await db
+      .delete(schema.departments)
+      .where(
+        and(
+          eq(schema.departments.id, id),
+          eq(schema.departments.orgId, tenantId),
+        ),
+      )
 
     return c.json({ data: { id, deleted: true } })
   },

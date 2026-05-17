@@ -237,7 +237,12 @@ employeesRouter.post(
     const rows = await db
       .select()
       .from(schema.employees)
-      .where(eq(schema.employees.id, employeeId))
+      .where(
+        and(
+          eq(schema.employees.id, employeeId),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
 
     return c.json({ data: rows[0] }, 201)
   },
@@ -338,7 +343,12 @@ employeesRouter.patch(
     await db
       .update(schema.employees)
       .set(patch)
-      .where(eq(schema.employees.id, id))
+      .where(
+        and(
+          eq(schema.employees.id, id),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
 
     // If userId was set (or cleared) for the first time, sync membership role.
     if (body.userId) {
@@ -354,7 +364,12 @@ employeesRouter.patch(
     const rows = await db
       .select()
       .from(schema.employees)
-      .where(eq(schema.employees.id, id))
+      .where(
+        and(
+          eq(schema.employees.id, id),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] })
   },
 )
@@ -442,13 +457,23 @@ employeesRouter.patch(
       await db
         .update(schema.employees)
         .set({ role: newRole })
-        .where(eq(schema.employees.id, id))
+        .where(
+        and(
+          eq(schema.employees.id, id),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
     }
 
     const rows = await db
       .select()
       .from(schema.employees)
-      .where(eq(schema.employees.id, id))
+      .where(
+        and(
+          eq(schema.employees.id, id),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] })
   },
 )
@@ -510,12 +535,22 @@ employeesRouter.patch(
     await db
       .update(schema.employees)
       .set({ status })
-      .where(eq(schema.employees.id, id))
+      .where(
+        and(
+          eq(schema.employees.id, id),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
 
     const rows = await db
       .select()
       .from(schema.employees)
-      .where(eq(schema.employees.id, id))
+      .where(
+        and(
+          eq(schema.employees.id, id),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] })
   },
 )
@@ -573,7 +608,14 @@ employeesRouter.delete(
 
     // Cascades automatically remove department_members + project_members
     // via FK ON DELETE CASCADE. memberships row stays (system-level).
-    await db.delete(schema.employees).where(eq(schema.employees.id, id))
+    await db
+      .delete(schema.employees)
+      .where(
+        and(
+          eq(schema.employees.id, id),
+          eq(schema.employees.orgId, tenantId),
+        ),
+      )
 
     return c.json({ data: { id, deleted: true } })
   },

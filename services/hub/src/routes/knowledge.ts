@@ -330,7 +330,12 @@ knowledgeRouter.post(
     await db
       .update(schema.knowledgeDocuments)
       .set({ chunkCount: chunks.length, lastIndexedAt: now })
-      .where(eq(schema.knowledgeDocuments.id, docId))
+      .where(
+        and(
+          eq(schema.knowledgeDocuments.id, docId),
+          eq(schema.knowledgeDocuments.orgId, tenantId),
+        ),
+      )
 
     await writeAudit(db, {
       tenantId,
@@ -348,7 +353,12 @@ knowledgeRouter.post(
     const rows = await db
       .select()
       .from(schema.knowledgeDocuments)
-      .where(eq(schema.knowledgeDocuments.id, docId))
+      .where(
+        and(
+          eq(schema.knowledgeDocuments.id, docId),
+          eq(schema.knowledgeDocuments.orgId, tenantId),
+        ),
+      )
     return c.json({ data: rows[0] }, 201)
   },
 )
@@ -583,7 +593,12 @@ knowledgeRouter.patch(
     await db
       .update(schema.knowledgeDocuments)
       .set(patch)
-      .where(eq(schema.knowledgeDocuments.id, id))
+      .where(
+        and(
+          eq(schema.knowledgeDocuments.id, id),
+          eq(schema.knowledgeDocuments.orgId, tenantId),
+        ),
+      )
 
     await writeAudit(db, {
       tenantId,
@@ -596,7 +611,12 @@ knowledgeRouter.patch(
     const next = await db
       .select()
       .from(schema.knowledgeDocuments)
-      .where(eq(schema.knowledgeDocuments.id, id))
+      .where(
+        and(
+          eq(schema.knowledgeDocuments.id, id),
+          eq(schema.knowledgeDocuments.orgId, tenantId),
+        ),
+      )
     return c.json({ data: next[0] })
   },
 )
@@ -639,7 +659,12 @@ knowledgeRouter.delete("/:id", orgGuard, async (c) => {
   // Chunks cascade via FK.
   await db
     .delete(schema.knowledgeDocuments)
-    .where(eq(schema.knowledgeDocuments.id, id))
+    .where(
+      and(
+        eq(schema.knowledgeDocuments.id, id),
+        eq(schema.knowledgeDocuments.orgId, tenantId),
+      ),
+    )
 
   await writeAudit(db, {
     tenantId,
