@@ -26,7 +26,9 @@
 
 **Q3**：retrofit 后 grep 验证：`db.insert(schema.auditLog).values` hit 数 = 0，**唯一例外见 Q4**。
 
-**Q4（2026-05-18 修订）**：`db.batch([...])` 路径允许使用 `auditValues({...})` 构造 row 后直接 `db.insert(schema.auditLog).values(...)`，因为 `writeAudit` 是 async-only、不适用 batch。当前唯一被认可的例外是 `services/hub/src/routes/invitations.ts` 的 invitation-accept batch（membership + audit 原子写）。在该位置必须留显式注释引用本规则。任何新的 batch 调用必须先在本文档登记。
+**Q4（2026-05-18 修订）**：`db.batch([...])` 路径允许使用 `auditValues({...})` 构造 row 后直接 `db.insert(schema.auditLog).values(...)`，因为 `writeAudit` 是 async-only、不适用 batch。在该位置必须留显式注释引用本规则。任何新的 batch 调用必须先在本文档登记。当前被认可的例外（已登记）：
+- `services/hub/src/routes/invitations.ts` 的 invitation-accept batch（membership + audit 原子写）。
+- `services/hub/src/routes/a2a-messages.ts` 的 a2a POST 主路径 batch（a2a_threads + messages_meta + pending_messages + a2a_messages + audit 五表协调写，round-19 H1 fix 引入）。round-25 reviewer 登记。
 
 ## R. 跨租户保护（再次强调）
 
