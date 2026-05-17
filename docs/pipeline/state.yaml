@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — 12/12 modules + services/web sprint A + hub round-3/round-7 reviewer all done (verdict A). Next: web sprint B (requires CEO approval to break loop red lines for delete + deploy)"
+topic: "firefly-mesh-product-layer — 12/12 modules + services/web sprint A + hub reviewer-saturated (8 rounds verdict A) + e2e quality round (14 phases added) + sprint B plan v3 ready. Next: CEO approves sprint B Option A/B/C"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,70 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === Loop extension: arch M1/M2 + sprint B plan v3 + e2e quality round (2026-05-18) ===
+sub_sprint_loop_extension:
+  topic_slug: "firefly-mesh-loop-extension"
+  status: completed
+  started_at: "2026-05-18T12:00:00Z"
+  completed_at: "2026-05-18T18:00:00Z"
+  trigger: |
+    After 8 hub reviewer rounds + 4 sprint A rounds reached verdict A, ralph
+    loop's "Medium 也应该看" + "测试只测 happy" mandates demanded continued
+    iteration on (1) deferred Medium items, (2) sprint B prep, (3) test
+    coverage gaps no prior reviewer had examined.
+  workstream_arch_medium:
+    - "arch M1 — duplicate resolveAgent helpers consolidated into lib/agents.ts"
+    - "arch M2 — knowledge PATCH invariant documented (prevents future scope-change drift)"
+  workstream_sprint_b_plan:
+    - "Sprint B plan v1 (fe16495) — initial CEO decision artifact"
+    - "Reviewer round 1: 2C + 4H + 3M (WS phantom / audit contradiction / standalone vs next-on-pages / INTERNAL_SECRET rotation / CF Pages cookie / B.0 hour math / hub deploy missing / Lighthouse contradiction)"
+    - "v2 (b3b2a5a) — round 1 fixes applied"
+    - "Reviewer round 2: 1C + 3H + 3M (multipart phantom newly introduced / 5-7 vs 4-7 contradiction / CORS unconditional vs Option A / PWA_URL window)"
+    - "v3 (4200b70) — round 2 fixes applied"
+    - "Reviewer round 3: 0C + 1H + 1M (acceptance block missed multipart removal / MAX_INLINE_BYTES sprint A bug)"
+    - "v3 patch (5596d0d) — H1 fix + sprint A upload-dialog code bug fix (real client/server cap mismatch)"
+    - "Reviewer round 4: verdict A, 0C/0H — sprint B plan CEO-ready"
+    - "Cosmetic (c2e7dbf) — UI label nit"
+  workstream_e2e_quality:
+    - "Test quality audit reviewer: 4C + 4H + 4M + 2L gaps caught across 68 phases / 6 suites"
+    - "Round 1 (04c8bd3) — fixed C1+C2+C3+H1+H4: receiver reject-receive + sender reject + scope revocation (manual JWT) + non-assignee submit + cross-tenant chunks. Added 5 e2e phases."
+    - "Round 2 (1d57545) — fixed C4+H3: employee-role agent-token RBAC + cross-tenant agent JWT POST. Added 2 e2e phases."
+    - "Test-of-tests reviewer round 2: 3 Medium 'underspecified assertion' gaps caught"
+    - "Round 3 (a2a23c7) — pinned error codes for 4 assertions; also corrected reviewer's own analysis bug (admin bypass) on Carol-wrong-side test"
+    - "Documented untestable: H2 TenantHub INTERNAL_SECRET direct (DO endpoint internal-only)"
+    - "Documented deferred (M-tier 4 items): token expiry / batch atomicity / last-owner / employee task create"
+  test_results:
+    web_typecheck: PASS
+    hub_typecheck: PASS
+    hub_e2e_agent_mesh: "PASS (6/6)"
+    hub_e2e_product_layer: "PASS (11/11)"
+    hub_e2e_m5_m7: "PASS (14/14 — added Phase 8 C4 employee RBAC)"
+    hub_e2e_m11_m12: "PASS (14/14 — added Phase 9.0.1 H3 cross-tenant agent JWT; 9.1 C1 reject-receive; 9.2 C3 sender reject; 9.3 H1 scope enforce)"
+    hub_e2e_m10: "PASS (14/14 — added Phase 4.1 C2 non-assignee submit)"
+    hub_e2e_m8_m9: "PASS (15/15 — added Phase 13.1 H4 cross-tenant chunks)"
+    total_phases: 74
+  commits:
+    - "e109255 — refactor(hub): arch M1 — consolidate duplicate resolveAgent helpers into lib/agents.ts"
+    - "4f48650 — docs(hub): arch M2 — knowledge PATCH invariant documented"
+    - "86a89a6 — docs(progress): hub round-6/7/8 cycle log"
+    - "fe16495 — docs(plans): sprint B plan v1 (pre-CEO)"
+    - "b3b2a5a — docs(plans): sprint B plan v2 (round 1 reviewer fixes 2C+4H+3M)"
+    - "4200b70 — docs(plans): sprint B plan v3 (round 2 reviewer fixes 1C+3H+3M)"
+    - "5596d0d — fix: plan v3 round-3 H1 + sprint A upload-dialog M1 code bug"
+    - "c2e7dbf — fix(web): align upload-dialog UI label with corrected 100KB cap"
+    - "04c8bd3 — test(hub): close 5 e2e coverage gaps reviewer caught (C1+C2+C3+H1+H4)"
+    - "1d57545 — test(hub): close 2 more e2e gaps (C4 + H3)"
+    - "a2a23c7 — test(hub): pin error codes in new e2e assertions (3 Medium + 1 reviewer-bug-fix)"
+  notes: |
+    Reviewer-driven loop value-add: this iteration's e2e quality round found
+    docstring-vs-code "灰色谎言" (claims like "receiver reject-receive
+    covered" with zero matching test code) across 4 test files — none of
+    the 8 prior code reviewers ever looked at test self-consistency. The
+    test-of-tests round then caught my pinning errors (incl. one where
+    reviewer's own analysis was wrong about admin bypass). End state:
+    pinned + verified e2e assertions for all C/H gaps the test quality
+    audit identified.
 
 # === hub round-3 + round-7 reviewer cycles (2026-05-18) — ARCH + SECURITY HARDEN ===
 sub_sprint_hub_review_round_3:
