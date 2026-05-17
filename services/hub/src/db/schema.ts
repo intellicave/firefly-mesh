@@ -148,6 +148,26 @@ export const agents = sqliteTable("agents", {
   signedPrekeySig: text("signed_prekey_sig"),
   createdAt: text("created_at").notNull(),
   lastSeenAt: text("last_seen_at"),
+  // Product-layer M5 sprint 2026-05-17: agents reattached to employees.
+  // owner_user_id retained for back-compat; new code prefers owner_employee_id.
+  ownerEmployeeId: text("owner_employee_id").references(() => employees.id, {
+    onDelete: "set null",
+  }),
+  runtimeKind: text("runtime_kind", {
+    enum: [
+      "openclaw",
+      "hermes",
+      "claude-code",
+      "cursor",
+      "claude-desktop",
+      "other-mcp",
+      "unknown",
+    ],
+  })
+    .notNull()
+    .default("unknown"),
+  runtimeMeta: text("runtime_meta"),
+  activatedAt: text("activated_at"),
 })
 
 export const oneTimePrekeys = sqliteTable(
@@ -322,5 +342,59 @@ export const projectMembers = sqliteTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.projectId, t.employeeId] }),
+  }),
+)
+
+// ---------------------------------------------------------------------------
+// Product layer M5-M7 — sprint 2026-05-17
+// Adds per-agent boundary scopes (M6) and admin-issued agent tokens (M7).
+// M5's agents-table extension (owner_employee_id + runtime_kind +
+// runtime_meta + activated_at) lives inline on the `agents` table above.
+// See docs/plans/2026-05-17-firefly-mesh-product-layer-m5-m7-design.md
+// ---------------------------------------------------------------------------
+
+export const representationBoundaries = sqliteTable("representation_boundaries", {
+  id: text("id").primaryKey(),
+  // 1:1 with agents — one boundary row per agent. UNIQUE enforces this.
+  agentId: text("agent_id")
+    .notNull()
+    .unique()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  // JSON-serialised string[] of scope IDs (e.g. ["read_kb", "submit_task"]).
+  // App layer uses JSON.parse/stringify; D1 has no JSONB.
+  scopes: text("scopes").notNull().default("[]"),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const agentTokens = sqliteTable(
+  "agent_tokens",
+  {
+    id: text("id").primaryKey(),
+    orgId: text("org_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    // SHA-256 hex hash of the plain token; plain token is returned ONCE at
+    // creation/regenerate and never stored.
+    tokenHash: text("token_hash").notNull().unique(),
+    // Set after a successful client-side activate-by-token (M7 V1.1 sprint).
+    agentId: text("agent_id").references(() => agents.id, {
+      onDelete: "set null",
+    }),
+    status: text("status", {
+      enum: ["pending", "consumed", "revoked", "expired"],
+    })
+      .notNull()
+      .default("pending"),
+    expiresAt: text("expires_at").notNull(),
+    consumedAt: text("consumed_at"),
+    revokedAt: text("revoked_at"),
+    createdAt: text("created_at").notNull(),
+    createdBy: text("created_by").references(() => employees.id),
+  },
+  (t) => ({
+    orgIdx: uniqueIndex("idx_agent_tokens_org_uq").on(t.orgId, t.id),
   }),
 )
