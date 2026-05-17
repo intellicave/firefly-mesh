@@ -1,7 +1,3 @@
-import { and, eq } from "drizzle-orm"
-import * as schema from "../db/schema.ts"
-import type { DrizzleD1 } from "../db/connect.ts"
-
 /**
  * Task state machine — sprint 2026-05-17 M10.
  *
@@ -11,6 +7,11 @@ import type { DrizzleD1 } from "../db/connect.ts"
  * Rejection bumps review_round and lets the assignee re-submit
  * (rejected → pending_review).
  */
+
+// Re-export the shared helper so existing imports
+// `import { resolveAgentOwnerEmployee } from "../lib/tasks.ts"` keep working
+// without forcing every route to update — round-3 arch M1 consolidation.
+export { resolveAgentOwnerEmployee } from "./agents.ts"
 
 export type TaskStatus =
   | "pending_dispatch_approval"
@@ -54,27 +55,4 @@ export class SelfReviewError extends Error {
   constructor() {
     super("Assignee cannot review their own task")
   }
-}
-
-/**
- * Look up the employee that owns the given agent, scoped to a tenant.
- * Used by POST /api/tasks/:id/submit when called via agent JWT.
- */
-export async function resolveAgentOwnerEmployee(
-  db: DrizzleD1,
-  agentId: string,
-  tenantId: string,
-): Promise<{ agentExists: boolean; employeeId: string | null }> {
-  const rows = await db
-    .select({
-      id: schema.agents.id,
-      ownerEmployeeId: schema.agents.ownerEmployeeId,
-    })
-    .from(schema.agents)
-    .where(
-      and(eq(schema.agents.id, agentId), eq(schema.agents.tenantId, tenantId)),
-    )
-  const row = rows[0]
-  if (!row) return { agentExists: false, employeeId: null }
-  return { agentExists: true, employeeId: row.ownerEmployeeId }
 }

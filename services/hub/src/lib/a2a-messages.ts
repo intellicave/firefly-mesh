@@ -1,7 +1,8 @@
-import { and, eq } from "drizzle-orm"
-import * as schema from "../db/schema.ts"
-import type { DrizzleD1 } from "../db/connect.ts"
 import { computeHitlFlags, type A2AMessageType } from "../hitl/engine.ts"
+// Re-export the shared agent lookup so existing imports
+// `import { resolveAgentEmployee } from "../lib/a2a-messages.ts"` keep
+// working — round-3 arch M1 consolidation.
+export { resolveAgentOwnerEmployee as resolveAgentEmployee } from "./agents.ts"
 
 /**
  * Product-layer A2A messages — sprint 2026-05-17 M11.
@@ -144,26 +145,3 @@ export function scopeForA2aType(type: A2AMessageType): string {
   }
 }
 
-/**
- * Look up the employee that owns the given agent in the given tenant.
- * Returns null if the agent doesn't have owner_employee_id set (legacy
- * agent pre-M5 sprint) — caller decides whether to proceed.
- */
-export async function resolveAgentEmployee(
-  db: DrizzleD1,
-  agentId: string,
-  tenantId: string,
-): Promise<{ agentExists: boolean; employeeId: string | null }> {
-  const rows = await db
-    .select({
-      id: schema.agents.id,
-      ownerEmployeeId: schema.agents.ownerEmployeeId,
-    })
-    .from(schema.agents)
-    .where(
-      and(eq(schema.agents.id, agentId), eq(schema.agents.tenantId, tenantId)),
-    )
-  const row = rows[0]
-  if (!row) return { agentExists: false, employeeId: null }
-  return { agentExists: true, employeeId: row.ownerEmployeeId }
-}
