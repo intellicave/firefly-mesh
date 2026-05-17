@@ -116,6 +116,15 @@ export const auditLog = sqliteTable("audit_log", {
   action: text("action").notNull(),
   targetId: text("target_id"),
   createdAt: text("created_at").notNull(),
+  // M12 sprint 2026-05-17 — extended fields. All nullable for back-compat.
+  // New code writes via lib/audit.ts::writeAudit() and populates these +
+  // mirrors resource_id into target_id.
+  actorType: text("actor_type", {
+    enum: ["human", "agent", "system"],
+  }),
+  resourceType: text("resource_type"),
+  resourceId: text("resource_id"),
+  payload: text("payload"),
 })
 
 // ---------------------------------------------------------------------------
@@ -398,3 +407,90 @@ export const agentTokens = sqliteTable(
     orgIdx: uniqueIndex("idx_agent_tokens_org_uq").on(t.orgId, t.id),
   }),
 )
+
+// ---------------------------------------------------------------------------
+// Product layer M11 — sprint 2026-05-17 (a2a product tier)
+// Product-tier A2A messages with HITL bidirectional state machine + thread
+// topic + employee-to-employee identity. Hub's existing messages_meta +
+// pending_messages remain the encryption layer; a2a_messages.encrypted_message_id
+// is the bridge.
+// See docs/plans/2026-05-17-firefly-mesh-product-layer-m11-m12-design.md §2
+// ---------------------------------------------------------------------------
+
+export const a2aThreads = sqliteTable("a2a_threads", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  topic: text("topic"),
+  // Soft ref to tasks (M10 sprint). No FK so we can ship M11 without tasks.
+  relatedTaskId: text("related_task_id"),
+  messageCount: integer("message_count").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+})
+
+export const a2aMessages = sqliteTable("a2a_messages", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  threadId: text("thread_id")
+    .notNull()
+    .references(() => a2aThreads.id, { onDelete: "cascade" }),
+  // Bridge to the encryption layer. Cascade delete keeps the two layers
+  // consistent (deleting an encrypted message also removes its product row).
+  encryptedMessageId: text("encrypted_message_id")
+    .notNull()
+    .references(() => messagesMeta.id, { onDelete: "cascade" }),
+  // Soft self-ref (no FK to avoid SQLite self-ref migration headaches).
+  replyToMessageId: text("reply_to_message_id"),
+
+  senderAgentId: text("sender_agent_id")
+    .notNull()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  // Nullable: agents created before M5 don't have owner_employee_id; we set
+  // null and the a2a row stays valid (HITL still works for receiver side).
+  senderEmployeeId: text("sender_employee_id").references(() => employees.id, {
+    onDelete: "set null",
+  }),
+  receiverAgentId: text("receiver_agent_id")
+    .notNull()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  receiverEmployeeId: text("receiver_employee_id").references(
+    () => employees.id,
+    { onDelete: "set null" },
+  ),
+
+  type: text("type", {
+    enum: [
+      "inform",
+      "sync",
+      "request",
+      "commit",
+      "handoff",
+      "escalate",
+      "block",
+    ],
+  }).notNull(),
+
+  // HITL bidirectional state. 'auto' = initial terminal (no human needed).
+  senderApprovalStatus: text("sender_approval_status", {
+    enum: ["pending", "approved", "rejected", "auto"],
+  })
+    .notNull()
+    .default("auto"),
+  senderApprovalBy: text("sender_approval_by").references(() => employees.id),
+  senderApprovalAt: text("sender_approval_at"),
+
+  receiverActionStatus: text("receiver_action_status", {
+    enum: ["pending", "accepted", "rejected", "auto"],
+  })
+    .notNull()
+    .default("auto"),
+  receiverActionBy: text("receiver_action_by").references(() => employees.id),
+  receiverActionAt: text("receiver_action_at"),
+
+  // Soft ref to tasks (M10 sprint).
+  relatedTaskId: text("related_task_id"),
+  createdAt: text("created_at").notNull(),
+})
