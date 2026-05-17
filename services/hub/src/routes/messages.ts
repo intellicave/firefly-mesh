@@ -11,6 +11,7 @@ import { requireAgentJwt } from "../middleware/auth.ts"
 import { rateLimitByAgent } from "../middleware/rateLimit.ts"
 import { computeHitlFlags, type A2AMessageType } from "../hitl/engine.ts"
 import { writeAudit } from "../lib/audit.ts"
+import { isInternalSecretUsable } from "../lib/internal-secret.ts"
 
 const messages = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
 
@@ -120,6 +121,22 @@ messages.post(
     // Try real-time delivery via Durable Object (encrypted blob — hub never decrypts)
     // Deliver to both the recipient agent AND the recipient owner's PWA session
     // (so the inbox UI updates without a refresh).
+    // Round-23 H: refuse to forward the publicly-known wrangler.toml
+    // placeholder on a non-loopback host. The DO's constant-time compare
+    // would otherwise accept the placeholder, exposing the impersonation
+    // surface to anyone who read the repo.
+    if (!isInternalSecretUsable(c.env.INTERNAL_SECRET, c.req.raw)) {
+      console.error("[messages] INTERNAL_SECRET unusable (missing or placeholder on non-loopback host) — skipping real-time deliver")
+      return c.json(
+        {
+          error: {
+            code: "MISCONFIGURED",
+            message: "INTERNAL_SECRET not set or still at placeholder",
+          },
+        },
+        500,
+      )
+    }
     const doId = c.env.TENANT_HUB.idFromName(tenantId)
     const tenantHub = c.env.TENANT_HUB.get(doId)
     const deliverRes = await tenantHub.fetch(

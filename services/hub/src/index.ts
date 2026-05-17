@@ -22,6 +22,7 @@ import { skillsRouter } from "./routes/skills.ts"
 import { TenantHub } from "./durable-objects/TenantHub.ts"
 import { runScheduled, pickTask } from "./cron/cleanup.ts"
 import { rateLimitByIp } from "./middleware/rateLimit.ts"
+import { isInternalSecretUsable } from "./lib/internal-secret.ts"
 
 export { TenantHub }
 
@@ -104,16 +105,20 @@ app.get("/ws", async (c) => {
   const doId = c.env.TENANT_HUB.idFromName(tenantId)
   const tenantHub = c.env.TENANT_HUB.get(doId)
 
-  // Round-21 security H1: the DO's WS upgrade handler verifies INTERNAL_SECRET
-  // before trusting the X-Verified-* identity claims. Stamp the secret here.
-  // Fail closed if it's not configured (mirrors the DO-side 500 surface).
+  // Round-21 security H1 + round-23 H: the DO's WS upgrade handler verifies
+  // INTERNAL_SECRET before trusting the X-Verified-* identity claims. Stamp
+  // the secret here. `isInternalSecretUsable` rejects the publicly-known
+  // wrangler.toml placeholder on non-loopback hosts so a missing
+  // `wrangler secret put` in prod fails closed instead of silently using
+  // a known-bad secret.
   const internalSecret = c.env.INTERNAL_SECRET ?? ""
-  if (!internalSecret) {
+  if (!isInternalSecretUsable(internalSecret, c.req.raw)) {
     return c.json(
       {
         error: {
           code: "MISCONFIGURED",
-          message: "INTERNAL_SECRET not set — WS forwarding disabled",
+          message:
+            "INTERNAL_SECRET not set or still at placeholder — WS forwarding disabled",
         },
       },
       500,

@@ -22,6 +22,7 @@ import * as schema from "../db/schema.ts"
 import type { Bindings } from "../auth.ts"
 import { drizzleD1 } from "../db/connect.ts"
 import { rateLimitByIp } from "../middleware/rateLimit.ts"
+import { isInternalSecretUsable } from "../lib/internal-secret.ts"
 
 /** ±5 minute freshness window for A2A envelope timestamps. */
 const A2A_TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
@@ -194,6 +195,18 @@ a2a.post("/message", rateLimitByIp("RL_A2A"), async (c) => {
   // Step 8: route via TenantHub for real-time delivery, keyed on RECEIVER's
   // tenant (not sender's — same tenant by step 5 but receiver-rooted is the
   // semantically correct DO partition).
+  // Round-23 H: refuse to forward placeholder INTERNAL_SECRET in prod. The
+  // a2a path is partner-server-to-receiver and the message is already
+  // durably enqueued in pending_messages, so we DON'T 5xx the caller —
+  // we just skip real-time delivery and log. The recipient's polling
+  // inbox picks it up. This keeps the partner-server contract intact
+  // even if the prod deploy forgot `wrangler secret put`.
+  if (!isInternalSecretUsable(c.env.INTERNAL_SECRET, c.req.raw)) {
+    console.error(
+      "[a2a] INTERNAL_SECRET unusable (missing or placeholder on non-loopback host) — skipping real-time deliver; recipient will pick up from pending_messages",
+    )
+    return c.json({ data: { messageId, accepted: true } }, 202)
+  }
   const doId = c.env.TENANT_HUB.idFromName(recipient.tenantId)
   const tenantHub = c.env.TENANT_HUB.get(doId)
   const deliverRes = await tenantHub.fetch(
