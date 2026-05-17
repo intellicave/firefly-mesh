@@ -8,7 +8,7 @@
 
 ### Task 5.1 — Schema 扩展
 
-**status**: pending
+**status**: completed
 **files modified**: services/hub/src/db/schema.ts
 
 **acceptance**:
@@ -22,7 +22,7 @@
 
 ### Task 5.2 — Migration 0011 (knowledge)
 
-**status**: pending
+**status**: completed
 **files**: services/hub/migrations/0011_knowledge.sql
 
 **acceptance**:
@@ -33,7 +33,7 @@
 
 ### Task 5.3 — Migration 0012 (skills)
 
-**status**: pending
+**status**: completed
 **files**: services/hub/migrations/0012_skills.sql
 
 **acceptance**:
@@ -43,7 +43,7 @@
 
 ### Task 5.4 — lib/scope-check.ts
 
-**status**: pending
+**status**: completed
 **files**: services/hub/src/lib/scope-check.ts (new)
 
 **acceptance**:
@@ -55,7 +55,7 @@
 
 ### Task 5.5 — routes/knowledge.ts (7 endpoint)
 
-**status**: pending
+**status**: completed
 **files**: services/hub/src/routes/knowledge.ts (new)
 
 **acceptance**:
@@ -69,7 +69,7 @@
 
 ### Task 5.6 — routes/skills.ts (7 endpoint)
 
-**status**: pending
+**status**: completed
 **files**: services/hub/src/routes/skills.ts (new)
 
 **acceptance**:
@@ -83,7 +83,7 @@
 
 ### Task 5.7 — 挂载 index.ts
 
-**status**: pending
+**status**: completed
 **files**: services/hub/src/index.ts
 
 **acceptance**:
@@ -92,7 +92,7 @@
 
 ### Task 5.8 — E2E
 
-**status**: pending
+**status**: completed
 **files**: services/hub/test/m8-m9.e2e.ts + package.json
 
 **acceptance**:
@@ -112,7 +112,7 @@
 
 ### Task 5.9 — 文档同步 + commits
 
-**status**: pending
+**status**: completed
 
 **acceptance**:
 - [ ] state.yaml 加 sub_sprint_m8_m9
@@ -148,12 +148,25 @@
 
 | Task | Status |
 |---|---|
-| 5.1 Schema | pending |
-| 5.2 Migration 0011 | pending |
-| 5.3 Migration 0012 | pending |
-| 5.4 lib/scope-check.ts | pending |
-| 5.5 routes/knowledge.ts | pending |
-| 5.6 routes/skills.ts | pending |
-| 5.7 挂载 | pending |
-| 5.8 E2E | pending |
-| 5.9 文档同步 | pending |
+| 5.1 Schema | completed |
+| 5.2 Migration 0011 | completed |
+| 5.3 Migration 0012 | completed |
+| 5.4 lib/scope-check.ts | completed |
+| 5.5 routes/knowledge.ts | completed |
+| 5.6 routes/skills.ts | completed |
+| 5.7 挂载 | completed |
+| 5.8 E2E | completed |
+| 5.9 文档同步 | completed |
+
+**Sleep run 完成于** 2026-05-18。验收：
+
+- ✅ typecheck 全绿
+- ✅ test:e2e:m8-m9 — **13/13 phases pass 第一次就过**（zero bugs caught in iteration）
+- ✅ 5 regression e2e 全部通过（agent-mesh 第一次撞 transient Node libuv assertion，重跑全绿；非 regression）
+- ✅ 5 个 atomic commit（docs / schema+migrations / scope-check / routes+mount / e2e+script）
+
+## 7. drift notes
+
+**零 drift**。设计文档未修订。e2e 一次通过 — sprint 端到端 clean。
+
+这是 hub 后端**最后一个**产品模块 sprint。完成后 12/12 模块 done，下一步搬 web。

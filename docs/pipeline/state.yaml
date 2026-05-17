@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — M1-M7 + M10 + M11 + M12 done (organizations/employees/departments/projects + agents-as-employee-runtime + boundary scopes + agent_tokens admin issuance + tasks with HITL 7-state machine + a2a product layer + audit_log extended); M8 (knowledge) + M9 (skills) deferred"
+topic: "firefly-mesh-product-layer — 12/12 modules done (M1-M12). hub backend complete. Next: services/web migration sprint A"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,64 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === M8+M9 sub-sprint (2026-05-18) — HUB BACKEND COMPLETE ===
+sub_sprint_m8_m9:
+  topic_slug: "firefly-mesh-product-layer-m8-m9"
+  status: completed
+  started_at: "2026-05-18T00:00:00Z"
+  completed_at: "2026-05-18T02:30:00Z"
+  modules_implemented:
+    - "M8 — Knowledge (3-tier scope, inline md/txt upload, SQLite LIKE search)"
+    - "M9 — Skills (3-tier scope, agentskills.io manifest, agent assignment with SCOPE_MISMATCH guard)"
+  endpoints_added:
+    - "GET    /api/knowledge                       (session + 3-tier scope filter)"
+    - "POST   /api/knowledge                       (inline md/txt only)"
+    - "GET    /api/knowledge/search                (LOWER(LIKE) fallback)"
+    - "GET    /api/knowledge/:id                   (canRead visibility check)"
+    - "PATCH  /api/knowledge/:id                   (creator or privileged)"
+    - "DELETE /api/knowledge/:id                   (cascades chunks)"
+    - "GET    /api/knowledge/:id/chunks            (paged)"
+    - "GET    /api/skills                          (3-tier scope filter)"
+    - "POST   /api/skills                          (manifest + dup-check)"
+    - "GET    /api/skills/:id                      (manifest parsed)"
+    - "PATCH  /api/skills/:id                      (creator or privileged)"
+    - "DELETE /api/skills/:id                      (cascades agent_skills)"
+    - "POST   /api/skills/:id/assign               (double cross-tenant guard)"
+    - "DELETE /api/skills/:id/agents/:agentId      (unlink)"
+  files_created:
+    - "services/hub/migrations/0011_knowledge.sql"
+    - "services/hub/migrations/0012_skills.sql"
+    - "services/hub/src/lib/scope-check.ts"
+    - "services/hub/src/routes/knowledge.ts"
+    - "services/hub/src/routes/skills.ts"
+    - "services/hub/test/m8-m9.e2e.ts"
+    - "docs/plans/2026-05-18-firefly-mesh-product-layer-m8-m9-{ideation,design,ui,api,plan,meta,index,rules}.md"
+  files_modified:
+    - "services/hub/src/db/schema.ts (+4 tables, +blob import)"
+    - "services/hub/src/index.ts (mount /api/knowledge + /api/skills)"
+    - "services/hub/package.json (test:e2e:m8-m9 script)"
+  test_results:
+    typecheck: PASS
+    test_e2e_m8_m9: "PASS (13/13 phases on first run — zero bugs)"
+    test_e2e_m10_regression: "PASS (12/12)"
+    test_e2e_m11_m12_regression: "PASS (10/10)"
+    test_e2e_m5_m7_regression: "PASS (14/14)"
+    test_e2e_product_layer_regression: "PASS (11/11)"
+    test_e2e_regression: "PASS (6/6 phases; one transient Node libuv assertion, passed on retry)"
+  commits:
+    - "43494d9 — docs(plans): M8+M9 sprint — 8 design documents"
+    - "ac945a0 — feat(hub): M8+M9 schema + migrations 0011/0012"
+    - "1571b00 — feat(hub): M8+M9 lib/scope-check.ts — shared three-tier scope helpers"
+    - "6c36513 — feat(hub): M8+M9 knowledge + skills routes (14 endpoints) + mount"
+    - "d573d79 — test(hub): M8+M9 end-to-end (13 phases)"
+  bugs_found_and_fixed_during_e2e_iteration: []
+  notes: |
+    HUB BACKEND 12/12 MODULES COMPLETE.
+    Final hub D1 schema: 22 tables (was 15 before product-layer rework).
+    Final hub endpoint count: 16 mounted routers, ~80 endpoints.
+    Next sprint: services/web migration A (copy legacy/v0/web →
+    services/web, rewire fetch to hub, salvage i18n).
 
 # === M10 sub-sprint (2026-05-17) ===
 sub_sprint_m10:
@@ -294,10 +352,6 @@ gate_history:
 
 # Follow-up sprints (planned, not yet started)
 next_sprints:
-  - slug: "firefly-mesh-product-layer-m8-m9"
-    scope: "M8 knowledge + M9 skills"
-    estimated_duration: "5 days"
-    depends_on: ["M10"]
   - slug: "firefly-mesh-web-migration-a"
     scope: "services/web: copy legacy/v0/web → services/web, change all fetch to hub, salvage i18n, delete services/pwa"
     estimated_duration: "5 days"
