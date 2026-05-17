@@ -11,7 +11,8 @@
     "migrate:remote": "wrangler d1 migrations apply firefly-mesh-hub-db --remote && node scripts/install-audit-triggers.mjs --remote",
     "test:e2e": "tsx test/e2e.ts",
     "test:e2e:product-layer": "tsx test/product-layer.e2e.ts",
-    "test:e2e:m5-m7": "tsx test/m5-m7.e2e.ts"
+    "test:e2e:m5-m7": "tsx test/m5-m7.e2e.ts",
+    "test:e2e:m11-m12": "tsx test/m11-m12.e2e.ts"
   },
   "dependencies": {
     "@firefly-mesh/proto": "workspace:*",
