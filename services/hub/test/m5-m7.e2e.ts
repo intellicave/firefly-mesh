@@ -343,14 +343,91 @@ async function main() {
   assert.equal(revokeResp.status, 200, "revoke 200")
   log("7.0", "revoke OK")
 
-  // ----- Phase 8: RBAC negatives -------------------------------------------
-  // Demote Carol-equivalent test: create an auditor employee for someone else
-  // and ensure they can't PUT/POST. But we'd need to sign in as that user.
-  // Pragmatic: simulate by trying as an employee (without admin) — Carol's
-  // session won't help since she IS admin. Skip the negative session test for
-  // brevity here; covered via unit-level inspection of requireRole in
-  // product-layer.e2e.ts which already verifies the 403 path.
-  log("8.0", "RBAC negatives covered by product-layer.e2e.ts SELF_NOT_ALLOWED test")
+  // ----- Phase 8: RBAC negatives (Test-quality round C4 fix) --------------
+  // Original comment delegated to product-layer.e2e.ts but that suite only
+  // covers PATCH /api/employees/:id/role SELF_NOT_ALLOWED, NOT
+  // POST /api/agent-tokens. A `requireRole(["owner","admin"])` regression
+  // would silently let employees issue long-lived agent tokens. Verified
+  // here directly.
+  //
+  // Setup: invite + accept a second user (Bob) with role=employee, then
+  // attempt POST /api/agent-tokens from Bob's session.
+  const bobEmail = `bob-rbac+${stamp}@example.com`
+  const bobInvite = unwrap(
+    (
+      await carol.json<Env<{ inviteLink: string }>>(
+        `/api/tenants/${tenantId}/invite`,
+        {
+          method: "POST",
+          body: JSON.stringify({ email: bobEmail, role: "member" }),
+        },
+      )
+    ).body,
+    "invite Bob",
+  )
+  const bobInviteToken = new URL(bobInvite.inviteLink).searchParams.get("token")!
+
+  const bob = new Session("bob")
+  const bobUp = await bob.json<{ user: { id: string } }>(
+    "/api/auth/sign-up/email",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        email: bobEmail,
+        password: "pass1234",
+        name: "Bob",
+      }),
+    },
+  )
+  assert.ok(bobUp.status === 200 || bobUp.status === 201, "bob sign-up")
+  await bob.json(`/api/invite/${bobInviteToken}/accept`, { method: "POST" })
+  // Backfill Bob's employee with role=employee
+  const bobEmpResp = await carol.json<Env<{ id: string }>>(
+    `/api/employees?tenantId=${tenantId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        email: bobEmail,
+        name: "Bob",
+        role: "employee",
+        userId: bobUp.body.user.id,
+      }),
+    },
+  )
+  assert.equal(bobEmpResp.status, 201, "bob employee created")
+  const bobEmpId = unwrap(bobEmpResp.body, "bob emp").id
+
+  // Bob (employee role) attempts to issue agent token → 403
+  const bobIssueToken = await bob.json<Env<unknown>>(
+    `/api/agent-tokens?tenantId=${tenantId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ employeeId: bobEmpId, expiresIn: "7d" }),
+    },
+  )
+  assert.equal(
+    bobIssueToken.status,
+    403,
+    `employee can't issue agent token (got ${bobIssueToken.status})`,
+  )
+
+  // Bob attempts to PUT boundaries → 403
+  const bobPutBoundary = await bob.json<Env<unknown>>(
+    `/api/boundaries/${agentId}?tenantId=${tenantId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ scopes: ["read_kb"] }),
+    },
+  )
+  assert.equal(
+    bobPutBoundary.status,
+    403,
+    `employee can't PUT boundaries (got ${bobPutBoundary.status})`,
+  )
+  log(
+    "8.0",
+    "C4 fix: employee blocked from POST /api/agent-tokens + PUT /api/boundaries (both 403)",
+  )
 
   // ----- Phase 9: cross-tenant injection on boundary ----------------------
   const otherCo = unwrap(
@@ -438,6 +515,7 @@ async function main() {
   log("DONE", "  ✓ M7: regenerate on non-pending → 409")
   log("DONE", "  ✓ M7: DELETE soft revoke (status=revoked)")
   log("DONE", "  ✓ cross-tenant boundary lookup blocked")
+  log("DONE", "  ✓ Test-quality round C4: employee role blocked from agent-token issue + boundary PUT (both 403)")
 }
 
 main().catch((err) => {

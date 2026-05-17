@@ -389,7 +389,27 @@ async function main() {
     { method: "POST" },
   )
   assert.equal(cross.status, 404, `cross-tenant approve → 404 (got ${cross.status})`)
-  log("9.0", "cross-tenant blocked")
+  log("9.0", "cross-tenant blocked (session-side approve)")
+
+  // -- Phase 9.0.1: H3 fix — cross-tenant agent JWT POST a2a-messages ------
+  // Register an agent in OtherCo, then use that agent's JWT to attempt
+  // POST /api/a2a-messages targeting Bob (Acme tenant). Hub resolves
+  // receiver by (id, tenantId) where tenantId comes from the JWT claim,
+  // so Acme's bobAgent will NOT be found in OtherCo → 404 RECIPIENT_NOT_FOUND.
+  // This proves the cross-tenant guard on the agent-JWT path of POST
+  // /api/a2a-messages (previously only session-side cross-tenant was tested).
+  const otherCoAgent = await registerAgent(carol, otherCoId, "carol-otherco")
+  const crossSend = await sendA2a(otherCoAgent.token, {
+    receiverAgentId: bobAgent.agentId, // Acme tenant agent
+    type: "inform",
+    summary: "cross-tenant attempt",
+  })
+  assert.equal(
+    crossSend.status,
+    404,
+    `cross-tenant agent send → 404 (got ${crossSend.status})`,
+  )
+  log("9.0.1", "H3 fix: cross-tenant agent JWT POST a2a-messages → 404 RECIPIENT_NOT_FOUND")
 
   // -- Phase 9.1: C1 fix — receiver reject-receive path (test quality round) ---
   // Send a fresh request, sender approves it, then receiver rejects with
@@ -562,6 +582,7 @@ async function main() {
   log("DONE", "  ✓ Test-quality round C1: receiver reject-receive happy + 409 + RBAC negative")
   log("DONE", "  ✓ Test-quality round C3: sender reject happy + 409 terminal")
   log("DONE", "  ✓ Test-quality round H1: boundary scope revocation blocks request-type send")
+  log("DONE", "  ✓ Test-quality round H3: cross-tenant agent JWT POST a2a-messages → 404")
   log("DONE", "  ✓ M12 audit_log retrofit: tenant.created / agent_token.issued / a2a_message.* / approve all write new columns")
 }
 
