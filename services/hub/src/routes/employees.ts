@@ -529,7 +529,24 @@ employeesRouter.patch(
       )
     }
 
-    // Archiving an owner: last-owner guard.
+    // Only an owner can modify the status of another owner. Without this
+    // guard, an admin could archive an owner — which is a privilege
+    // escalation path equivalent to demoting them. This mirrors the
+    // owner-only guard on PATCH /:id/role.
+    if (target.role === "owner" && requester.role !== "owner") {
+      return c.json(
+        {
+          error: {
+            code: "FORBIDDEN",
+            message: "Only an owner can change another owner's status",
+          },
+        },
+        403,
+      )
+    }
+
+    // Archiving an owner: last-owner guard. (Reachable only when requester
+    // is also an owner — the admin path is blocked above.)
     if (target.role === "owner" && status === "archived") {
       try {
         await assertNotLastOwner(db, tenantId, id, target)
@@ -601,6 +618,21 @@ employeesRouter.delete(
       return c.json(
         { error: { code: "NOT_FOUND", message: "Employee not found" } },
         404,
+      )
+    }
+
+    // Only an owner can delete another owner. Without this guard, an admin
+    // could delete an owner (privilege escalation equivalent to demotion).
+    // Mirrors the owner-only guard on /role and /status.
+    if (target.role === "owner" && requester.role !== "owner") {
+      return c.json(
+        {
+          error: {
+            code: "FORBIDDEN",
+            message: "Only an owner can delete another owner",
+          },
+        },
+        403,
       )
     }
 

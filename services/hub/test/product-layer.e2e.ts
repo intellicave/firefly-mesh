@@ -217,9 +217,8 @@ async function main() {
     },
   )
   assert.equal(cycleResp.status, 409, "cycle detection 409")
-  if ("error" in cycleResp.body) {
-    assert.equal(cycleResp.body.error.code, "CYCLE_DETECTED", "cycle code")
-  }
+  assert.ok("error" in cycleResp.body, "cycle expects error envelope")
+  assert.equal(cycleResp.body.error.code, "CYCLE_DETECTED", "cycle code")
   log("5.0", "cycle detection works")
 
   // Add Alice to Eng
@@ -267,9 +266,8 @@ async function main() {
     },
   )
   assert.equal(invalidTransition.status, 409, "invalid transition 409")
-  if ("error" in invalidTransition.body) {
-    assert.equal(invalidTransition.body.error.code, "INVALID_TRANSITION")
-  }
+  assert.ok("error" in invalidTransition.body, "invalid-transition expects error envelope")
+  assert.equal(invalidTransition.body.error.code, "INVALID_TRANSITION")
   log("6.1", "active → planning rejected")
 
   // Add Alice to project as lead
@@ -302,9 +300,8 @@ async function main() {
     },
   )
   assert.equal(selfRole.status, 403, "self role 403")
-  if ("error" in selfRole.body) {
-    assert.equal(selfRole.body.error.code, "SELF_NOT_ALLOWED")
-  }
+  assert.ok("error" in selfRole.body, "self-role expects error envelope")
+  assert.equal(selfRole.body.error.code, "SELF_NOT_ALLOWED")
   log("8.0", "self-protect on role")
 
   // Last-owner: Carol is the only owner; demoting her via Alice should fail.
@@ -328,14 +325,18 @@ async function main() {
   assert.equal(unwrap(promoteAlice.body, "promote").role, "admin")
   log("8.1", "Alice promoted to admin")
 
-  // -- Phase 8.2: M3 fix — LAST_OWNER guard end-to-end --------------------
-  // Carol is sole owner. Sign up Bob as a real admin, then from Bob's
-  // session attempt to ARCHIVE Carol via PATCH /status. This must fire
-  // LAST_OWNER 409. Why /status (not /role)? Because /role has an
-  // "admin-can't-touch-owner" guard that returns 403 FORBIDDEN before
-  // ever reaching the last-owner check — so LAST_OWNER is only reachable
-  // via /status (archive) and DELETE for an admin requester. We exercise
-  // /status here; DELETE follows the same code shape.
+  // -- Phase 8.2: H1 fix — admin can't touch owner on any of /role/status/delete -
+  // Bob is admin, Carol is owner. After the round-19 H1 fix, all three
+  // mutation endpoints reject the admin → owner mutation with a 403
+  // FORBIDDEN. (Before the fix, only /role had this guard; /status and
+  // DELETE silently let admins archive/delete owners — a privilege
+  // escalation path.) We exercise all three to lock in symmetric coverage.
+  //
+  // Note on LAST_OWNER: with these guards in place, LAST_OWNER becomes
+  // effectively unreachable from normal flows (requester needs to be
+  // owner, can't be self, target must be sole owner — contradictory).
+  // It remains as TOCTOU race defense; no e2e can fire it without
+  // injecting concurrent calls, so we don't try.
   const stampB = `${stamp}b`
   const bobEmail = `bob+${stampB}@example.com`
   const bob = new Session("bob")
@@ -386,29 +387,46 @@ async function main() {
   )
   log("8.2", `Bob admin signed up + employee created (${bobEmpRow.id})`)
 
-  // Bob (admin) attempts to ARCHIVE Carol (sole owner) → 409 LAST_OWNER
+  // H1.a: Bob (admin) /role demote Carol → 403 FORBIDDEN (only-owner-can guard)
+  const bobDemoteCarol = await bob.json<Envelope<unknown>>(
+    `/api/employees/${carolEmployeeId}/role?tenantId=${acmeId}`,
+    { method: "PATCH", body: JSON.stringify({ role: "admin" }) },
+  )
+  assert.equal(bobDemoteCarol.status, 403, "admin /role on owner → 403")
+  assert.ok("error" in bobDemoteCarol.body, "/role expects error envelope")
+  assert.equal(
+    bobDemoteCarol.body.error.code,
+    "FORBIDDEN",
+    `/role admin→owner expected FORBIDDEN (got ${bobDemoteCarol.body.error.code})`,
+  )
+
+  // H1.b: Bob (admin) /status archive Carol → 403 FORBIDDEN (H1 fix on /status)
   const bobArchiveCarol = await bob.json<Envelope<unknown>>(
     `/api/employees/${carolEmployeeId}/status?tenantId=${acmeId}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ status: "archived" }),
-    },
+    { method: "PATCH", body: JSON.stringify({ status: "archived" }) },
   )
+  assert.equal(bobArchiveCarol.status, 403, "admin /status archive owner → 403")
+  assert.ok("error" in bobArchiveCarol.body, "/status expects error envelope")
   assert.equal(
-    bobArchiveCarol.status,
-    409,
-    `last-owner archive attempt → 409 (got ${bobArchiveCarol.status})`,
+    bobArchiveCarol.body.error.code,
+    "FORBIDDEN",
+    `/status admin→owner expected FORBIDDEN (got ${bobArchiveCarol.body.error.code})`,
   )
-  if ("error" in bobArchiveCarol.body) {
-    assert.equal(
-      bobArchiveCarol.body.error.code,
-      "LAST_OWNER",
-      `expected LAST_OWNER (got ${bobArchiveCarol.body.error.code})`,
-    )
-  } else {
-    throw new Error("expected error body, got data")
-  }
-  log("8.3", "M3 fix: LAST_OWNER guard fires when admin tries to archive sole owner")
+
+  // H1.c: Bob (admin) DELETE Carol → 403 FORBIDDEN (H1 fix on DELETE)
+  const bobDeleteCarol = await bob.json<Envelope<unknown>>(
+    `/api/employees/${carolEmployeeId}?tenantId=${acmeId}`,
+    { method: "DELETE" },
+  )
+  assert.equal(bobDeleteCarol.status, 403, "admin DELETE owner → 403")
+  assert.ok("error" in bobDeleteCarol.body, "DELETE expects error envelope")
+  assert.equal(
+    bobDeleteCarol.body.error.code,
+    "FORBIDDEN",
+    `DELETE admin→owner expected FORBIDDEN (got ${bobDeleteCarol.body.error.code})`,
+  )
+
+  log("8.3", "H1 fix: admin blocked from /role + /status + DELETE on owner (3/3)")
 
   // -- Phase 9: cross-tenant injection ----------------------------------
   // Try to GET employee from Acme using OtherCo tenantId — should 404
@@ -466,7 +484,7 @@ async function main() {
   log("DONE", "  ✓ role promotion (employee → admin)")
   log("DONE", "  ✓ cross-tenant injection blocked")
   log("DONE", "  ✓ hierarchical reads (employee → depts, employee → projects)")
-  log("DONE", "  ✓ Test-quality round M3: LAST_OWNER guard (admin can't archive sole owner)")
+  log("DONE", "  ✓ Round-19 H1 fix: admin can't /role + /status + DELETE owner (3 symmetric guards)")
 }
 
 main().catch((err) => {

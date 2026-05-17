@@ -165,10 +165,12 @@ invitations.post("/:token/accept", requireSession, async (c) => {
   }
 
   // From here on we are the sole winner of the CAS. Group the membership +
-  // audit writes into one D1 batch so they are atomically all-or-nothing —
-  // otherwise a partial failure (membership written but audit missing, or
-  // vice versa) would leave the system in an inconsistent state that we
-  // couldn't fully roll back without risking double-grant on retry.
+  // audit writes into one D1 batch. NOTE: D1's db.batch() is a serialized
+  // batch, NOT a SQL transaction — if statement N fails, statements 1..N-1
+  // already committed. We mitigate this with the catch block below, which
+  // explicitly releases the CAS claim on any batch error. The intent is
+  // "either both writes succeed, or the CAS is rolled back so the caller
+  // can retry" — implemented manually, not via DB-level atomicity.
   try {
     await db.batch([
       db

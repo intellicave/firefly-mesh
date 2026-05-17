@@ -377,6 +377,11 @@ tasksRouter.post(
     let actingEmployeeId: string | null
     let actorType: "human" | "agent" = "human"
     let actorId: string
+    // Captured from the same orgId-scoped lookup that resolves the actor's
+    // employee. Reused for RBAC instead of issuing a second query — avoids
+    // a defense-in-depth gap where the second lookup might miss the orgId
+    // filter.
+    let actingRole: string | null = null
 
     if (agentId) {
       // Agent JWT path. Tenant from JWT; verify scope; resolve owner employee.
@@ -465,6 +470,7 @@ tasksRouter.post(
       }
       actingEmployeeId = emp[0].id
       actorId = actingEmployeeId
+      actingRole = emp[0].role
     }
 
     // Load task
@@ -477,16 +483,11 @@ tasksRouter.post(
       return c.json({ error: { code: "NOT_FOUND", message: "Task not found" } }, 404)
     }
 
-    // RBAC
-    // (admin/owner can submit on anyone's behalf only via session)
-    let isAdmin = false
-    if (actorType === "human" && actingEmployeeId) {
-      const empRow = await db
-        .select({ role: schema.employees.role })
-        .from(schema.employees)
-        .where(eq(schema.employees.id, actingEmployeeId))
-      isAdmin = empRow[0]?.role === "owner" || empRow[0]?.role === "admin"
-    }
+    // RBAC: admin/owner can submit on anyone's behalf only via session.
+    // Agents never get the admin bypass — even an owner's agent must be
+    // the task's assignee agent to submit (else use the human session).
+    const isAdmin =
+      actorType === "human" && (actingRole === "owner" || actingRole === "admin")
     if (!isAdmin && task.assigneeEmployeeId !== actingEmployeeId) {
       return c.json(
         {

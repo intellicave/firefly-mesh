@@ -18,6 +18,22 @@ import type { DrizzleD1 } from "../db/connect.ts"
  *   - `auditValues(params)`     — sync; builds the row object so callers
  *                                 can include the insert in a `db.batch([...])`
  *                                 for atomicity with other writes
+ *
+ * DURABILITY MODEL — best-effort, NOT transactional with the mutation.
+ *   Most callers do:  await mutate(...); await writeAudit(...).
+ *   If writeAudit throws (D1 transient, schema mismatch), the mutation
+ *   already committed and the audit row is lost. The exception bubbles
+ *   to the request handler and becomes a 500, but no rollback occurs.
+ *
+ *   For events where audit loss is unacceptable (compliance-grade trails:
+ *   role.changed, boundary.updated, invitation.accepted, etc.), callers
+ *   MUST use `auditValues()` inside a `db.batch([...])` alongside the
+ *   mutation — see invitations.ts for the canonical pattern. NOTE that
+ *   D1's batch() is serialized-not-transactional, so even with batch the
+ *   caller must catch partial-failure and roll back manually.
+ *
+ *   For lower-stakes events (tenant.created, task.started, etc.) the
+ *   silent-loss-on-D1-flake risk is accepted as the cost of simpler code.
  */
 
 export type AuditActorType = "human" | "agent" | "system"
