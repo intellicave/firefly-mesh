@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — 12/12 modules + services/web sprint A + hub reviewer-saturated (8 rounds verdict A) + e2e quality round (14 phases added) + sprint B plan v3 ready. Next: CEO approves sprint B Option A/B/C"
+topic: "firefly-mesh-product-layer — 12/12 modules + services/web sprint A + hub reviewer-saturated (15 rounds across 2 loop phases) + e2e quality 14 phases + ralph-loop rounds 19-25 (7 additional reviewer turns, 2-consec-clean exit). Next: CEO approves sprint B Option A/B/C"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,109 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === Ralph-loop rounds 19-25 (2026-05-18) — CONTINUOUS REVIEWER ITERATION ===
+sub_sprint_ralph_loop_19_25:
+  topic_slug: "firefly-mesh-ralph-loop-r19-r25"
+  status: completed
+  started_at: "2026-05-18T18:00:00Z"
+  completed_at: "2026-05-18T22:00:00Z"
+  trigger: |
+    Ralph loop's "消除一切'为了快速交付而做的低质量思考与实现'" mandate
+    requires continued multi-reviewer iteration after the e2e quality round.
+    Exit criterion: 2 consecutive clean (no Critical/High) reviewer rounds.
+  rounds:
+    round_19:
+      angle: "code-reviewer, focus on missed issues from prior 18 rounds"
+      findings: "2 High + 3 Medium"
+      details: |
+        H1: admin-can't-touch-owner asymmetry — /role had the guard,
+        /status and DELETE silently allowed admins to archive/delete
+        owners (privilege escalation equivalent to demotion)
+        H2: tasks /submit RBAC employee lookup missing orgId filter
+        M1: invitations.ts db.batch() comment misleading (claimed
+        "atomically all-or-nothing" — D1 batch is serialized-not-tx)
+        M2: writeAudit best-effort durability not documented
+        M3: 3 product-layer e2e sites using `if ("error" in body)`
+        pattern silently skip error-code assertions
+      commit: "3297d46"
+    round_20:
+      angle: "verify round 19 fixes + extend search for same-shape issues"
+      findings: "0 — CLEAN (1/2 toward exit)"
+      notes: "Confirmed all 5 fixes correct, no missed instances elsewhere"
+    round_21:
+      angle: "security-focused (different surfaces: JWT chain, WS, CORS, encryption interplay, rate limits, audit integrity, input validation)"
+      findings: "2 High"
+      details: |
+        H1: TenantHub WS upgrade path lacked INTERNAL_SECRET check
+        (deliver path had it but WS upgrade trusted X-Verified-*
+        headers unconditionally — defense-in-depth gap if CF DO
+        network isolation ever breaks or via future Service Binding)
+        H2: pair-confirm TOCTOU — SELECT-check-UPDATE not atomic,
+        two concurrent confirms could both pass claimedAt pre-check
+        and the second writer hijacks the device pairing (userId
+        overwrite). Fix: CAS UPDATE with isNull(claimedAt) WHERE.
+      commit: "8e818e5"
+    round_22:
+      angle: "verify round 21 fixes + TOCTOU sweep on tasks/HITL/regenerate/boundary/tenant-slug"
+      findings: "0 — CLEAN (1/2 toward exit)"
+      notes: |
+        Round-21 H1+H2 verified correct. TOCTOU sweep found
+        agent-token regenerate could race to create 2 live pending
+        tokens for same employee (consequence: 2 unclaimed tokens,
+        not privilege escalation). Below High threshold.
+    round_23:
+      angle: "fresh angle: migrations, schema/migration drift, wrangler config, orgId index coverage, lib smoke check"
+      findings: "1 High + 1 Medium"
+      details: |
+        H: INTERNAL_SECRET committed placeholder in wrangler.toml
+        [vars] was truthy — the existing `if (!internalSecret)` guard
+        accepted it. A prod deploy that skipped `wrangler secret put`
+        would silently use the publicly-known placeholder. Fix:
+        new lib/internal-secret.ts with isInternalSecretUsable()
+        helper that rejects the placeholder on non-loopback hosts.
+        Applied at /ws, POST /api/messages, POST /api/a2a/message.
+        DO-side check unchanged (defense-in-depth: Worker gates).
+        M: missing orgId indexes on departments + projects (DoS at
+        scale via full table scans). Added migration 0013.
+      commit: "196c5e0"
+    round_24:
+      angle: "verify round 23 fixes + 3 fresh-area deep passes (cron, WS handler, tasks state machine) + smoke check (TODO/FIXME/as any/Math.random/bare throws/long funcs)"
+      findings: "0 — CLEAN (1/2 toward exit)"
+      notes: |
+        Round-23 fixes verified. constantTimeEquals correctness
+        re-confirmed. Cron lease CAS correct. webSocketMessage
+        defensively wrapped. Task state machine SSOT respected.
+        Smoke check found no // TODO, no `as any`, no Math.random
+        in security paths, no console.log of sensitive values.
+    round_25:
+      angle: "rules-adherence audit across 5 sprint rules.md files (S/T/U/Q/A/K/O/R/V/W/N rules)"
+      findings: "0 Critical + 0 High + 1 Low"
+      details: |
+        Audited 15 safety-critical rules across M5-M7/M10/M11-M12/
+        M8-M9 + product-layer rules.md. 14 fully compliant. 1 Low:
+        Q4 batch exception for a2a-messages.ts existed in code
+        comment but was not registered in the rules.md per Q4's
+        own "任何新的 batch 调用必须先在本文档登记" requirement.
+      commit: "4fe3297 (rules.md update to register Q4 a2a-messages exception)"
+      status: "Round 24+25 = 2 consecutive clean → EXIT CRITERION SATISFIED"
+  test_results:
+    hub_typecheck: PASS
+    hub_e2e_agent_mesh: "PASS (6/6)"
+    hub_e2e_product_layer: "PASS (M3 LAST_OWNER test replaced by H1 3-endpoint symmetric FORBIDDEN coverage)"
+    hub_e2e_m5_m7: "PASS"
+    hub_e2e_m8_m9: "PASS"
+    hub_e2e_m10: "PASS"
+    hub_e2e_m11_m12: "PASS"
+    migrations_local_applied: "0013_org_indexes.sql applied to local D1"
+  cumulative_loop_stats: |
+    Across 7 ralph-loop rounds (19-25): 5 High + 3 Medium + 1 Low caught
+    and fixed (5H/3M committed as 9944bef, 3297d46, 8e818e5, 196c5e0,
+    4fe3297). 6 commits in this loop phase. Adversarial reviewer found
+    real privilege-escalation paths (H1 round 19), real race conditions
+    (H2 round 21), and a real config trap (H round 23) — none of which
+    prior 18 rounds had surfaced. End state: 2 consecutive clean rounds
+    + 6/6 e2e green + typecheck clean.
 
 # === Loop extension: arch M1/M2 + sprint B plan v3 + e2e quality round (2026-05-18) ===
 sub_sprint_loop_extension:

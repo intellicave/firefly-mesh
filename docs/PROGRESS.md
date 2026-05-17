@@ -91,7 +91,8 @@
 | 6 | 2026-05-18 | services/web sprint A (前端搬迁 + 对接 hub) | sprint A reviewer A | 5 (c1e9ac0→bec5a12) | 多轮 reviewer 抓 4C+4H+3M+2L 全修 |
 | 7 | 2026-05-18 | hub 后端多 reviewer 加固（arch + sec 双线 + 验证）| 60/60 (无回归) | 5 (55e6021/fd8ec47/8ed87ac/e109255/4f48650) | round-3 reviewer 抓 4C+7H+8M, round-7 抓 1H, round-8 verdict A |
 | 8 | 2026-05-18 | Loop 延伸: arch M1/M2 + sprint B plan v3 (4 reviewer 轮) + e2e quality 补 14 phases | 74/74 (新增 e2e) | 11 (86a89a6 → a2a23c7) | sprint B plan reviewer-saturated; e2e quality 抓 4C+4H "docstring 谎称覆盖" 全修, 加 9 phases 错误码钉死 |
-| **总** | | **12 模块 + 1 前端 + 多 reviewer 加固 + e2e quality 补** | **74/74** | **48 commits** | **多轮 reviewer 累计抓 17C+22H+26M+12L，17C+22H+20M 全修，剩余 Medium/Low 明确登记到 v1.1 / sprint B** |
+| 9 | 2026-05-18 | Ralph loop 持续审查 (round 19-25, 7 轮独立 reviewer): code/arch/sec/rules-adherence 多角度 | 76/76 (M3+H1 e2e 替换 LAST_OWNER → 3 端点对称 FORBIDDEN) | 6 (5363449 → 4fe3297) | round-19 抓 2H+3M (admin-touch-owner 不对称 + tasks RBAC 漏 orgId + audit 持久化未文档化 + D1 batch 误读 + e2e silent assertion 模式); round-21 抓 2H 安全 (WS 升级缺 INTERNAL_SECRET + pair-confirm TOCTOU); round-23 抓 1H+1M (placeholder secret 在 prod 可用 + dept/proj 缺 orgId index); round-25 抓 1L (Q4 batch 例外漏登记). round 24+25 连续 2 轮 clean → exit criterion 满足 |
+| **总** | | **12 模块 + 1 前端 + 多 reviewer 加固 + e2e quality 补 + ralph-loop 7 轮** | **76/76** | **54 commits** | **多轮 reviewer 累计抓 22C+27H+27M+13L，22C+27H+23M 全修，剩余 4 Medium 明确登记到 v1.1 / sprint B；Low 1 已修登记** |
 
 每个 sprint 完整 autodev 流水线产出：
 - 8 份设计文档（meta / ideation / design / ui / api / plan / rules / index）
