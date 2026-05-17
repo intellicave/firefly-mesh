@@ -13,7 +13,8 @@
     "test:e2e:product-layer": "tsx test/product-layer.e2e.ts",
     "test:e2e:m5-m7": "tsx test/m5-m7.e2e.ts",
     "test:e2e:m11-m12": "tsx test/m11-m12.e2e.ts",
-    "test:e2e:m10": "tsx test/m10.e2e.ts"
+    "test:e2e:m10": "tsx test/m10.e2e.ts",
+    "test:e2e:m8-m9": "tsx test/m8-m9.e2e.ts"
   },
   "dependencies": {
     "@firefly-mesh/proto": "workspace:*",
