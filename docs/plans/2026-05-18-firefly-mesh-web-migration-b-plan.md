@@ -59,9 +59,9 @@ v3 reviewer 抓出 v2 引入的 C1 phantom：hub `POST /api/knowledge` 已存在
 
 **红线突破**：动 hub 路由（增加端点，不动现有 6 路由对外契约）— 与 sprint A 红线一致，**不需要额外 CEO 批准**。
 
-**验收**：
-- 3 个新端点（agents tenant-wide / bulk-import / multipart upload）都有 e2e test
-- 6/6 现有 hub e2e + 3 个新 suite 全绿
+**验收**（v3 round-3 reviewer H1 fix — count 从 3 改为 2，移除 multipart 残留）：
+- 2 个新端点（agents tenant-wide / bulk-import）都有 e2e test
+- 6/6 现有 hub e2e + 2 个新 suite 全绿
 - typecheck 全绿
 - 接下来 hub 需要 prod 部署 — 见 **B.0.1**
 

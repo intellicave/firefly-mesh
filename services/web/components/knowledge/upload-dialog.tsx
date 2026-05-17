@@ -25,7 +25,12 @@ interface CreateResponse {
   id: string;
 }
 
-const MAX_INLINE_BYTES = 200_000; // matches hub MAX_INLINE_BYTES
+// Must stay in sync with hub `MAX_INLINE_BYTES` in services/hub/src/routes/knowledge.ts.
+// v3 round-3 reviewer M1 fix: was 200_000 (wrong — hub caps at 100 KB), so
+// content between 100 KB and 200 KB passed client validation but the hub
+// returned 422 — the user got a confusing post-submit failure. Now matches
+// hub's 100 * 1024 cap exactly.
+const MAX_INLINE_BYTES = 100 * 1024;
 
 export function KnowledgeUploadDialog({
   open,
@@ -62,8 +67,9 @@ export function KnowledgeUploadDialog({
     if (!content.trim() || !title.trim()) return;
     if (new TextEncoder().encode(content).byteLength > MAX_INLINE_BYTES) {
       setErr(
-        `Content too large (max ${MAX_INLINE_BYTES.toLocaleString()} bytes). ` +
-          "Multipart upload for larger files lands in sprint B.",
+        `Content too large (max ${MAX_INLINE_BYTES.toLocaleString()} bytes / ` +
+          `~${Math.floor(MAX_INLINE_BYTES / 1024)} KB). ` +
+          "Multipart upload for larger files lands in V1.1 Vectorize sprint.",
       );
       return;
     }
