@@ -196,7 +196,7 @@ a2a.post("/message", rateLimitByIp("RL_A2A"), async (c) => {
   // semantically correct DO partition).
   const doId = c.env.TENANT_HUB.idFromName(recipient.tenantId)
   const tenantHub = c.env.TENANT_HUB.get(doId)
-  await tenantHub.fetch(
+  const deliverRes = await tenantHub.fetch(
     new Request("https://do.internal/internal/deliver", {
       method: "POST",
       headers: {
@@ -211,6 +211,17 @@ a2a.post("/message", rateLimitByIp("RL_A2A"), async (c) => {
       }),
     }),
   )
+  // Round-7 H1 fix: mirror routes/messages.ts pattern — surface DO failures
+  // (e.g. INTERNAL_SECRET misconfigured, DO crash) instead of swallowing.
+  // We do NOT 5xx the caller here because the message is already in
+  // pending_messages and will deliver via the recipient's polling inbox;
+  // we just log so ops can detect infra issues without silently degrading.
+  if (!deliverRes.ok) {
+    const errBody = await deliverRes.text().catch(() => "<unreadable>")
+    console.error(
+      `[a2a] DO deliver failed status=${deliverRes.status} body=${errBody}`,
+    )
+  }
 
   return c.json({ data: { messageId, accepted: true } }, 202)
 })
