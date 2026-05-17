@@ -220,36 +220,71 @@ This is a pnpm monorepo. Each package has its own README and a separate publishi
 
 ## Roadmap
 
-We ship in milestones tracked in [docs/plans/2026-04-28-firefly-mesh-plan.md](docs/plans/2026-04-28-firefly-mesh-plan.md).
+> Live status: **[docs/PROGRESS.md](docs/PROGRESS.md)** (single source of truth, updated after every sprint).
+> Sprint history: [docs/pipeline/state.yaml](docs/pipeline/state.yaml). Per-sprint plans: [docs/plans/](docs/plans/).
 
-| Milestone | Status | What's in it |
+The project went through three architectural phases:
+
+1. **Classic (2026-04-28 → 2026-05-08)** — Next.js + Postgres + pgvector + RULE-protected audit. **Frozen**; code in `legacy/v0/`.
+2. **Edge (2026-05-08 → 2026-05-12)** — full rewrite to Cloudflare Workers + D1 + DO + WebSocket + X3DH/AES-GCM. Hub deployed. PWA front-end shipped. Old dashboard archived.
+3. **Product layer rework (2026-05-16 → ongoing)** — bring v0's product-layer semantics (employees / departments / projects / knowledge / skills / tasks / a2a product-tier / extended audit) onto the edge tech substrate.
+
+### Phase 3 milestones (product layer on edge)
+
+| Sprint | Status | What's in it |
 |---|---|---|
-| M0 — Bootstrap | ✅ | Monorepo, env, docker-compose |
-| M1 — Infra | ✅ | 21-table schema, Postgres + pgvector, audit RULE |
-| M2 — Org & agents | ✅ | Auth, employees, departments, agent activation, onboarding wizard |
-| M3 — HITL + Inbox | ✅ | HITL state machine, Inbox UI, drawer |
-| M4 — A2A protocol | ✅ | Broker, ed25519 signing, agent-card.json |
-| M5 — Tasks + W1 demo | ✅ | LLM decompose, dispatcher, end-to-end W1 demo verified |
-| M6 — Audit | ✅ | Threads, log, CSV export, SSE |
-| M7 — Knowledge | ✅ | Parse / chunk / embed / search; 3-tier scope; UI |
-| M8 — Skills | ✅ | CRUD, dry-run, precedence merge, UI |
-| M9 — Skill + MCP packages | ✅ | `@firefly-mesh/skill` (agentskills.io) + `@firefly-mesh/mcp` |
-| **M10 — Hardening + dogfooding** | 🚧 | Integration tests, runtime smoke matrix, docs site, npm publish, GitHub release |
-| V0.2 — Project tier, KB project scope | 📋 | Fourth scope tier, scoped projects |
-| V1.0 — Helm charts, multi-region | 📋 | Production deployment topology |
+| M1-M4 — Organizations / Employees / Departments / Projects | ✅ (2026-05-16) | 5 tables, 32 endpoints, lib/employees+departments+projects, RBAC dual-layer, tenant auto-bootstraps owner employee |
+| M5-M7 — Agents reattached to Employees / Boundary scopes / Agent tokens | ✅ (2026-05-17) | ALTER agents (+4 cols), representation_boundaries, agent_tokens (admin signing), 10 scopes ported from v0 catalog, JWT scope claim with back-compat |
+| M11-M12 — A2A product layer + audit_log extension | ✅ (2026-05-17) | a2a_threads + a2a_messages (HITL bidirectional state), audit_log +4 cols, lib/audit.ts helper, 11 write sites retrofitted |
+| M10 — Tasks + HITL 7-state machine | ✅ (2026-05-17) | tasks table, 6 endpoints, dual auth on submit (session OR agent JWT with submit_task scope), self-review forbidden |
+| M8-M9 — Knowledge + Skills (three-tier scope) | ✅ (2026-05-18) | 4 tables, 14 endpoints, lib/scope-check.ts, inline md/txt upload, SQLite LIKE search fallback, agentskills.io manifest |
+| **Sprint 6 — services/web migration A** | 📋 next | Copy `legacy/v0/web/` → `services/web/`, rewire all fetch to hub, salvage i18n from services/pwa |
+| Sprint 7 — services/web migration B | 📋 | Delete 45 v0 server routes, keep 3 (auth / health / well-known), `@cloudflare/next-on-pages` deploy to `app.firefly-mesh.com` |
+| Sprint 8 — go-live | 📋 | Stripe billing + legal pages + Sentry monitoring + marketing CTA + soft launch |
+
+### Backend status as of 2026-05-18
+
+- **22 D1 tables**, **16 mounted routers**, **~80 endpoints**
+- **5 end-to-end test suites**, **60/60 phases passing**
+- Hub deployed at `hub.firefly-mesh.com`; **7 new migrations queued for remote D1**
+- Dashboard UI deferred to migration sprints (users on `firefly-mesh.com` still see the temporary Astro PWA)
+
+### Deferred to V1.1 / V2 (explicit, see PROGRESS.md §"V1.1 / V2 推迟项")
+
+- Vectorize cosine search (M8 uses LIKE fallback)
+- pdf / docx knowledge upload (M8 inline md/txt only)
+- Skill execution engine (M9 management only)
+- Client-side `activate-by-token` (M7 admin signing only)
+- LLM-based task dispatch decomposition
+- Sub-task tree recursion
+- GET /api/audit read endpoint (M12 write-side only)
 
 ---
 
 ## Documentation
 
-- **[Design](docs/plans/2026-04-28-firefly-mesh-design.md)** — full system design including data model, A2A protocol, HITL state machine, SQL templates.
-- **[API reference](docs/plans/2026-04-28-firefly-mesh-api.md)** — all 60+ HTTP endpoints, SSE channel catalogue, error codes.
-- **[UI spec](docs/plans/2026-04-28-firefly-mesh-ui.md)** — page-by-page breakdown.
-- **[Plan](docs/plans/2026-04-28-firefly-mesh-plan.md)** — milestone breakdown with acceptance criteria.
-- **[Rules](docs/plans/2026-04-28-firefly-mesh-rules.md)** — engineering invariants and red lines (e.g. R7: no `ToolLoopAgent` on server).
-- **[Index](docs/plans/2026-04-28-firefly-mesh-index.md)** — map of where things live in the codebase.
+**Start here — current state (always up to date):**
+- **[docs/PROGRESS.md](docs/PROGRESS.md)** — 5-second dashboard: what's done, what's not, what's next. Refreshed after every sprint.
+- **[docs/pipeline/state.yaml](docs/pipeline/state.yaml)** — machine-readable sprint history with commit hashes and test results.
 
-A standalone documentation site is on the M10 roadmap; for now, the design docs are the source of truth.
+**Live architecture & API contracts (current):**
+- Hub endpoint catalogue: [docs/dashboard/reference/api-implemented.md](docs/dashboard/reference/api-implemented.md) (16 routers, ~80 endpoints)
+- Per-sprint API contracts (with zod schemas + RBAC matrices):
+  - [M1-M4 organizations/employees/depts/projects](docs/plans/2026-05-16-firefly-mesh-product-layer-api.md)
+  - [M5-M7 agents reattached / boundary / agent tokens](docs/plans/2026-05-17-firefly-mesh-product-layer-m5-m7-api.md)
+  - [M10 tasks + HITL](docs/plans/2026-05-17-firefly-mesh-product-layer-m10-api.md)
+  - [M11-M12 a2a product tier + audit](docs/plans/2026-05-17-firefly-mesh-product-layer-m11-m12-api.md)
+  - [M8-M9 knowledge + skills](docs/plans/2026-05-18-firefly-mesh-product-layer-m8-m9-api.md)
+
+**Product semantics (still valid, partially out-of-date on implementation details):**
+- [docs/dashboard/features/](docs/dashboard/features/) — 8 product-domain specs (agent messaging, onboarding, organization, knowledge, skills, audit, account, getting-started)
+- [docs/dashboard/ARCHITECTURE.md](docs/dashboard/ARCHITECTURE.md) — top-level architecture (3 domains, cookie strategy)
+
+**Historical design (frozen, kept for context):**
+- [Classic 2026-04-28 series](docs/plans/) — original Next.js + Postgres design, archived
+- [Edge 2026-05-08 series](docs/plans/) — rewrite to Cloudflare Workers, all infra decisions D1-D8
+
+A standalone documentation site is on the post-launch roadmap; for now, PROGRESS.md is the entry point.
 
 ---
 

@@ -1,4 +1,14 @@
-# Reference — Hub 待新增 API
+# Reference — Hub 待新增 API — ✅ 已全部实现（2026-05-18）
+
+> ✅ **本文档列举的"待新增端点"全部已 ship**（实际跨 5 次 sleep run 完成）。
+> 当前 hub 真实端点清单见 [`api-implemented.md`](api-implemented.md)（已 2026-05-18 重写）；
+> 顶层进度见 [`../../PROGRESS.md`](../../PROGRESS.md)。
+>
+> 本文档保留作"原 dashboard 重建方案的设计意图"参考。
+
+---
+
+## 历史记录（设计意图，已实现）
 
 > 按 feature 分组,标注优先级。所有契约都按 [`api-implemented.md`](api-implemented.md) 的约定(cookie auth + 错误格式)。
 >

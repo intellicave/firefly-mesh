@@ -1,0 +1,175 @@
+# Firefly Mesh — 项目进度仪表盘
+
+> **最后更新**：2026-05-18（M8+M9 sleep run 完成后）
+> **真实状态来源**：[`docs/pipeline/state.yaml`](pipeline/state.yaml) + git log
+> 这一份是给人 5 秒看清现状的总览。任何冲突以 state.yaml + 代码为准。
+
+---
+
+## TL;DR
+
+**hub 后端 12/12 模块全部完成**，dashboard UI 还没搬迁，未上线。
+
+```
+后端骨架 ████████████████  12/12 模块 done 🎉
+前端搬迁 ░░░░░░░░░░░░░░░░  完全未动
+上线准备 ░░░░░░░░░░░░░░░░  完全未动
+```
+
+**剩余 ~15 工作日（3 周）到 V1.0 GA**：web 搬迁 A → web 搬迁 B → Stripe+法律+监控+soft launch。
+
+---
+
+## 当前在线
+
+| 域名 | 是什么 | 状态 |
+|---|---|---|
+| `hub.firefly-mesh.com` | API 后端（Hono + D1 + DO + WS + E2E 加密） | ✅ 上线，**待应用最新 7 个 migration 到 remote D1** |
+| `firefly-mesh.com` | Astro 营销页 + 临时 PWA 极简 dashboard（5-12 i18n 改造后） | ✅ 上线，**待替换为新 dashboard** |
+| `app.firefly-mesh.com` | 完整 Next.js dashboard | ❌ 尚未存在（下个 sprint 创建）|
+
+---
+
+## hub 后端模块矩阵（12/12）
+
+| # | 模块 | 数据表 | API 端点 | 实施日期 | git commit |
+|---|---|---|---|---|---|
+| M1 | Organizations | 复用 tenants | 4 | 2026-05-16 | `e32f9ca` ~ `1a02c9c` |
+| M2 | Employees | employees (+2 unique idx) | 10 | 2026-05-16 | 同上 |
+| M3 | Departments | departments + department_members | 8 | 2026-05-16 | 同上 |
+| M4 | Projects | projects + project_members | 10 | 2026-05-16 | 同上 |
+| M5 | Agents 重归属 | ALTER agents (+4 cols) | 内部扩展 | 2026-05-17 | `2b26f49` |
+| M6 | Boundary scopes | representation_boundaries | 2 | 2026-05-17 | 同上 |
+| M7 | Agent tokens（admin 签发） | agent_tokens | 4 | 2026-05-17 | 同上 |
+| M11 | A2A 产品层 + HITL 双向状态 | a2a_threads + a2a_messages | 6 | 2026-05-17 | `bbe2258` ~ `f6baf9a` |
+| M12 | audit_log 扩展（+4 cols + writeAudit retrofit 11 处） | ALTER audit_log | (无 endpoint) | 2026-05-17 | 同上 |
+| M10 | Tasks + HITL 7 态状态机 | tasks | 6 | 2026-05-17 | `9669dc6` ~ `bf04cf8` |
+| M8 | Knowledge（3-tier scope）| knowledge_documents + chunks | 7 | 2026-05-18 | `ac945a0` ~ `d573d79` |
+| M9 | Skills（agentskills.io） | skills + agent_skills | 7 | 2026-05-18 | 同上 |
+
+**累计**：hub D1 从 15 → 22 表；16 个 mounted routers；~80 个新/重构 endpoint；5 套端到端测试全绿（M8-M9 + M10 + M11-M12 + M5-M7 + M1-M4 + 原 agent-mesh）。
+
+---
+
+## 已完成功能（产品视角）
+
+✅ 公司创建（Carol 注册即自动成为 owner employee + tenant + 默认 boundary）
+✅ 员工管理（5 角色 owner/admin/manager/employee/auditor，邀请绑定，self-protect，last-owner guard）
+✅ 部门管理（含父子嵌套，cycle 检测，dept head 角色）
+✅ 项目管理（状态机 planning→active→done→archived；project lead 角色）
+✅ Agent 配对（device pairing → 自动绑 employee + runtime kind + activated_at）
+✅ Agent 权限边界（10 个 scope；JWT 携带 scope claim；旧 JWT 向后兼容自动 default scopes）
+✅ Agent token admin 签发（plain 一次性返回；SHA-256 hash；regenerate / revoke）
+✅ A2A 产品层（双层模型：messages_meta 加密层 + a2a_messages 业务层；7 类型；双向 HITL）
+✅ 任务派发 + 双重审批（assigned → in_progress → pending_review → approved/rejected；reviewRound 计数；assignee 不能 review 自己）
+✅ 知识库（公司/部门/个人三层 scope + DB CHECK 兜底；inline md/txt 上传；自动分块；SQLite LIKE 搜索 fallback）
+✅ 技能注册（agentskills.io 标准 manifest；3 层 scope；assign 给 agent 含 SCOPE_MISMATCH 防错）
+✅ 完整审计（writeAudit 集中 helper；actor type + resource type + JSON payload；11 处现有写入点 retrofit）
+
+## 尚未做的（按用户能感知的优先级排）
+
+❌ **dashboard UI**（front-end 完全未动）—— 用户今天打开 firefly-mesh.com 看不到任何变化
+❌ Stripe 付费链路（hub 无 billing schema）
+❌ 法律页（ToS / 隐私 / Cookie / 退款）
+❌ 监控（Sentry / 告警）
+❌ Vectorize 向量检索（M8 是 LIKE fallback）
+❌ pdf / docx 知识库上传（M8 仅支持 inline md/txt）
+❌ Skill 执行引擎（M9 仅做管理面板）
+❌ Agent token client 侧消费 endpoint（M7 仅 admin 签发面）
+
+---
+
+## 5 次 sleep run 累计
+
+| Sprint | 日期 | 模块 | E2E | atomic commits | drift bugs |
+|---|---|---|---|---|---|
+| 1 | 2026-05-16 | M1-M4 organizations/employees/departments/projects | 11/11 | 5 | 1（tenants.ts bootstrap）|
+| 2 | 2026-05-17 | M5-M7 agents+boundary+tokens | 14/14 | 6 | 0 |
+| 3 | 2026-05-17 | M11-M12 a2a 产品层 + audit | 10/10 | 6 | 4（test/handler 小 bug）|
+| 4 | 2026-05-17 | M10 tasks + HITL | 12/12 | 5 | 1（state machine no-op）|
+| 5 | 2026-05-18 | M8-M9 knowledge + skills | 13/13 | 5 | 0 |
+| **总** | | **12 模块** | **60/60** | **27 commits** | **6 bugs（全部 e2e 抓出且修复）** |
+
+每个 sprint 完整 autodev 流水线产出：
+- 8 份设计文档（meta / ideation / design / ui / api / plan / rules / index）
+- N 个原子 commit（schema / 中间件 / 路由 / 测试 / 文档同步）
+- 端到端 e2e 测试覆盖所有 happy path + 关键 RBAC negatives + cross-tenant guards
+
+---
+
+## 下一步路线图
+
+### Sprint 6 — services/web 搬迁 A（约 5 工作日）
+
+- 复制 `legacy/v0/packages/web/` → `services/web/`
+- 把 14 个页面的 fetch 全部改成调 hub 的 ~80 个新 endpoint
+- 抢救 `services/pwa/src/i18n/`（zh + en + 切换器）到新 web
+- 删除 v0 web 自带的 45 个业务 server route（仅保留 auth callback / health / well-known 3 个同域必须的）
+
+### Sprint 7 — services/web 搬迁 B（约 5 工作日）
+
+- Next.js + `@cloudflare/next-on-pages` 适配
+- Cloudflare Pages 部署到 `app.firefly-mesh.com`
+- 跨域 cookie + Better Auth + CORS 端到端联调
+- E2E：完整用户旅程（Carol 创公司 → 邀 Alice → Alice agent 给 Bob agent 发消息 → Bob 审批 → 任务派发 + 审核）
+- 删除 `services/pwa/`
+
+### Sprint 8 — go-live（约 5 工作日）
+
+- Stripe Checkout + Webhook + billing schema
+- 法律页（ToS / 隐私 / Cookie / 退款 — 用 termly.io 生成）
+- 监控（Sentry + 告警）
+- 营销页改造（pricing / case-studies / FAQ）
+- soft launch + 初批用户
+
+---
+
+## V1.1 / V2 推迟项（明确登记）
+
+| 模块 | 推迟到 | 原因 |
+|---|---|---|
+| M7 client-side activate-by-token endpoint | V1.1 | device pairing 已够用 |
+| M8 Vectorize 向量检索 | V1.1（独立 sprint） | 需要外部 Vectorize binding + 重新设计 chunker |
+| M8 pdf / docx 上传 + R2 存储 | V1.1 | 需要外部解析 lib + R2 binding |
+| M9 skill loader endpoint | V1.1 | 配合执行引擎一起做 |
+| M9 skill 执行引擎 | V2 | 复杂度高 |
+| boundary 改后强制刷新 JWT | V1.1 | 当前最坏 90 天 TTL |
+| LLM-based task dispatch decomposition | V1.1 | 需要 LLM router 选型 |
+| Task sub-tree 嵌套递归 | V1.1 | parent_id / root_id 字段已 ship |
+| WS 主动推送 a2a 产品层事件 | V1.1 | 当前依赖 hub 现有 messages_meta 推送 |
+| GET /api/audit 读端 | audit-read sprint | M12 只动写入面 |
+| audit_log RULE 防篡改 | TBD | D1 不支持 PG RULE，要 cron lease |
+
+---
+
+## 文档地图
+
+| 想了解 | 看这份 |
+|---|---|
+| 产品定位 + 商业模式 | [README.md](../README.md) |
+| 路演材料 | [docs/pitch/2026-05-15-firefly-mesh-incubator-pitch.md](pitch/2026-05-15-firefly-mesh-incubator-pitch.md) |
+| 12 个产品模块的完整设计 | [docs/plans/2026-05-16-firefly-mesh-product-layer-*.md](plans/) 系列 + 后续 sprint plans |
+| 当前 sprint 状态 | [docs/pipeline/state.yaml](pipeline/state.yaml) |
+| 待校验的 dashboard 重建参考 | [docs/dashboard/](dashboard/)（**部分已过期** — 见该目录 README） |
+| 历史 sprint 设计史 | [docs/plans/2026-04-28-*.md](plans/) classic / [2026-05-08-*-edge-*.md](plans/) edge |
+| 项目地图 + 文件指向 | 各 sprint 的 `*-index.md` |
+
+---
+
+## 反范围（永不做）
+
+继承 [edge meta §8](plans/2026-05-08-firefly-mesh-edge-meta.md#8-不可破坏的产品边界)（含本 sprint §M10-M12 修订）：
+
+- ❌ LLM 推理平台
+- ❌ IM 即时通讯（Slack/Discord 替代）
+- ❌ git 协作工具
+- ❌ 完整 IAM 替代（Okta/Auth0）— 我们内置"够用"的组织/部门/RBAC
+- ❌ 完整项目管理（Linear/Asana 替代）— tasks 表只为 agent 协调用
+
+---
+
+## 联系
+
+- 仓库：https://github.com/intellicave/firefly-mesh
+- Owner：黄文轩 / CyberAutonomy
+- 邮箱：wenxuan@cyberautonomy.io

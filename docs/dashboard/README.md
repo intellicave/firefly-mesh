@@ -1,5 +1,14 @@
 # Firefly Mesh — Dashboard 文档地图
 
+> ⚠️ **本文档树写于 2026-05-12 ~ 2026-05-15，部分内容已过期**。
+> hub 后端实际已走完 **12/12 模块**（M1-M12），不再是本文档描述的"hub 31 端点"状态。
+> **真实状态以 [`../PROGRESS.md`](../PROGRESS.md) + [`../pipeline/state.yaml`](../pipeline/state.yaml) 为准**。
+>
+> 子文档状态：
+> - 📗 **仍然有效**：`features/*` 产品语义 + `ARCHITECTURE.md` 顶层架构 + `reference/auth-cookie.md`
+> - 📒 **部分过期**：`migration/0[1-2,4-5].md` 步骤思路对，但 hub 端点编号需对照新数据
+> - 📕 **已大幅过期**：`reference/api-implemented.md`（hub 现 ~80 端点）、`reference/api-needed.md`（清单已实现）、`migration/03-hub-extend.md`（已完成）
+
 > **本文档是地图,不是百科**。每一行指向一份独立文档,按需阅读。
 >
 > 你只需要看这个 README,然后跳到你关心的那份文件。每份文件都自给自足,不需要交叉翻阅。

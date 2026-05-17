@@ -1,8 +1,31 @@
-# Migration 03 — Hub 补足缺失端点
+# Migration 03 — Hub 补足缺失端点 — ✅ 已完成（2026-05-18）
+
+> ✅ **本文档列举的"hub 待补端点"全部已实现**。
+>
+> 实际跨 5 次 sleep run 完成，命名/分阶段与原计划略有差异（按产品模块 M1-M12 而非 dashboard feature 序号），但**功能覆盖与超额完成**。
+>
+> 真实实施记录：
+> - [docs/PROGRESS.md](../../PROGRESS.md) — 12 模块矩阵 + 端点数 + commit 链接
+> - [docs/pipeline/state.yaml](../../pipeline/state.yaml) — 每个 sub-sprint 的端点清单 + 测试结果
+> - 各 sprint plan.md：
+>   - [2026-05-16 M1-M4](../../plans/2026-05-16-firefly-mesh-product-layer-plan.md)
+>   - [2026-05-17 M5-M7](../../plans/2026-05-17-firefly-mesh-product-layer-m5-m7-plan.md)
+>   - [2026-05-17 M10](../../plans/2026-05-17-firefly-mesh-product-layer-m10-plan.md)
+>   - [2026-05-17 M11-M12](../../plans/2026-05-17-firefly-mesh-product-layer-m11-m12-plan.md)
+>   - [2026-05-18 M8-M9](../../plans/2026-05-18-firefly-mesh-product-layer-m8-m9-plan.md)
+>
+> 当前 hub 端点总览见 [`../reference/api-implemented.md`](../reference/api-implemented.md)（已 2026-05-18 重写）。
+>
+> **下一步不是"补 hub"，而是 services/web 搬迁 sprint A**（详见 PROGRESS.md §"下一步路线图"）。
+
+---
+
+## 历史记录（仅作设计原意参考，已被 12 sprint 全部覆盖）
 
 > Dashboard 需要 hub 提供 37 个 P0 + 23 个 P1 新端点 (详见 [`../reference/api-needed.md`](../reference/api-needed.md))。本文档按"实施顺序"组织,而不是按 feature。
 
 预计耗时:**5-8 工作日** (P0 全部 + P1 部分)。
+**实际耗时**：5 次 sleep run，约 10 小时（autodev 自动加速）。
 
 ---
 
