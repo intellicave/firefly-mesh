@@ -465,7 +465,32 @@ async function main() {
     `/api/knowledge/${carolPersonalId}?tenantId=${otherCoId}`,
   )
   assert.equal(crossKb.status, 404, "cross-tenant kb 404")
-  log("13.0", "cross-tenant lookups blocked ✓")
+
+  // Phase 13.1: cross-tenant WRITE paths must also be blocked. Added
+  // 2026-05-18 after code review (M-1) — original e2e only covered GET.
+  const crossPatchKb = await carol.json<Env<unknown>>(
+    `/api/knowledge/${carolPersonalId}?tenantId=${otherCoId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ title: "hijacked" }),
+    },
+  )
+  assert.equal(
+    crossPatchKb.status,
+    404,
+    "cross-tenant PATCH knowledge → 404",
+  )
+
+  const crossDeleteSkill = await carol.json<Env<unknown>>(
+    `/api/skills/${skillId}?tenantId=${otherCoId}`,
+    { method: "DELETE" },
+  )
+  assert.equal(
+    crossDeleteSkill.status,
+    404,
+    "cross-tenant DELETE skill → 404",
+  )
+  log("13.0", "cross-tenant GET + PATCH + DELETE blocked ✓")
 
   // -- DONE -------------------------------------------------------------
   log("DONE", "")

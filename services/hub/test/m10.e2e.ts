@@ -463,8 +463,27 @@ async function main() {
   const crossResp = await carol.json<Env<unknown>>(
     `/api/tasks/${taskId}?tenantId=${otherCoId}`,
   )
-  assert.equal(crossResp.status, 404, "cross-tenant 404")
-  log("11.0", "cross-tenant lookup blocked")
+  assert.equal(crossResp.status, 404, "cross-tenant GET 404")
+  log("11.0", "cross-tenant GET blocked")
+
+  // Phase 11.1: cross-tenant WRITE paths must also be blocked. Added
+  // 2026-05-18 after code review (M-1) — original e2e only covered GET.
+  // SELECT-with-orgId guard short-circuits before any UPDATE runs.
+  const crossStart = await carol.json<Env<unknown>>(
+    `/api/tasks/${task2Id}/start?tenantId=${otherCoId}`,
+    { method: "POST" },
+  )
+  assert.equal(crossStart.status, 404, "cross-tenant POST /start → 404")
+
+  const crossReview = await carol.json<Env<unknown>>(
+    `/api/tasks/${taskId}/review?tenantId=${otherCoId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ decision: "approved" }),
+    },
+  )
+  assert.equal(crossReview.status, 404, "cross-tenant POST /review → 404")
+  log("11.1", "cross-tenant POST /start + /review blocked")
 
   // -- Phase 12: GET list as Bob (employee) -- self-filter ----------------
   const bobList = await bob.json<Env<Array<{ id: string }>>>(
