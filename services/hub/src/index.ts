@@ -104,11 +104,28 @@ app.get("/ws", async (c) => {
   const doId = c.env.TENANT_HUB.idFromName(tenantId)
   const tenantHub = c.env.TENANT_HUB.get(doId)
 
+  // Round-21 security H1: the DO's WS upgrade handler verifies INTERNAL_SECRET
+  // before trusting the X-Verified-* identity claims. Stamp the secret here.
+  // Fail closed if it's not configured (mirrors the DO-side 500 surface).
+  const internalSecret = c.env.INTERNAL_SECRET ?? ""
+  if (!internalSecret) {
+    return c.json(
+      {
+        error: {
+          code: "MISCONFIGURED",
+          message: "INTERNAL_SECRET not set — WS forwarding disabled",
+        },
+      },
+      500,
+    )
+  }
+
   const headers: Record<string, string> = {
     ...Object.fromEntries(c.req.raw.headers),
     "X-Verified-Kind": kind,
     "X-Verified-Tenant-Id": tenantId,
     "X-Verified-User-Id": userId,
+    "X-Internal-Auth": internalSecret,
   }
   if (agentId) headers["X-Verified-Agent-Id"] = agentId
 

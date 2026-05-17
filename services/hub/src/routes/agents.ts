@@ -137,10 +137,29 @@ agents.post(
       return c.json({ error: { code: "NOT_MEMBER", message: "Not a member of this tenant" } }, 403)
     }
 
-    await db
+    // Round-21 security H2: TOCTOU fix. The pre-check at line 121 reads
+    // claimedAt, but two concurrent confirms can both pass that check and
+    // both reach the UPDATE — without the WHERE guard, the second writer
+    // silently overwrites userId/tenantId, hijacking the device. The
+    // `isNull(claimedAt)` WHERE turns the claim into an atomic CAS: the
+    // second writer matches zero rows and gets the same 409 the pre-check
+    // would have returned.
+    const result = await db
       .update(schema.devicePairingCodes)
       .set({ claimedAt: now.toISOString(), userId, tenantId })
-      .where(eq(schema.devicePairingCodes.code, code))
+      .where(
+        and(
+          eq(schema.devicePairingCodes.code, code),
+          isNull(schema.devicePairingCodes.claimedAt),
+        ),
+      )
+    const changes = (result.meta as { changes?: number } | undefined)?.changes ?? 0
+    if (changes === 0) {
+      return c.json(
+        { error: { code: "CODE_ALREADY_CLAIMED", message: "Code already claimed" } },
+        409,
+      )
+    }
 
     return c.json({ data: { code, confirmed: true } })
   },

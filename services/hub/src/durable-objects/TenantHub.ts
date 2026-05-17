@@ -27,6 +27,16 @@ export class TenantHub {
     const url = new URL(request.url)
 
     if (request.headers.get("Upgrade") === "websocket") {
+      // Round-21 security H1: gate WS upgrade behind the same INTERNAL_SECRET
+      // check as /internal/deliver. The WS handler trusts caller-supplied
+      // X-Verified-Kind / X-Verified-Tenant-Id / X-Verified-User-Id /
+      // X-Verified-Agent-Id headers; without a shared-secret check, any
+      // future Service Binding (or a runtime mistake that exposes the DO
+      // directly) would let a caller spoof those headers and impersonate
+      // arbitrary tenants/agents. Cloudflare DO network-isolation is a
+      // platform invariant, not a code invariant — defense-in-depth.
+      const verified = this.verifyInternalSecret(request)
+      if (verified !== null) return verified
       return this.handleWebSocketUpgrade(request)
     }
 
@@ -35,25 +45,35 @@ export class TenantHub {
       // so co-located Workers (or any future caller in the same CF account)
       // can't bypass the HITL stack by directly invoking handleDeliver.
       // Constant-time compare to defeat header-timing oracles.
-      const provided = request.headers.get("X-Internal-Auth") ?? ""
-      const expected = this.env.INTERNAL_SECRET ?? ""
-      if (!expected) {
-        // Strong fail: never allow this branch to silently pass through
-        // in case INTERNAL_SECRET wasn't configured. Surface visibly.
-        console.error(
-          "[TenantHub] INTERNAL_SECRET is not configured — refusing all internal deliveries.",
-        )
-        return new Response("Misconfigured: INTERNAL_SECRET missing", {
-          status: 500,
-        })
-      }
-      if (!constantTimeEquals(provided, expected)) {
-        return new Response("Forbidden", { status: 403 })
-      }
+      const verified = this.verifyInternalSecret(request)
+      if (verified !== null) return verified
       return this.handleDeliver(request)
     }
 
     return new Response("Not found", { status: 404 })
+  }
+
+  /**
+   * Returns null when the caller passed a valid INTERNAL_SECRET; otherwise
+   * returns the Response that should be sent back (500 misconfig / 403).
+   * Centralised so the WS upgrade path and the deliver path use the same
+   * check — adding new internal endpoints just calls this helper.
+   */
+  private verifyInternalSecret(request: Request): Response | null {
+    const provided = request.headers.get("X-Internal-Auth") ?? ""
+    const expected = this.env.INTERNAL_SECRET ?? ""
+    if (!expected) {
+      console.error(
+        "[TenantHub] INTERNAL_SECRET is not configured — refusing internal request.",
+      )
+      return new Response("Misconfigured: INTERNAL_SECRET missing", {
+        status: 500,
+      })
+    }
+    if (!constantTimeEquals(provided, expected)) {
+      return new Response("Forbidden", { status: 403 })
+    }
+    return null
   }
 
   private async handleWebSocketUpgrade(request: Request): Promise<Response> {
