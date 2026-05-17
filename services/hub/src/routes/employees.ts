@@ -10,6 +10,7 @@ import { type AuthVariables, requireSession } from "../middleware/auth.ts"
 import {
   orgGuard,
   requireRole,
+  requireEmployee,
   type OrgGuardVariables,
 } from "../middleware/orgGuard.ts"
 import {
@@ -268,9 +269,12 @@ employeesRouter.post(
 )
 
 // PATCH /api/employees/:id — update profile fields
+// Round-32 H2: requireEmployee prevents `c.get("employee")!` crash for
+// users with membership but no profile (e.g. just-accepted invitation).
 employeesRouter.patch(
   "/:id",
   orgGuard,
+  requireEmployee,
   zValidator(
     "json",
     z.object({

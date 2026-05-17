@@ -306,11 +306,15 @@ knowledgeRouter.post(
       updatedAt: now,
     })
 
-    // Chunk + insert.
+    // Chunk + insert. Round-32 H3 fix: previously a for-loop issued one
+    // `await db.insert` per chunk — for a 100KB markdown that's 50-100+
+    // sequential D1 round-trips per upload, each paying full network
+    // overhead. Now we build the row array once and do a single multi-row
+    // insert (Drizzle supports `values([...])`), which becomes a single
+    // D1 statement regardless of chunk count.
     const chunks = chunkText(body.content, body.fileType)
-    for (let i = 0; i < chunks.length; i++) {
-      const ch = chunks[i]!
-      await db.insert(schema.knowledgeChunks).values({
+    if (chunks.length > 0) {
+      const chunkRows = chunks.map((ch, i) => ({
         id: `kch_${nanoid(16)}`,
         documentId: docId,
         orgId: tenantId,
@@ -324,7 +328,8 @@ knowledgeRouter.post(
         endOffset: ch.endOffset,
         headingPath: JSON.stringify(ch.headingPath),
         createdAt: now,
-      })
+      }))
+      await db.insert(schema.knowledgeChunks).values(chunkRows)
     }
 
     await db

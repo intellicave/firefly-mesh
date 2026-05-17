@@ -10,6 +10,7 @@ import { type AuthVariables, requireSession } from "../middleware/auth.ts"
 import {
   orgGuard,
   requireRole,
+  requireEmployee,
   type OrgGuardVariables,
 } from "../middleware/orgGuard.ts"
 import {
@@ -139,9 +140,13 @@ projectsRouter.post(
 )
 
 // PATCH /api/projects/:id — basic fields (not status)
+// Round-32 H2: requireEmployee prevents `c.get("employee")!` crash when
+// the caller has a membership but no employee profile (e.g. just-accepted
+// invitation pending profile completion).
 projectsRouter.patch(
   "/:id",
   orgGuard,
+  requireEmployee,
   zValidator(
     "json",
     z.object({
@@ -221,6 +226,7 @@ projectsRouter.patch(
 projectsRouter.patch(
   "/:id/status",
   orgGuard,
+  requireEmployee,
   zValidator("json", z.object({ status: projectStatusEnum })),
   async (c) => {
     const db = drizzleD1(c.env)
@@ -486,6 +492,7 @@ projectsRouter.post(
 projectsRouter.patch(
   "/:id/members/:employeeId",
   orgGuard,
+  requireEmployee,
   zValidator("json", z.object({ role: z.string().max(50).nullable() })),
   async (c) => {
     const db = drizzleD1(c.env)
@@ -538,6 +545,7 @@ projectsRouter.patch(
 projectsRouter.delete(
   "/:id/members/:employeeId",
   orgGuard,
+  requireEmployee,
   async (c) => {
     const db = drizzleD1(c.env)
     const tenantId = c.get("tenantId")

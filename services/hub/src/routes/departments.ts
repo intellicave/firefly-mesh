@@ -10,6 +10,7 @@ import { type AuthVariables, requireSession } from "../middleware/auth.ts"
 import {
   orgGuard,
   requireRole,
+  requireEmployee,
   type OrgGuardVariables,
 } from "../middleware/orgGuard.ts"
 import {
@@ -163,9 +164,12 @@ departmentsRouter.post(
 )
 
 // PATCH /api/departments/:id
+// Round-32 H2: requireEmployee prevents `c.get("employee")!` crash for
+// users with membership but no profile.
 departmentsRouter.patch(
   "/:id",
   orgGuard,
+  requireEmployee,
   zValidator(
     "json",
     z.object({
@@ -381,9 +385,11 @@ departmentsRouter.get("/:id/members", orgGuard, async (c) => {
 })
 
 // POST /api/departments/:id/members
+// Round-32 H2: requireEmployee prevents `c.get("employee")!` crash.
 departmentsRouter.post(
   "/:id/members",
   orgGuard,
+  requireEmployee,
   zValidator(
     "json",
     z.object({
@@ -479,9 +485,11 @@ departmentsRouter.post(
 )
 
 // DELETE /api/departments/:id/members/:employeeId
+// Round-32 H2: requireEmployee prevents `c.get("employee")!` crash.
 departmentsRouter.delete(
   "/:id/members/:employeeId",
   orgGuard,
+  requireEmployee,
   async (c) => {
     const db = drizzleD1(c.env)
     const tenantId = c.get("tenantId")

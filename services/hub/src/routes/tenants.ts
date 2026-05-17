@@ -9,7 +9,7 @@ import type { Bindings } from "../auth.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireSession } from "../middleware/auth.ts"
 import { sendInvitationEmail } from "../email/invitation.ts"
-import { writeAudit } from "../lib/audit.ts"
+import { writeAudit, auditValues } from "../lib/audit.ts"
 
 type Vars = AuthVariables & { userId: string }
 
@@ -64,47 +64,70 @@ tenants.post(
       return c.json({ error: { code: "SLUG_TAKEN", message: "Slug already taken" } }, 409)
     }
 
-    await db.insert(schema.tenants).values({
-      id: tenantId,
-      slug,
-      displayName,
-      ownerId: userId,
-      plan: "free",
-      createdAt: now,
-    })
-
-    await db.insert(schema.memberships).values({
-      tenantId,
-      userId,
-      role: "owner",
-      joinedAt: now,
-    })
-
-    // Product-layer bootstrap (sprint 2026-05-16): every tenant has at least
-    // one owner employee — the creator. Without this, the new product-layer
-    // routes (employees / departments / projects) reject every mutation
-    // because their `requireRole` check fails on missing employee profile.
-    // Email + name come from the Better Auth session.
+    // Round-32 H1 fix: tenant + owner-membership + owner-employee + audit
+    // must land together. Previously these were 4 sequential awaits — if
+    // the memberships insert succeeded but employees failed (D1 transient,
+    // schema constraint, etc.), the tenant owner would have a membership
+    // row but no employee profile, and every product-layer mutation would
+    // permanently 403 NO_EMPLOYEE_PROFILE — unrecoverable without manual
+    // DB repair. Now wrapped in db.batch (§Q4 sanctioned third site,
+    // alongside invitations.ts + a2a-messages.ts) so partial failures
+    // roll back to a fully-empty state and the caller can retry the slug
+    // cleanly without orphan rows.
+    //
+    // NOTE: D1 batch is serialized-not-transactional. If the batch fails
+    // mid-way, statements already committed remain — the failure surfaces
+    // as a 500 to the caller. Per §Q4 the audit-only path can't catch
+    // that, but the failure is loud (5xx, not silent corruption). True
+    // tx-atomicity would need wrapping in a Worker-level retry+cleanup
+    // (out of scope; documented as known limitation).
     const ownerName = c.get("userName") ?? c.get("userEmail") ?? "Owner"
     const ownerEmail = c.get("userEmail") ?? `owner+${userId}@local`
-    await db.insert(schema.employees).values({
-      id: `emp_${nanoid(16)}`,
-      orgId: tenantId,
-      userId,
-      name: ownerName,
-      email: ownerEmail,
-      role: "owner",
-      status: "active",
-      createdAt: now,
-    })
-
-    await writeAudit(db, {
-      tenantId,
-      actor: { type: "human", id: userId },
-      action: "tenant.created",
-      resource: { type: "tenant", id: tenantId },
-      payload: { slug, displayName },
-    })
+    const ownerEmployeeId = `emp_${nanoid(16)}`
+    await db.batch([
+      db.insert(schema.tenants).values({
+        id: tenantId,
+        slug,
+        displayName,
+        ownerId: userId,
+        plan: "free",
+        createdAt: now,
+      }),
+      db.insert(schema.memberships).values({
+        tenantId,
+        userId,
+        role: "owner",
+        joinedAt: now,
+      }),
+      // Product-layer bootstrap (sprint 2026-05-16): every tenant has at
+      // least one owner employee — the creator. Without this, the
+      // product-layer routes (employees / departments / projects) reject
+      // every mutation because requireRole fails on missing profile.
+      db.insert(schema.employees).values({
+        id: ownerEmployeeId,
+        orgId: tenantId,
+        userId,
+        name: ownerName,
+        email: ownerEmail,
+        role: "owner",
+        status: "active",
+        createdAt: now,
+      }),
+      // §Q4 sanctioned exception (third site): writeAudit is async-only
+      // and can't be embedded in db.batch — use auditValues to build the
+      // row directly. Co-commits with the three table inserts so a partial
+      // failure rolls back to nothing-happened, matching the caller's
+      // SLUG_TAKEN retry expectation.
+      db.insert(schema.auditLog).values(
+        auditValues({
+          tenantId,
+          actor: { type: "human", id: userId },
+          action: "tenant.created",
+          resource: { type: "tenant", id: tenantId },
+          payload: { slug, displayName },
+        }),
+      ),
+    ])
 
     const [tenant] = await db
       .select()
