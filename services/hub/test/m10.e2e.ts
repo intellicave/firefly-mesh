@@ -303,6 +303,33 @@ async function main() {
   const taskId = task.id
   log("2.0", `task=${taskId} status=assigned`)
 
+  // -- Phase 2.1: M4 fix — employee-role POST /api/tasks → 403 -----------
+  // Test quality round Medium: requireRole(["owner","admin","manager"]) on
+  // task creation untested. Bob is employee role, attempt create from
+  // his session — must be rejected with FORBIDDEN.
+  const bobCreateTask = await bob.json<{ error?: { code?: string } }>(
+    `/api/tasks?tenantId=${acmeId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        title: "should be blocked",
+        assigneeEmployeeId: bobEmp,
+        reviewerEmployeeId: daveEmp,
+      }),
+    },
+  )
+  assert.equal(
+    bobCreateTask.status,
+    403,
+    `employee create task → 403 (got ${bobCreateTask.status})`,
+  )
+  assert.equal(
+    bobCreateTask.body.error?.code,
+    "FORBIDDEN",
+    `expected FORBIDDEN from requireRole (got ${bobCreateTask.body.error?.code})`,
+  )
+  log("2.1", "M4 fix: employee POST /api/tasks → 403 FORBIDDEN")
+
   // -- Phase 3: Bob start ------------------------------------------------
   const startResp = await bob.json<Env<{ status: string }>>(
     `/api/tasks/${taskId}/start?tenantId=${acmeId}`,
@@ -545,6 +572,7 @@ async function main() {
   log("DONE", "  ✓ non-assignee start blocked")
   log("DONE", "  ✓ assignee submit → pending_review")
   log("DONE", "  ✓ Test-quality round C2: non-assignee session submit blocked 403")
+  log("DONE", "  ✓ Test-quality round M4: employee POST /api/tasks blocked 403 FORBIDDEN")
   log("DONE", "  ✓ self-review (assignee != reviewer) blocked 403")
   log("DONE", "  ✓ reviewer reject + comment → status='rejected', round=1")
   log("DONE", "  ✓ assignee re-submit → pending_review (round preserved)")
