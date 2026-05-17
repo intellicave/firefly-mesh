@@ -12,7 +12,7 @@
 
 ### Task 3.1 — Schema 扩展
 
-**status**: pending
+**status**: completed
 **files modified**: services/hub/src/db/schema.ts
 
 **acceptance_criteria**:
@@ -25,7 +25,7 @@
 
 ### Task 3.2 — Migration 0008 (a2a 产品层)
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/migrations/0008_a2a_product_layer.sql
 
 **acceptance_criteria**:
@@ -38,7 +38,7 @@
 
 ### Task 3.3 — Migration 0009 (audit_log ALTER)
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/migrations/0009_audit_log_extend.sql
 
 **acceptance_criteria**:
@@ -50,7 +50,7 @@
 
 ### Task 3.4 — lib/audit.ts
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/src/lib/audit.ts
 
 **acceptance_criteria**:
@@ -62,7 +62,7 @@
 
 ### Task 3.5 — Retrofit 11 处 audit_log 写入
 
-**status**: pending
+**status**: completed
 **files modified**: tenants.ts / invitations.ts / agents.ts / boundaries.ts / agent-tokens.ts / messages.ts
 
 **acceptance_criteria**:
@@ -75,7 +75,7 @@
 
 ### Task 3.6 — lib/a2a-messages.ts
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/src/lib/a2a-messages.ts
 
 **acceptance_criteria**:
@@ -88,7 +88,7 @@
 
 ### Task 3.7 — routes/a2a-messages.ts（6 endpoint）
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/src/routes/a2a-messages.ts
 
 **acceptance_criteria**:
@@ -104,7 +104,7 @@
 
 ### Task 3.8 — 挂载
 
-**status**: pending
+**status**: completed
 **files modified**: services/hub/src/index.ts
 
 **acceptance_criteria**:
@@ -114,7 +114,7 @@
 
 ### Task 3.9 — E2E
 
-**status**: pending
+**status**: completed
 **files created**: services/hub/test/m11-m12.e2e.ts + package.json script
 
 **acceptance_criteria**:
@@ -132,7 +132,7 @@
 
 ### Task 3.10 — 文档同步 + commits
 
-**status**: pending
+**status**: completed
 **files modified**: state.yaml, plan.md statuses
 
 **acceptance_criteria**:
@@ -177,13 +177,34 @@
 
 | Task | Status |
 |---|---|
-| 3.1 Schema | pending |
-| 3.2 Migration 0008 | pending |
-| 3.3 Migration 0009 | pending |
-| 3.4 lib/audit.ts | pending |
-| 3.5 Retrofit 11 处 | pending |
-| 3.6 lib/a2a-messages.ts | pending |
-| 3.7 routes/a2a-messages.ts | pending |
-| 3.8 挂载 | pending |
-| 3.9 E2E | pending |
-| 3.10 文档同步 | pending |
+| 3.1 Schema | completed |
+| 3.2 Migration 0008 | completed |
+| 3.3 Migration 0009 | completed |
+| 3.4 lib/audit.ts | completed |
+| 3.5 Retrofit 11 处 | completed |
+| 3.6 lib/a2a-messages.ts | completed |
+| 3.7 routes/a2a-messages.ts | completed |
+| 3.8 挂载 | completed |
+| 3.9 E2E | completed |
+| 3.10 文档同步 | completed |
+
+**Sleep run 完成于** 2026-05-17。验收：
+
+- ✅ typecheck 全绿
+- ✅ test:e2e:m11-m12 — 10/10 phases pass
+- ✅ test:e2e:m5-m7 不回归 — 14/14
+- ✅ test:e2e:product-layer 不回归 — 11/11
+- ✅ test:e2e 不回归 — 6/6 phases
+- ✅ 6 个 atomic commit（docs / schema+migrations / audit helper / retrofit / a2a lib+route / e2e tests / state sync）
+
+## 7. 实现 drift notes
+
+实施期发现 + 修复的 4 个 bug（test 迭代时 catch）：
+1. 测试调错 invite endpoint（应 `/api/tenants/:id/invite` 不是 `/api/invite`）
+2. invite response 不直接返 token 而是 inviteLink，需 URL parse 提取
+3. POST a2a-messages 代码有死代码 `set({ messageCount: undefined as never })` 违反 NOT NULL
+4. inbox GET 用 `senderEmp = schema.employees, receiverEmp = schema.employees` 双 JOIN 同表未用 Drizzle `alias()` → SQL 冲突
+
+全部已 fix；test 通过；commit message 里有详情。
+
+设计文档无需修订（schema / API / RBAC / 状态机设计本身正确）。

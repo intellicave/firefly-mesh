@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — M1-M7 done (organizations/employees/departments/projects + agents reattached to employee + boundaries + agent_tokens admin issuance); M8-M12 deferred"
+topic: "firefly-mesh-product-layer — M1-M7 + M11 + M12 done (organizations/employees/departments/projects + agents-as-employee-runtime + boundary scopes + agent_tokens admin issuance + a2a product layer with HITL bidirectional state + audit_log extended); M8/M9/M10 deferred"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,55 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === M11-M12 sub-sprint (2026-05-17) ===
+sub_sprint_m11_m12:
+  topic_slug: "firefly-mesh-product-layer-m11-m12"
+  status: completed
+  started_at: "2026-05-17T05:30:00Z"
+  completed_at: "2026-05-17T07:30:00Z"
+  modules_implemented:
+    - "M11 — A2A product layer (a2a_threads + a2a_messages 17 cols + HITL bidirectional state machine)"
+    - "M12 — audit_log extended (4 new nullable cols + writeAudit/auditValues helpers + 11 call-site retrofit)"
+  endpoints_added:
+    - "POST   /api/a2a-messages                          (agent JWT)"
+    - "GET    /api/a2a-messages/inbox?tab=approve|action (session)"
+    - "POST   /api/a2a-messages/:id/approve              (session, sender side)"
+    - "POST   /api/a2a-messages/:id/reject               (session, sender side)"
+    - "POST   /api/a2a-messages/:id/accept               (session, receiver side)"
+    - "POST   /api/a2a-messages/:id/reject-receive       (session, receiver side)"
+  files_created:
+    - "services/hub/migrations/0008_a2a_product_layer.sql"
+    - "services/hub/migrations/0009_audit_log_extend.sql"
+    - "services/hub/src/lib/audit.ts"
+    - "services/hub/src/lib/a2a-messages.ts"
+    - "services/hub/src/routes/a2a-messages.ts"
+    - "services/hub/test/m11-m12.e2e.ts"
+    - "docs/plans/2026-05-17-firefly-mesh-product-layer-m11-m12-{ideation,design,ui,api,plan,meta,index,rules}.md"
+  files_modified:
+    - "services/hub/src/db/schema.ts (a2a_threads + a2a_messages + auditLog +4 cols)"
+    - "services/hub/src/index.ts (mount /api/a2a-messages)"
+    - "services/hub/src/routes/{tenants,invitations,agents,boundaries,agent-tokens,messages}.ts (11 audit_log retrofits)"
+    - "services/hub/package.json (test:e2e:m11-m12 script)"
+  test_results:
+    typecheck: PASS
+    test_e2e_m11_m12: "PASS (10/10 phases)"
+    test_e2e_m5_m7_regression: "PASS (14/14)"
+    test_e2e_product_layer_regression: "PASS (11/11)"
+    test_e2e_regression: "PASS (6/6 phases)"
+  commits:
+    - "0720573 — docs(plans): 8 design documents"
+    - "bbe2258 — feat(hub): M11+M12 schema + migrations 0008/0009"
+    - "b1264ad — feat(hub): M12 lib/audit.ts helper"
+    - "9a4b33d — refactor(hub): M12 retrofit 11 audit_log write sites"
+    - "aa2bebd — feat(hub): M11 A2A product layer — lib + 6 endpoints"
+    - "f6baf9a — test(hub): M11+M12 end-to-end (10 phases)"
+  bugs_found_and_fixed_during_e2e_iteration:
+    - "test invite endpoint typo (/api/invite → /api/tenants/:id/invite)"
+    - "invite response shape: inviteLink not direct token (URL parse needed)"
+    - "POST a2a-messages: dead code 'set({ messageCount: undefined as never })' violated NOT NULL"
+    - "Drizzle aliasing: double JOIN to employees without alias() helper → SQL conflict; fixed with alias()"
+  notes: "All 4 bugs caught by e2e iteration before commit. Design docs unchanged."
 
 # === M5-M7 sub-sprint (2026-05-17) ===
 sub_sprint_m5_m7:
@@ -203,10 +252,6 @@ gate_history:
 
 # Follow-up sprints (planned, not yet started)
 next_sprints:
-  - slug: "firefly-mesh-product-layer-m11-m12"
-    scope: "M11 a2a product-tier + M12 audit_log extension"
-    estimated_duration: "5 days"
-    depends_on: ["M5-M7"]
   - slug: "firefly-mesh-product-layer-m10"
     scope: "M10 tasks + HITL state machine"
     estimated_duration: "5 days"
