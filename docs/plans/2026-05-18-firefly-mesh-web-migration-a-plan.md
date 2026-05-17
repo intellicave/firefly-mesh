@@ -21,14 +21,13 @@
 // services/web/app/page.tsx
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function RootPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -61,7 +60,9 @@ export default function RootPage() {
     }
   }, [router])
 
-  if (!loading) return null
+  // Skeleton renders while mounted. Component unmounts when router.replace
+  // navigates away. No "loaded but no redirect" branch exists, so no need
+  // for a loading flag.
   return (
     <div className="flex h-screen items-center justify-center">
       <div className="space-y-2">
@@ -80,6 +81,7 @@ export default function RootPage() {
 - [ ] useEffect 有 cancelled flag 避免 race condition
 - [ ] 显示骨架屏期间不闪空白
 - [ ] router.replace 而非 push，避免 history 污染
+- [ ] **不**使用 `useState(loading)` + `if (!loading) return null` 这种死代码模式（setLoading 永不调用 → dead branch；H-NEW-2 reviewer fix）
 - [ ] grep `services/web/app/` + `services/web/components/` + `services/web/lib/` 找其他 RSC 调 db 案例，全部列出。如有 → 加进 A.0 替换清单
 
 ### Task A.1 — 拷贝代码
@@ -127,6 +129,10 @@ grep '@firefly-mesh/core' services/web/next.config.ts
 
 **目标**：浏览器始终 fetch `/api/*` (same-origin)，Next.js server 在 SSR 阶段代理到 hub。
 
+**⚠️ 关键（H-NEW-1 reviewer fix）**：v0 `next.config.ts` 已有一个 `rewrites()` 函数，里面定义了 `/.well-known/agent-card.json` → `/api/well-known/agent-card.json` 规则（A2A 协议发现端点）。**必须保留**，不能直接替换为只含 hub proxy 的 rewrites（否则 A2A agent 找不到 organization card → 404）。
+
+**Next.js rewrites 优先级（M2 reviewer note）**：rewrites 在 file system 路由**之后**评估。即 `app/api/*/route.ts` 存在时，请求会先命中 route.ts（v0 server route → Postgres），rewrites 不触发。**只有 path 没有对应 route.ts 时**（如重命名后的 `/api/employees`），rewrites 才把它代理到 hub。这是预期行为：sprint A 通过 A.9 把客户端调用从 `/api/employee`（命中 route.ts → Postgres）改为 `/api/employees`（无 route.ts → 走 rewrites → hub）。
+
 **新增代码**：
 
 ```typescript
@@ -134,9 +140,15 @@ grep '@firefly-mesh/core' services/web/next.config.ts
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  // ... 已有配置 ...
+  // ... 已有配置（保留全部，除 transpilePackages 中的 @firefly-mesh/core）...
   async rewrites() {
     return [
+      // 保留：A2A 协议发现端点（v0 原有 rule）
+      {
+        source: "/.well-known/agent-card.json",
+        destination: "/api/well-known/agent-card.json",
+      },
+      // 新增：hub API proxy（W2'）
       {
         source: "/api/:path*",
         destination: `${process.env.NEXT_PUBLIC_HUB_URL ?? "http://localhost:8787"}/api/:path*`,
@@ -150,10 +162,12 @@ export default nextConfig
 
 **acceptance**:
 - [ ] next.config.ts 含 rewrites 函数
+- [ ] **rewrites 数组含 2 条规则**：well-known + hub proxy（H-NEW-1）
 - [ ] destination 用 `process.env.NEXT_PUBLIC_HUB_URL`，fallback `http://localhost:8787`
 - [ ] **不**改 api-client.ts 的路径（A.5 单独处理 credentials）
 - [ ] typescript 编译过
 - [ ] 启动 dev 后 `curl localhost:3000/api/health` → 200（rewrites 代理到 hub）
+- [ ] **curl localhost:3000/.well-known/agent-card.json** → 200（well-known 规则未被破坏）
 
 ### Task A.5 — api-client.ts credentials 调整
 
@@ -181,26 +195,57 @@ export default nextConfig
 - [ ] 保留 organizationClient plugin
 - [ ] typescript 编译过
 
-### Task A.7 — i18n: next-intl + 中文 messages（W5' 修订）
+### Task A.7 — i18n: next-intl 从零接入 + 中文 messages（W5' 修订）
 
 **status**: pending
-**files created**: services/web/lib/messages/zh.ts, services/web/components/language-switcher.tsx
+**files created**: services/web/i18n/request.ts, services/web/lib/messages/zh.ts, services/web/components/language-switcher.tsx
 **files modified**: services/web/app/layout.tsx（包 NextIntlClientProvider）
 
-**目标**：用 v0 已有的 next-intl（package.json 已含 next-intl@4.11.0），只 cp services/pwa 的**中文翻译内容**（key-value），不 cp Astro Zustand store。
+**⚠️ 关键（M1 reviewer 澄清）**：v0 `package.json` 已有 `next-intl@4.11.0`，但**从未激活**——`lib/messages/en.ts` 只是个普通 TS object，没有 `i18n/request.ts`，没有 middleware，layout.tsx 没有 NextIntlClientProvider。所以 sprint A 是**从零 bootstrap next-intl**，不是"集成已有"。
+
+**关键决策**：采用 next-intl **"without i18n routing"** 模式（不加 middleware，不加 path prefix /zh/*）。Locale 通过 `NEXT_LOCALE` cookie 持久化。这是最小集成成本路径。
 
 **步骤**：
-1. 看 services/pwa/src/i18n/zh.ts 的 key-value，整理成 next-intl 兼容的 messages 结构
-2. 写到 services/web/lib/messages/zh.ts（参考 services/web/lib/messages/en.ts 的格式）
-3. 写一个简单的 LanguageSwitcher client component（调用 next-intl 的 useLocale + setLocale + 重渲染）
-4. app/layout.tsx 包 NextIntlClientProvider，messages 根据 cookie / locale 切换
-5. dashboard 顶部 nav 集成 LanguageSwitcher
+1. **创建 `services/web/i18n/request.ts`**（next-intl v4 必需）：
+   ```typescript
+   // services/web/i18n/request.ts
+   import { getRequestConfig } from "next-intl/server"
+   import { cookies } from "next/headers"
+
+   export default getRequestConfig(async () => {
+     const cookieStore = await cookies()
+     const locale = cookieStore.get("NEXT_LOCALE")?.value ?? "en"
+     const valid = ["en", "zh"].includes(locale) ? locale : "en"
+     const messages = (await import(`@/lib/messages/${valid}.ts`)).default
+     return { locale: valid, messages }
+   })
+   ```
+
+2. **next.config.ts 加 next-intl plugin**（与 W2' rewrites 共存）：
+   ```typescript
+   import createNextIntlPlugin from "next-intl/plugin"
+   const withNextIntl = createNextIntlPlugin("./i18n/request.ts")
+   // ... NextConfig 定义 ...
+   export default withNextIntl(nextConfig)
+   ```
+
+3. **cp services/pwa 的中文翻译 key-value**（不 cp Zustand store）：整理成 next-intl 兼容的 nested object，与 v0 现有 `lib/messages/en.ts` 的 key 100% 对齐。写到 `services/web/lib/messages/zh.ts`。
+
+4. **写 LanguageSwitcher**（client component < 50 行）：通过 `document.cookie` 设 NEXT_LOCALE + `router.refresh()` 触发 next-intl 重读。
+
+5. **修改 `app/layout.tsx`**：用 RSC functions `getLocale()` + `getMessages()`，包 NextIntlClientProvider。
+
+6. **不迁移现有 13 page.tsx 的硬编码 messages.x 引用**：v0 现有页面用 `messages.nav.inbox` 这种直接对象访问，sprint A **不**改为 `useTranslations()` hook。只加 provider + LanguageSwitcher 工作即可。改 13 个 page.tsx 是 V0.2 i18n migration sprint 的范围。
 
 **acceptance**:
+- [ ] services/web/i18n/request.ts 存在，getRequestConfig 从 NEXT_LOCALE cookie 读 locale
 - [ ] services/web/lib/messages/zh.ts 存在，与 en.ts 的 key 100% 对齐
+- [ ] next.config.ts 用 `createNextIntlPlugin('./i18n/request.ts')(nextConfig)` 包装 export
 - [ ] LanguageSwitcher 是 client component < 50 行
 - [ ] app/layout.tsx 包 NextIntlClientProvider
-- [ ] 中英切换工作（看到 "员工" / "Employees" 切换）
+- [ ] 中英切换工作（LanguageSwitcher 点击 → cookie 写入 → router.refresh → 看到 next-intl 加载新 messages）
+- [ ] 现有 13 page.tsx 的 `messages.x` 硬编码引用**不动**（V0.2 sprint 再迁移）
+- [ ] **不**加 middleware.ts（without-i18n-routing 模式）
 - [ ] **不**引入新 dep（next-intl 已在 v0 deps）
 
 ### Task A.8 — 环境变量配置
@@ -264,9 +309,23 @@ grep -rE "/api/(employee|department|skill|task|org|token|boundary|a2a)([/?'\"]|$
 
 | 缺失 endpoint | 替代 |
 |---|---|
-| /api/onboarding/state | useEffect 并发 /api/me + /api/organizations/me + /api/me/agents，前端拼装状态 |
+| /api/onboarding/state | useEffect 并发 3 endpoint + 推导 step（详见 A.9.3.1 推导规则）|
 | /api/org/graph | useEffect 并发 /api/employees + /api/departments + /api/projects，前端组装 graph 数据 |
 | /api/token/batch | for-loop N 次 /api/agent-tokens POST |
+
+##### A.9.3.1 onboarding state 推导规则（M3 reviewer fix）
+
+v0 `app/onboarding/page.tsx` 期望返回 `{ step: "create-org" | "import" | "tokens" | "done", completed: boolean, orgId?: string }`。hub 无聚合 endpoint，需在客户端推导。**推导规则必须严格按下表**（不能临场发挥），否则 onboarding 流程乱跳：
+
+| 条件 | step |
+|---|---|
+| `GET /api/me` 401 | 不应到达此页（root gate 已拦截到 /login）|
+| `GET /api/organizations/me` 返回 404 or null | `step = "create-org"` |
+| `GET /api/organizations/me` 200 + `GET /api/employees` 返回 0 条 | `step = "import"` |
+| `GET /api/employees` 返回 ≥1 条 + `GET /api/me/agents` 返回 0 条 | `step = "tokens"` |
+| `GET /api/me/agents` 返回 ≥1 条 | `step = "done"` |
+
+实施时把推导逻辑封装成 `lib/onboarding.ts::deriveOnboardingStep()` helper，让 page.tsx 调用结果跟原 `/api/onboarding/state` shape 兼容。这样 v0 page.tsx 主体逻辑（`state.data.step === "done" ? "/inbox" : ...`）不需要改。
 
 **acceptance**:
 - [ ] A.9.1 grep 验证零 hit

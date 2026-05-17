@@ -33,14 +33,27 @@ rewrites 策略一行不动 hub：
 
 ### 2.2 next.config.ts rewrites 块
 
+**⚠️ v0 已有 rewrites（H-NEW-1 reviewer fix）**：v0 `next.config.ts` 已有一个 `rewrites()` 函数，定义了 `/.well-known/agent-card.json` → `/api/well-known/agent-card.json`（A2A 协议发现端点）。**必须保留**，不能用新 rewrites 直接替换（否则 agent 找不到 organization card → 404）。
+
+正确做法是**在已有数组里追加** hub proxy 规则：
+
 ```typescript
 // services/web/next.config.ts
 import type { NextConfig } from "next"
+import createNextIntlPlugin from "next-intl/plugin"
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts")
 
 const nextConfig: NextConfig = {
-  // ... 已有配置（保留）...
+  // ... 已有配置（保留全部，除 transpilePackages 中的 @firefly-mesh/core）...
   async rewrites() {
     return [
+      // 保留：A2A 协议发现端点（v0 原有）
+      {
+        source: "/.well-known/agent-card.json",
+        destination: "/api/well-known/agent-card.json",
+      },
+      // 新增：hub API proxy（W2'）
       {
         source: "/api/:path*",
         destination: `${process.env.NEXT_PUBLIC_HUB_URL ?? "http://localhost:8787"}/api/:path*`,
@@ -49,8 +62,26 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+// next-intl plugin 包装（W5' / A.7）
+export default withNextIntl(nextConfig)
 ```
+
+**Next.js rewrites 优先级（M2 reviewer note）**：rewrites 在 file system 路由**之后**评估。即 `app/api/*/route.ts` 存在时，请求先命中 route.ts（v0 server route → Postgres），rewrites 不触发。**只有 path 没有对应 route.ts 时**（如重命名后的 `/api/employees`），rewrites 才把它代理到 hub。
+
+这是预期行为：sprint A 通过 A.9 把客户端调用从 `/api/employee`（命中 route.ts → Postgres）改为 `/api/employees`（无 route.ts → 走 rewrites → hub）。**rename 是 load-bearing 的，不只是 consistency**。
+
+具体例子：
+- `/api/auth/*` → `app/api/auth/[...all]/route.ts` 存在 → Next.js 处理（v0 route 内部 proxy 到 hub Better Auth，所以 sprint A 是双层 proxy，工作但不优雅；sprint B 删 route.ts 后变单层 rewrites）
+- `/api/employee/*` → `app/api/employee/route.ts` 存在 → 命中 v0 Postgres（**不该被新代码调用**，A.9 rename 后客户端不再请求此路径）
+- `/api/employees/*` → 无 route.ts → 走 rewrites → hub
+- `/api/me/*` → `app/api/me/route.ts` 存在 → 命中 v0 Postgres（**已知 sprint A 内仍走 v0 Postgres，sprint B 删 route.ts 后才走 hub**；smoke test 需验证 v0 me route 行为与 hub 一致，或加进 A.9 rename 范围）
+
+⚠️ **/api/me 路径冲突的处理决定**：sprint A 不 rename `/api/me`（hub 和 v0 都用此路径）。v0 route.ts 会先命中，行为可能不一致。**应对**：
+- 选项 A（推荐）：A.9 内**删除** v0 `app/api/me/route.ts`（仅此一个 v0 route 删；不算违反 W1 因为是路径冲突解决，不是"全面清理"，记录到 plan 风险）
+- 选项 B：把 v0 `/api/me` 重命名为 `/api/v0-me`（强名称，明确无意调用），并改所有客户端不再调
+- 选项 C（保留 W1）：smoke test 验证 v0 me 返回兼容 shape，若不兼容再上选项 A
+
+A.9 阶段决定选哪个。
 
 ### 2.3 删除 transpilePackages: ["@firefly-mesh/core"]（W8）
 
@@ -221,7 +252,41 @@ NEXT_PUBLIC_HUB_URL=http://localhost:8787
 
 v0 已含 `next-intl@4.11.0`，已有 `lib/messages/en.ts`。把 pwa 的 Astro 多 island Zustand store cp 过来反而有 SSR hydration mismatch 风险。
 
-### 6.2 用 next-intl
+### 6.2 next-intl 是从零 bootstrap，不是"集成已有"（M1 reviewer 澄清）
+
+虽然 v0 `package.json` 已含 `next-intl@4.11.0`，但**从未激活**：
+- 无 `i18n/request.ts`（next-intl v4 必需的 RSC config 文件）
+- 无 middleware.ts（next-intl 路由匹配可选项）
+- `app/layout.tsx` 无 NextIntlClientProvider、无 getLocale/getMessages 调用
+- `lib/messages/en.ts` 是普通 TS object，13 个 page.tsx 用 `messages.nav.inbox` 直接访问，不通过 `useTranslations()` hook
+
+所以 sprint A 是**从零 bootstrap next-intl**，4 个新增文件：
+- `services/web/i18n/request.ts`（getRequestConfig）
+- `services/web/lib/messages/zh.ts`（中文 messages，从 pwa 抢救 key-value）
+- `services/web/components/language-switcher.tsx`
+- next.config.ts 加 `withNextIntl()` 包装
+
+**采用"without i18n routing"模式**：不加 middleware（无 path prefix /zh/*），locale 通过 `NEXT_LOCALE` cookie 持久化。最小集成成本。
+
+**Sprint A 不迁移现有 13 page.tsx 的 `messages.x` 引用**到 `useTranslations()` hook。这些 page.tsx 继续用普通 TS object 访问（messages.en.ts 仍是 plain object，只是文件内容也作为 zh.ts 的 fallback）。LanguageSwitcher 只是切换 next-intl 的 provider locale，已有页面看到的 messages 不变（V0.2 sprint 再迁移到 useTranslations）。
+
+### 6.3 i18n/request.ts
+
+```typescript
+// services/web/i18n/request.ts
+import { getRequestConfig } from "next-intl/server"
+import { cookies } from "next/headers"
+
+export default getRequestConfig(async () => {
+  const cookieStore = await cookies()
+  const locale = cookieStore.get("NEXT_LOCALE")?.value ?? "en"
+  const valid = ["en", "zh"].includes(locale) ? locale : "en"
+  const messages = (await import(`@/lib/messages/${valid}.ts`)).default
+  return { locale: valid, messages }
+})
+```
+
+### 6.4 app/layout.tsx
 
 ```typescript
 // services/web/app/layout.tsx (修改)
@@ -243,7 +308,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 }
 ```
 
-### 6.3 中文 messages 抢救
+### 6.5 中文 messages 抢救
 
 ```typescript
 // services/web/lib/messages/zh.ts (新增)
@@ -259,7 +324,7 @@ const zh = {
 export default zh
 ```
 
-### 6.4 LanguageSwitcher
+### 6.6 LanguageSwitcher
 
 ```typescript
 // services/web/components/language-switcher.tsx (新增 <50 行)
@@ -287,9 +352,9 @@ export function LanguageSwitcher() {
 
 集成进 dashboard 顶部 nav（settings menu 旁）。
 
-### 6.5 服务端国际化（V1.1）
+### 6.7 服务端国际化进阶（V1.1）
 
-本 sprint 完成"客户端切换 + cookie 持久化"即可。其他高级特性（路径前缀 /zh/* 之类）推 V1.1。
+本 sprint 完成"客户端切换 + cookie 持久化 + provider 接入"即可。其他高级特性（路径前缀 /zh/*、中间件路由匹配、13 page.tsx 迁移到 useTranslations）推 V0.2 / V1.1。
 
 ## 7. 不动 hub（铁律）
 

@@ -32,6 +32,14 @@
 | **W8** | next.config.ts 删除 `transpilePackages: ["@firefly-mesh/core"]`（如有），避免 Next.js 试图编译 Postgres 代码 |
 | **W9** | 缺失端点（audit read / multipart upload / SSE / dry-run / org graph / token batch / onboarding state）的 UI **必须显式禁用 + banner**，禁止 silent fail |
 
+v2 第二轮 reviewer 修订引入：
+
+| ID | 决策 |
+|---|---|
+| **W10** | next.config.ts `rewrites()` 数组必须保留 v0 已有的 `/.well-known/agent-card.json` 规则（A2A 协议发现端点），不能直接替换为只含 hub proxy（H-NEW-1 reviewer fix）|
+| **W11** | next-intl 是从零 bootstrap（不是"集成已有"）。v0 虽含 next-intl@4.11.0 但从未激活：需新增 `i18n/request.ts`、修改 layout.tsx、采用 "without i18n routing" 模式。13 现有 page.tsx 的 `messages.x` 硬编码引用 sprint A 不迁移到 useTranslations（V0.2 sprint）。（M1 reviewer 澄清）|
+| **W12** | `/api/me` 路径冲突处理：v0 已有 `app/api/me/route.ts`（Postgres），hub 也有 `/api/me`（D1）。Next.js rewrites 优先级让 v0 route.ts 命中，sprint A 内**实际访问 v0 Postgres 而非 hub**。A.9 阶段决定方案（推荐：删除该 v0 route.ts；备选：route.ts 内部改 proxy 到 hub）。（M2 reviewer 澄清）|
+
 ## 不可破坏（铁律）
 
 - **hub 一行不动**（git diff services/hub 必须空）
@@ -64,4 +72,13 @@
 - 新增 AE / AF / W9 规则 → Critical C2 / C3 + High H1 消解
 - 改 W5 → W5' + 删 transpilePackages → High H2 / H3 消解
 
-预期 v2 reviewer 重审通过。
+## v2 第二轮 reviewer（commit 78536ff 之后）
+
+第二轮 reviewer 评级 **B**，确认全部 8 个 v1 Critical/High 真实修复。新发现：
+
+- **2 High**：H-NEW-1（rewrites 漏保留 well-known agent-card.json 规则）+ H-NEW-2（app/page.tsx 有 dead loading 状态代码）
+- **3 Medium**：M1（next-intl 是从零 bootstrap）+ M2（Next.js 路由优先级 → /api/me 命中 v0 而非 hub）+ M3（onboarding 状态推导缺规则）
+
+全部修复入 plan.md + design.md（commit pending）。新增 W10-W12 决策。
+
+预期 v2 第三轮 reviewer 重审通过（无 Critical/High，最多 Medium/Low）。
