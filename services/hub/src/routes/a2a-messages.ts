@@ -65,9 +65,18 @@ a2aMessagesRouter.post(
       replyToMessageId: z.string().optional(),
       relatedTaskId: z.string().optional(),
       // Encryption envelope (same shape as POST /api/messages).
-      ciphertext: z.string(),
-      nonce: z.string(),
-      ephemeralPk: z.string(),
+      // Round-38 M3 fix: cap sizes to plausible cryptographic shapes.
+      // Without caps, an oversized payload from a compromised agent
+      // token holder would pass zod and hit D1's 1MB row-size error
+      // with an opaque DB exception. Conservative caps based on
+      // X3DH / XChaCha20-Poly1305 envelope sizes:
+      //   - nonce: XChaCha20 = 24 bytes → 32 chars base64 (cap 64)
+      //   - ephemeralPk: Curve25519 = 32 bytes → 44 chars base64 (cap 64)
+      //   - ciphertext: 64KB max per message (plenty for any real msg;
+      //     bigger payloads should use a different transport).
+      ciphertext: z.string().max(64 * 1024),
+      nonce: z.string().max(64),
+      ephemeralPk: z.string().max(64),
       oneTimePrekeyId: z.number().int().optional(),
     }),
   ),

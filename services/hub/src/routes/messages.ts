@@ -32,9 +32,12 @@ messages.post(
         .enum(["inform", "sync", "request", "commit", "handoff", "escalate", "block"])
         .default("inform"),
       summary: z.string().max(500).optional(),
-      ciphertext: z.string(),
-      nonce: z.string(),
-      ephemeralPk: z.string(),
+      // Round-38 M3 fix: cap encryption envelope sizes (matches the
+      // caps applied in a2a-messages.ts POST). See that file for
+      // rationale; same XChaCha20 / Curve25519 / 64KB ciphertext.
+      ciphertext: z.string().max(64 * 1024),
+      nonce: z.string().max(64),
+      ephemeralPk: z.string().max(64),
       oneTimePrekeyId: z.number().int().optional(),
     }),
   ),

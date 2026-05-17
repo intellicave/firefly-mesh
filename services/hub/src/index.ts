@@ -37,6 +37,29 @@ app.use("*", (c, next) =>
   })(c, next),
 )
 
+// Round-38 M2 fix: global error handler so unhandled exceptions don't
+// return a bare Hono 500 with no log record. CF Workers captures
+// unhandled exceptions at the runtime layer but with no stack trace
+// in our logs, making prod debugging blind. Log the error with method
+// + URL for correlation, then return a structured envelope matching
+// the rest of the API. Do NOT include err.message in the response —
+// that may leak internals (stack traces, DB column names).
+app.onError((err, c) => {
+  console.error(
+    `[unhandled] ${c.req.method} ${new URL(c.req.url).pathname}`,
+    err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ""}` : err,
+  )
+  return c.json(
+    {
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "An unexpected error occurred",
+      },
+    },
+    500,
+  )
+})
+
 app.get("/", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
 // Better Auth — handles /api/auth/sign-up/email, /sign-in/email, /sign-out, /get-session, /callback/*, etc.

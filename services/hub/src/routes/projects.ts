@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, eq, inArray } from "drizzle-orm"
+import { and, desc, eq, inArray, lt } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -46,10 +46,17 @@ projectsRouter.get(
     const db = drizzleD1(c.env)
     const tenantId = c.get("tenantId")
     const requester = c.get("employee")
-    const { status } = c.req.valid("query")
+    const { status, cursor, limit } = c.req.valid("query")
 
     const conditions = [eq(schema.projects.orgId, tenantId)]
     if (status) conditions.push(eq(schema.projects.status, status))
+
+    // Round-38 M1 fix: cursor was parsed but never applied + no .limit()
+    // meant a tenant with N projects returned all N rows on every call
+    // (unbounded scan + broken pagination contract). Apply both now.
+    // Cursor is the createdAt of the last row from the previous page;
+    // pagination is reverse-chronological (desc).
+    if (cursor) conditions.push(lt(schema.projects.createdAt, cursor))
 
     // Employee role: limit to joined projects.
     if (requester && requester.role === "employee") {
@@ -64,12 +71,18 @@ projectsRouter.get(
       conditions.push(inArray(schema.projects.id, joinedIds))
     }
 
+    // Fetch limit+1 to determine if there's a next page without a second query.
     const rows = await db
       .select()
       .from(schema.projects)
       .where(and(...conditions))
+      .orderBy(desc(schema.projects.createdAt))
+      .limit(limit + 1)
+    const hasMore = rows.length > limit
+    const data = hasMore ? rows.slice(0, limit) : rows
+    const nextCursor = hasMore ? data[data.length - 1]!.createdAt : null
 
-    return c.json({ data: rows, nextCursor: null })
+    return c.json({ data, nextCursor })
   },
 )
 
