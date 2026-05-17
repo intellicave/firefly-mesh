@@ -339,6 +339,26 @@ async function main() {
   assert.equal(unwrap(submitResp.body, "submit").status, "pending_review")
   log("4.0", "Bob submitted → pending_review")
 
+  // -- Phase 4.1: C2 fix — non-assignee session submit blocked -----------
+  // Test quality round: docstring claimed coverage but no test existed for
+  // the session-path NOT_ASSIGNEE 403 branch on POST /tasks/:id/submit.
+  // We use a task already in pending_review (from Phase 4) — but submit
+  // also runs RBAC before the state-machine check, so Dave (reviewer, NOT
+  // assignee) attempting submit must 403 NOT_ASSIGNEE, NOT 409 state.
+  const daveSubmit = await dave.json<Env<unknown>>(
+    `/api/tasks/${taskId}/submit?tenantId=${acmeId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ output: { reason: "should be blocked" } }),
+    },
+  )
+  assert.equal(
+    daveSubmit.status,
+    403,
+    `non-assignee submit → 403 (got ${daveSubmit.status})`,
+  )
+  log("4.1", "C2 fix: non-assignee session submit correctly rejected 403")
+
   // -- Phase 5: Bob attempts self-review ---------------------------------
   // (Bob is assignee, not reviewer, so this is also caught by FORBIDDEN
   // before SELF_REVIEW_FORBIDDEN. Either error code proves the guard.)
@@ -516,6 +536,7 @@ async function main() {
   log("DONE", "  ✓ assignee start → in_progress")
   log("DONE", "  ✓ non-assignee start blocked")
   log("DONE", "  ✓ assignee submit → pending_review")
+  log("DONE", "  ✓ Test-quality round C2: non-assignee session submit blocked 403")
   log("DONE", "  ✓ self-review (assignee != reviewer) blocked 403")
   log("DONE", "  ✓ reviewer reject + comment → status='rejected', round=1")
   log("DONE", "  ✓ assignee re-submit → pending_review (round preserved)")

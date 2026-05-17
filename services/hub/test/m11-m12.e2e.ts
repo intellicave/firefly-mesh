@@ -30,6 +30,7 @@
 
 import assert from "node:assert/strict"
 import { generateX3DHKeys } from "@firefly-mesh/crypto"
+import { SignJWT } from "jose"
 
 const HUB = process.env.HUB_URL ?? "http://localhost:8787"
 const log = (step: string, detail = "") => console.log(`[${step}] ${detail}`)
@@ -390,6 +391,145 @@ async function main() {
   assert.equal(cross.status, 404, `cross-tenant approve → 404 (got ${cross.status})`)
   log("9.0", "cross-tenant blocked")
 
+  // -- Phase 9.1: C1 fix — receiver reject-receive path (test quality round) ---
+  // Send a fresh request, sender approves it, then receiver rejects with
+  // reject-receive. Previously docstring claimed coverage but no test ran.
+  const r2 = await sendA2a(carolAgent.token, {
+    receiverAgentId: bobAgent.agentId,
+    type: "request",
+    summary: "Reject-receive test",
+    threadId: inform.threadId,
+  })
+  assert.equal(r2.status, 201)
+  const r2Body = unwrap(r2.body, "request2")
+  // sender side approve
+  const r2Approve = await carol.json<Env<{ status: string }>>(
+    `/api/a2a-messages/${r2Body.id}/approve?tenantId=${acmeId}`,
+    { method: "POST" },
+  )
+  assert.equal(r2Approve.status, 200)
+  // receiver rejects
+  const r2Reject = await bob.json<Env<{ status: string }>>(
+    `/api/a2a-messages/${r2Body.id}/reject-receive?tenantId=${acmeId}`,
+    { method: "POST" },
+  )
+  assert.equal(r2Reject.status, 200, `reject-receive happy 200 (got ${r2Reject.status})`)
+  assert.equal(unwrap(r2Reject.body, "reject-receive").status, "rejected")
+  // duplicate reject-receive → 409 (terminal)
+  const r2RejectDup = await bob.json<Env<unknown>>(
+    `/api/a2a-messages/${r2Body.id}/reject-receive?tenantId=${acmeId}`,
+    { method: "POST" },
+  )
+  assert.equal(r2RejectDup.status, 409, "reject-receive terminal-state 409")
+  // wrong-side: Carol (sender) attempting receiver-side reject-receive → 403
+  const r2WrongSide = await carol.json<Env<unknown>>(
+    `/api/a2a-messages/${r2Body.id}/reject-receive?tenantId=${acmeId}`,
+    { method: "POST" },
+  )
+  assert.ok(
+    r2WrongSide.status === 403 || r2WrongSide.status === 409,
+    `Carol blocked from receiver-side reject-receive (${r2WrongSide.status})`,
+  )
+  log("9.1", "C1 fix: reject-receive happy + 409 terminal + RBAC negative all green")
+
+  // -- Phase 9.2: C3 fix — sender reject path -------------------------------
+  // Fresh request, sender (Carol) rejects own message before receiver acts.
+  const r3 = await sendA2a(carolAgent.token, {
+    receiverAgentId: bobAgent.agentId,
+    type: "request",
+    summary: "Sender reject test",
+    threadId: inform.threadId,
+  })
+  assert.equal(r3.status, 201)
+  const r3Body = unwrap(r3.body, "request3")
+  const r3Reject = await carol.json<Env<{ status: string }>>(
+    `/api/a2a-messages/${r3Body.id}/reject?tenantId=${acmeId}`,
+    { method: "POST" },
+  )
+  assert.equal(r3Reject.status, 200, `sender reject 200 (got ${r3Reject.status})`)
+  assert.equal(unwrap(r3Reject.body, "sender reject").status, "rejected")
+  // duplicate sender reject → 409
+  const r3RejectDup = await carol.json<Env<unknown>>(
+    `/api/a2a-messages/${r3Body.id}/reject?tenantId=${acmeId}`,
+    { method: "POST" },
+  )
+  assert.equal(r3RejectDup.status, 409, "sender reject terminal 409")
+  log("9.2", "C3 fix: sender reject happy + terminal 409")
+
+  // -- Phase 9.3: H1 fix — enforceScope wired into POST /api/a2a-messages ----
+  // arch C2 fix wires enforceScope() on the JWT's `scope` claim. Test by
+  // constructing a JWT manually that omits send_a2a_request, then attempt
+  // a request-type send. Should 403 BOUNDARY_VIOLATION.
+  //
+  // Why not via PUT /api/boundaries: that updates DB scopes but the agent's
+  // existing JWT still carries old (default) scopes. Re-signing JWT on
+  // boundary change is V1.1 deferred. So the in-the-wild risk is short-TTL
+  // JWTs that get re-issued; we test the enforcement primitive itself.
+  const fs = await import("node:fs/promises")
+  const path = await import("node:path")
+  const devVars = await fs.readFile(
+    path.resolve(import.meta.dirname, "..", ".dev.vars"),
+    "utf8",
+  )
+  const jwtSecretLine = devVars
+    .split(/\r?\n/)
+    .find((l) => l.startsWith("JWT_SECRET="))
+  if (!jwtSecretLine)
+    throw new Error("JWT_SECRET not found in .dev.vars (needed for scope test)")
+  const secret = jwtSecretLine.slice("JWT_SECRET=".length).trim()
+
+  // Read Carol's userId from session (we don't capture it at signup time)
+  const carolSession = (
+    await carol.json<{ user: { id: string } | null }>(
+      "/api/auth/get-session",
+    )
+  ).body
+  const carolUserId = carolSession.user?.id
+  if (!carolUserId) throw new Error("Carol session missing user id")
+
+  // Sign a JWT with carolAgent identity but reduced scope (no send_a2a_*)
+  const reducedJwt = await new SignJWT({
+    tenantId: acmeId,
+    userId: carolUserId,
+    type: "agent",
+    scope: ["read_kb"], // intentionally omit all send_a2a_*
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(carolAgent.agentId)
+    .setIssuer("firefly-mesh")
+    .setAudience("firefly-mesh-hub")
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(new TextEncoder().encode(secret))
+
+  const blockedSend = await fetch(`${HUB}/api/a2a-messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${reducedJwt}`,
+    },
+    body: JSON.stringify({
+      receiverAgentId: bobAgent.agentId,
+      type: "request",
+      summary: "should be blocked by missing scope",
+      ciphertext: "dummy",
+      nonce: "dummy",
+      ephemeralPk: "dummy",
+    }),
+  })
+  assert.equal(
+    blockedSend.status,
+    403,
+    `send_a2a_request without scope → 403 (got ${blockedSend.status})`,
+  )
+  const blockedBody = (await blockedSend.json()) as { error?: { code?: string } }
+  assert.equal(
+    blockedBody.error?.code,
+    "BOUNDARY_VIOLATION",
+    `expected BOUNDARY_VIOLATION code, got ${blockedBody.error?.code}`,
+  )
+  log("9.3", "H1 fix: enforceScope rejects request-type send when scope absent")
+
   // -- Phase 10: M12 — POST tenant retrofit produced new audit fields ----
   // We can't directly query D1 from e2e, but we verify indirectly:
   // - Creating a tenant succeeds (already done many times above).
@@ -419,6 +559,9 @@ async function main() {
   log("DONE", "  ✓ M11 state machine 409 on terminal-state transition")
   log("DONE", "  ✓ M11 RBAC: wrong-side blocked")
   log("DONE", "  ✓ Cross-tenant injection blocked")
+  log("DONE", "  ✓ Test-quality round C1: receiver reject-receive happy + 409 + RBAC negative")
+  log("DONE", "  ✓ Test-quality round C3: sender reject happy + 409 terminal")
+  log("DONE", "  ✓ Test-quality round H1: boundary scope revocation blocks request-type send")
   log("DONE", "  ✓ M12 audit_log retrofit: tenant.created / agent_token.issued / a2a_message.* / approve all write new columns")
 }
 

@@ -492,6 +492,32 @@ async function main() {
   )
   log("13.0", "cross-tenant GET + PATCH + DELETE blocked ✓")
 
+  // -- Phase 13.1: H4 fix — cross-tenant chunks + search blocked ----------
+  // Test quality round: sec C2 fix added orgId filter on knowledge chunks
+  // query, but no e2e verified search/chunks paths from a different tenant.
+  // Search: query Acme content via OtherCo tenantId — should return 0 hits.
+  const crossSearch = await carol.json<
+    Env<{ results: Array<{ documentId: string }> }>
+  >(`/api/knowledge/search?q=strategy&tenantId=${otherCoId}`)
+  assert.equal(crossSearch.status, 200, "cross-tenant search 200 (empty)")
+  assert.equal(
+    unwrap(crossSearch.body, "cross search").results.length,
+    0,
+    "cross-tenant search must return 0 results",
+  )
+
+  // Chunks: GET /api/knowledge/:id/chunks for an Acme doc via OtherCo
+  // tenantId — should 404 at the parent-doc guard before reaching chunks.
+  const crossChunks = await carol.json<Env<unknown>>(
+    `/api/knowledge/${carolPersonalId}/chunks?tenantId=${otherCoId}`,
+  )
+  assert.equal(
+    crossChunks.status,
+    404,
+    `cross-tenant chunks → 404 (got ${crossChunks.status})`,
+  )
+  log("13.1", "H4 fix: cross-tenant search + chunks both blocked")
+
   // -- DONE -------------------------------------------------------------
   log("DONE", "")
   log("DONE", "M8 + M9 acceptance PASS — hub backend 12/12 modules done!")
@@ -506,6 +532,7 @@ async function main() {
   log("DONE", "  ✓ M9 list skills filtered by scope")
   log("DONE", "  ✓ M9 assign skill to agent + unassign")
   log("DONE", "  ✓ cross-tenant injection blocked (KB + skill)")
+  log("DONE", "  ✓ Test-quality round H4: cross-tenant search + chunks blocked")
 }
 
 main().catch((err) => {
