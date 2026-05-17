@@ -290,6 +290,58 @@ async function main() {
   assert.equal(s1.projectCount, 1, "1 project")
   log("7.0", "stats updated correctly")
 
+  // -- Phase 7.1: round-30 Critical fix — DELETE project requires archived
+  // Per lib/projects.ts state machine: "Terminal — only DELETE can remove
+  // an archived project". Project is currently `active`; DELETE must 409.
+  const activeDelete = await carol.json<Envelope<unknown>>(
+    `/api/projects/${projId}?tenantId=${acmeId}`,
+    { method: "DELETE" },
+  )
+  assert.equal(activeDelete.status, 409, "DELETE active project → 409")
+  assert.ok("error" in activeDelete.body, "delete-active expects error envelope")
+  assert.equal(
+    activeDelete.body.error.code,
+    "INVALID_STATUS",
+    `expected INVALID_STATUS (got ${activeDelete.body.error.code})`,
+  )
+
+  // Now transition to archived (active → archived is valid) and try again.
+  const archResp = await carol.json<Envelope<{ status: string }>>(
+    `/api/projects/${projId}/status?tenantId=${acmeId}`,
+    { method: "PATCH", body: JSON.stringify({ status: "archived" }) },
+  )
+  assert.equal(archResp.status, 200, "archive transition 200")
+  assert.equal(unwrap(archResp.body, "archive").status, "archived")
+
+  const archDelete = await carol.json<Envelope<{ deleted: boolean }>>(
+    `/api/projects/${projId}?tenantId=${acmeId}`,
+    { method: "DELETE" },
+  )
+  assert.equal(archDelete.status, 200, "DELETE archived project → 200")
+  assert.equal(unwrap(archDelete.body, "delete archived").deleted, true)
+  log("7.1", "round-30 Critical fix: project DELETE requires archived (active → 409, archived → 200)")
+
+  // Re-create the project so downstream phases still see expected counts.
+  // Phase 10 (list employees) only cares about employee count (3 from Bob+Carol+Alice).
+  // Phase 11 (alice projects) expects Alice's project list length === 1 — we need
+  // to re-add Alice to a new project to preserve that invariant.
+  const reCreateProj = await carol.json<Envelope<{ id: string }>>(
+    `/api/projects?tenantId=${acmeId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ name: "regression-suite-replacement", departmentId: toolsId }),
+    },
+  )
+  assert.equal(reCreateProj.status, 201, "recreate project 201")
+  const newProjId = unwrap(reCreateProj.body, "recreate").id
+  await carol.json(
+    `/api/projects/${newProjId}/members?tenantId=${acmeId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ employeeId: aliceId, role: "lead" }),
+    },
+  )
+
   // -- Phase 8: employee role change guards -----------------------------
   // Self-protect: Carol cannot change her own role
   const selfRole = await carol.json<Envelope<unknown>>(
@@ -485,6 +537,7 @@ async function main() {
   log("DONE", "  ✓ cross-tenant injection blocked")
   log("DONE", "  ✓ hierarchical reads (employee → depts, employee → projects)")
   log("DONE", "  ✓ Round-19 H1 fix: admin can't /role + /status + DELETE owner (3 symmetric guards)")
+  log("DONE", "  ✓ Round-30 Critical fix: project DELETE requires archived (state machine guard)")
 }
 
 main().catch((err) => {

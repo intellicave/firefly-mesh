@@ -306,15 +306,35 @@ projectsRouter.delete(
     const id = c.req.param("id")
 
     const projRows = await db
-      .select({ id: schema.projects.id })
+      .select({ id: schema.projects.id, status: schema.projects.status })
       .from(schema.projects)
       .where(
         and(eq(schema.projects.id, id), eq(schema.projects.orgId, tenantId)),
       )
-    if (projRows.length === 0) {
+    const proj = projRows[0]
+    if (!proj) {
       return c.json(
         { error: { code: "NOT_FOUND", message: "Project not found" } },
         404,
+      )
+    }
+
+    // Round-30 Critical fix: per lib/projects.ts state machine docstring
+    // ("Terminal — only DELETE can remove an archived project"), only
+    // `archived` projects may be hard-deleted. Without this guard, an
+    // admin could nuke an active project (and its members via cascade)
+    // without going through the state machine, bypassing the
+    // archive-before-delete safety convention and silently orphaning
+    // any FK-referencing tasks.
+    if (proj.status !== "archived") {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_STATUS",
+            message: `Only archived projects can be deleted (current: '${proj.status}'). Transition to 'archived' first via PATCH /:id/status.`,
+          },
+        },
+        409,
       )
     }
 
