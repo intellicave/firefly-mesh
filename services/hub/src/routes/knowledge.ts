@@ -527,6 +527,15 @@ knowledgeRouter.get("/:id", orgGuard, async (c) => {
 
 // ---------------------------------------------------------------------------
 // PATCH /api/knowledge/:id — title / description / tags / status
+//
+// ⚠️ Round-3 arch M2 invariant (documented): the zod schema below
+// INTENTIONALLY excludes `scope`, `departmentId`, and `ownerEmployeeId`.
+// Reason: knowledgeChunks (cascade-children rows) denormalise those three
+// columns for search filtering, and there is no resync path on PATCH. If a
+// future contributor adds scope/departmentId/ownerEmployeeId to this
+// schema, they MUST also issue an UPDATE against knowledgeChunks for the
+// same document to keep the denorm coherent — or chunks become invisible
+// to the visibility filter. Keep this in mind when expanding the body.
 // ---------------------------------------------------------------------------
 knowledgeRouter.patch(
   "/:id",
