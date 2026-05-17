@@ -60,8 +60,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   const me = meQuery.data;
-  const inboxTotal =
-    (me?.pendingCounts.inboxApprove ?? 0) + (me?.pendingCounts.inboxAction ?? 0);
+  // Sprint A: pendingCounts are booleans (limit=1 fetch); we surface a dot,
+  // not a number. Real counts wait on a hub aggregate endpoint (sprint B).
+  const hasInbox = Boolean(
+    me?.pendingCounts.hasInboxApprove || me?.pendingCounts.hasInboxAction,
+  );
 
   const initials = me?.employee.name
     .split(/\s+/)
@@ -114,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label="Notifications"
         >
           <Bell size={16} strokeWidth={1.75} />
-          {inboxTotal > 0 ? (
+          {hasInbox ? (
             <span className="pulse-orange absolute right-1 top-1 size-2 rounded-full bg-primary" />
           ) : null}
         </button>
@@ -142,7 +145,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {NAV_ITEMS.map((item) => {
             const active = pathname.startsWith(item.href);
             const showBadge =
-              "badge" in item && item.badge === "inbox" && inboxTotal > 0;
+              "badge" in item && item.badge === "inbox" && hasInbox;
             return (
               <Link
                 key={item.href}
@@ -160,9 +163,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <item.Icon size={14} strokeWidth={1.75} />
                 <span>{item.label}</span>
                 {showBadge ? (
-                  <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
-                    {inboxTotal}
-                  </span>
+                  <span
+                    className="ml-auto size-2 rounded-full bg-primary"
+                    aria-label="Pending items"
+                    title="You have pending inbox items"
+                  />
                 ) : null}
               </Link>
             );

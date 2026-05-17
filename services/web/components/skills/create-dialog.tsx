@@ -135,6 +135,13 @@ export function SkillCreateDialog({
             />
           </Field>
 
+          {scope === "department" ? (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+              Sprint A: department-scope skills require a department picker
+              that lands in sprint B. Use Company or Personal scope for now.
+            </p>
+          ) : null}
+
           {create.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {create.error instanceof ApiCallError
@@ -160,12 +167,7 @@ export function SkillCreateDialog({
                 !description ||
                 !version ||
                 create.isPending ||
-                (scope === "department")
-              }
-              title={
                 scope === "department"
-                  ? "Department-scope creation requires picking a department — TODO"
-                  : ""
               }
               className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >

@@ -7,7 +7,7 @@
 // Used by /onboarding wizard to redirect the user to the right step.
 
 import { NextRequest, NextResponse } from "next/server";
-import { count, eq, ne } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 
 import { db } from "@firefly-mesh/core/db";
 import { agentTokens, employees } from "@firefly-mesh/core/db/schema";
@@ -75,5 +75,3 @@ export async function GET(req: NextRequest): Promise<Response> {
     data: { step: "done", completed: true, orgId: emp.orgId },
   });
 }
-
-void ne;

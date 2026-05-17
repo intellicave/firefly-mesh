@@ -5,7 +5,7 @@
 // file <input type="file"> is replaced with a <textarea> + a fileType
 // chooser (md | txt). Cancel button + banner explain the change.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 
 import { api, ApiCallError } from "@/lib/api-client";
@@ -242,15 +242,23 @@ function DepartmentPicker({
   value: string;
   onChange: (v: string) => void;
 }) {
-  // Lazy fetch on mount via useState lazy initializer pattern.
-  // Path renamed v0 /api/department → hub /api/departments.
-  // api() helper handles the { data: [...] } envelope unwrap.
+  // Fetch in useEffect (not in render body — that pattern double-fires in
+  // React Strict Mode and has no cancellation). Path renamed v0
+  // /api/department → hub /api/departments; api() unwraps { data: [...] }.
   const [opts, setOpts] = useState<Department[] | null>(null);
-  if (opts === null) {
-    void api<Department[]>("/api/departments")
-      .then((data) => setOpts(Array.isArray(data) ? data : []))
-      .catch(() => setOpts([]));
-  }
+  useEffect(() => {
+    let active = true;
+    api<Department[]>("/api/departments")
+      .then((data) => {
+        if (active) setOpts(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (active) setOpts([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   return (
     <div>
       <label className="text-sm font-medium">Department</label>

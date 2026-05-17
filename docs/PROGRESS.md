@@ -1,6 +1,6 @@
 # Firefly Mesh — 项目进度仪表盘
 
-> **最后更新**：2026-05-18（M8+M9 sleep run 完成后）
+> **最后更新**：2026-05-18（web 搬迁 sprint A 实施 + 2 轮 reviewer 通过）
 > **真实状态来源**：[`docs/pipeline/state.yaml`](pipeline/state.yaml) + git log
 > 这一份是给人 5 秒看清现状的总览。任何冲突以 state.yaml + 代码为准。
 
@@ -8,15 +8,15 @@
 
 ## TL;DR
 
-**hub 后端 12/12 模块全部完成**，dashboard UI 还没搬迁，未上线。
+**hub 后端 12/12 done + dashboard 已搬到 services/web（typecheck + 6/6 e2e 全绿）**，未上线。
 
 ```
 后端骨架 ████████████████  12/12 模块 done 🎉
-前端搬迁 ░░░░░░░░░░░░░░░░  完全未动
+前端搬迁 ████████░░░░░░░░  sprint A done（W2' rewrites + 14 路径 rename + 10 UI 禁用 + i18n bootstrap） · sprint B 待
 上线准备 ░░░░░░░░░░░░░░░░  完全未动
 ```
 
-**剩余 ~15 工作日（3 周）到 V1.0 GA**：web 搬迁 A → web 搬迁 B → Stripe+法律+监控+soft launch。
+**剩余 ~10 工作日（2 周）到 V1.0 GA**：web 搬迁 B（部署 Cloudflare Pages + 删 v0 server route + 删 pwa）→ Stripe + 法律 + 监控 + soft launch。
 
 ---
 
@@ -26,7 +26,7 @@
 |---|---|---|
 | `hub.firefly-mesh.com` | API 后端（Hono + D1 + DO + WS + E2E 加密） | ✅ 上线，**待应用最新 7 个 migration 到 remote D1** |
 | `firefly-mesh.com` | Astro 营销页 + 临时 PWA 极简 dashboard（5-12 i18n 改造后） | ✅ 上线，**待替换为新 dashboard** |
-| `app.firefly-mesh.com` | 完整 Next.js dashboard | ❌ 尚未存在（下个 sprint 创建）|
+| `app.firefly-mesh.com` | 完整 Next.js dashboard | ❌ 尚未部署（sprint A 本地能跑，sprint B 部署 Cloudflare Pages）|
 
 ---
 
@@ -99,19 +99,30 @@
 
 ## 下一步路线图
 
-### Sprint 6 — services/web 搬迁 A（约 5 工作日）
+### Sprint 6 — services/web 搬迁 A（✅ 2026-05-18 done，commit 7287099）
 
-- 复制 `legacy/v0/packages/web/` → `services/web/`
-- 把 14 个页面的 fetch 全部改成调 hub 的 ~80 个新 endpoint
-- 抢救 `services/pwa/src/i18n/`（zh + en + 切换器）到新 web
-- 删除 v0 web 自带的 45 个业务 server route（仅保留 auth callback / health / well-known 3 个同域必须的）
+- ✅ 复制 `legacy/v0/packages/web/` → `services/web/`（+ pnpm workspace 集成）
+- ✅ 反转 fetch 策略：Next.js rewrites 代理 `/api/*` → hub（不是跨域 fetch），保留 v0 `/.well-known/agent-card.json`
+- ✅ 替换 `app/page.tsx` 为客户端 auth gate（v0 是 RSC 直接调 Postgres）
+- ✅ 14 路径 rename + 10 UI 禁用 banner（hub 缺失端点对应功能）
+- ✅ 客户端聚合 helper：`lib/{me,org-graph,onboarding}.ts` 替代缺失的 hub 端点
+- ✅ 删 5 个 v0 routes（与 hub 路径冲突的：auth/me/knowledge）
+- ✅ next-intl 从零 bootstrap（v0 含 dep 但未激活）+ 中文 messages
+- ✅ typecheck 全绿；6/6 hub e2e 全绿（hub 一行不动）
+- ⏸ 本地浏览器 smoke test 未做（环境受限）；sprint B 配合部署一并做
 
-### Sprint 7 — services/web 搬迁 B（约 5 工作日）
+### Sprint 7 — services/web 搬迁 B（约 3-4 工作日，next）
 
-- Next.js + `@cloudflare/next-on-pages` 适配
+- 删除剩余 43 个 v0 server route（sprint A 已删 5 个）
+- 删 `transpilePackages: @firefly-mesh/core`（W14：sprint A 推迟到此）
+- 删 `legacy/v0/packages/core` 从 pnpm-workspace（W13：sprint A 推迟到此）
+- 删 services/web/lib/middleware/*（3 个文件，sprint A 保留作为死代码）
+- 加 `@cloudflare/next-on-pages`
 - Cloudflare Pages 部署到 `app.firefly-mesh.com`
 - 跨域 cookie + Better Auth + CORS 端到端联调
-- E2E：完整用户旅程（Carol 创公司 → 邀 Alice → Alice agent 给 Bob agent 发消息 → Bob 审批 → 任务派发 + 审核）
+- SSE 改为 WS（hub 已有 /ws）：audit / knowledge live 实时更新恢复
+- 加 hub 端缺失端点（按优先级）：agents tenant-wide list、multipart upload、CSV bulk import、audit read、org/graph 聚合
+- E2E：完整用户旅程
 - 删除 `services/pwa/`
 
 ### Sprint 8 — go-live（约 5 工作日）

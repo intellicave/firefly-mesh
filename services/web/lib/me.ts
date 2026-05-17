@@ -34,7 +34,13 @@ export interface MeResponse {
   user: { id: string };
   employee: MeEmployee;
   org: MeOrg;
-  pendingCounts: { inboxApprove: number; inboxAction: number };
+  /**
+   * Boolean indicators (NOT real counts) — sprint A fetches the inbox with
+   * `limit=1` so we only learn "at least one pending" vs "none". Callers
+   * MUST treat these as booleans: render a dot/badge if `hasInboxApprove`
+   * is true, not a count. Real counts wait on a hub aggregate endpoint.
+   */
+  pendingCounts: { hasInboxApprove: boolean; hasInboxAction: boolean };
 }
 
 interface OrgMeResponse {
@@ -97,12 +103,10 @@ export async function fetchMe(): Promise<MeResponse> {
       name: orgMe.organization.displayName,
       slug: orgMe.organization.slug,
     },
-    // Sprint A uses the returned items.length as the count proxy. The hub inbox
-    // endpoint cap is 100 by default; we only need 0/non-zero indication for
-    // nav badges, so limit=1 keeps this cheap.
+    // limit=1 → boolean indicator only. See `pendingCounts` doc on MeResponse.
     pendingCounts: {
-      inboxApprove: approveInbox.items.length,
-      inboxAction: actionInbox.items.length,
+      hasInboxApprove: approveInbox.items.length > 0,
+      hasInboxAction: actionInbox.items.length > 0,
     },
   };
 }

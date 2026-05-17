@@ -1,4 +1,4 @@
-topic: "firefly-mesh-product-layer — 12/12 modules done (M1-M12). hub backend complete. Next: services/web migration sprint A"
+topic: "firefly-mesh-product-layer — 12/12 modules done + services/web sprint A done. Next: web sprint B (Cloudflare Pages deploy + delete v0 routes + delete pwa)"
 topic_slug: "firefly-mesh-product-layer"
 status: in_progress
 current_phase: 8
@@ -6,6 +6,97 @@ paused_at_gate: null
 started_at: "2026-05-16T00:00:00Z"
 completed_at: null
 sleep_mode: true
+
+# === web migration sprint A (2026-05-18) — DASHBOARD LOCAL UP AGAINST HUB ===
+sub_sprint_web_migration_a:
+  topic_slug: "firefly-mesh-web-migration-a"
+  status: completed
+  started_at: "2026-05-18T03:00:00Z"
+  completed_at: "2026-05-18T08:00:00Z"
+  strategy: |
+    W2': Next.js rewrites proxy /api/* → hub (avoids cross-origin cookie
+    nightmare). hub/.dev.vars + hub CORS stay untouched. v0 dashboard runs
+    against hub D1 via same-origin /api/*.
+  design_iterations: 2
+  reviewer_rounds:
+    - "round 1 (v1 design): verdict C, 4 Critical + 4 High + 3 Medium + 2 Low"
+    - "round 2 (v2 design): verdict B, 0 Critical + 2 High + 3 Medium — fixes integrated"
+  endpoints_added: []          # web sprint adds zero hub endpoints
+  hub_routes_deleted_via_W15: # 5 v0 routes conflicted with hub same-paths
+    - "services/web/app/api/auth/[...all]/route.ts"
+    - "services/web/app/api/me/route.ts"
+    - "services/web/app/api/knowledge/route.ts"
+    - "services/web/app/api/knowledge/[id]/route.ts"
+    - "services/web/app/api/knowledge/search/route.ts"
+  files_created:
+    - "services/web/ (cp from legacy/v0/packages/web/, sans v0 lock + workspace yaml)"
+    - "services/web/i18n/request.ts (next-intl getRequestConfig)"
+    - "services/web/lib/messages/zh.ts (translated to match en.ts keys)"
+    - "services/web/lib/me.ts (client aggregation for legacy /api/me shape)"
+    - "services/web/lib/org-graph.ts (client aggregation for legacy /api/org/graph)"
+    - "services/web/lib/onboarding.ts (client aggregation for legacy /api/onboarding/state, M3 fix)"
+    - "services/web/components/language-switcher.tsx"
+    - "services/web/components/ui/alert.tsx (shadcn-style minimal alert for AE1 banners)"
+    - "services/web/.env.example"
+    - "services/web/.env.local (gitignored)"
+  files_modified:
+    - "services/web/next.config.ts (withNextIntl + rewrites preserving well-known + hub proxy)"
+    - "services/web/app/layout.tsx (NextIntlClientProvider)"
+    - "services/web/app/page.tsx (RSC → client auth gate, W7)"
+    - "services/web/app/(dashboard)/audit/page.tsx (full disable banner, no SSE)"
+    - "services/web/app/(dashboard)/inbox/page.tsx (path renames)"
+    - "services/web/app/(dashboard)/knowledge/page.tsx (multipart banner + SSE silent + GET search)"
+    - "services/web/app/(dashboard)/organization/page.tsx (agents=[] banner + fetchMe/fetchOrgGraph)"
+    - "services/web/app/(dashboard)/settings/page.tsx (PUT /api/me → PATCH /api/employees/:id)"
+    - "services/web/app/(dashboard)/skills/page.tsx (loaded tab removed, /api/skill→/api/skills)"
+    - "services/web/app/onboarding/page.tsx (uses fetchOnboardingState)"
+    - "services/web/app/onboarding/create-org/page.tsx (POST /api/org → POST /api/tenants)"
+    - "services/web/app/onboarding/import/page.tsx (disable banner)"
+    - "services/web/app/onboarding/tokens/page.tsx (/api/token/batch → N x /api/agent-tokens)"
+    - "services/web/components/inbox/inbox-drawer.tsx (no GET, uses parent's InboxItem)"
+    - "services/web/components/knowledge/upload-dialog.tsx (multipart → inline md/txt)"
+    - "services/web/components/organization/agent-detail-drawer.tsx (boundary + token regen renames)"
+    - "services/web/components/skills/create-dialog.tsx (/api/skill → /api/skills)"
+    - "services/web/components/skills/skill-drawer.tsx (/api/skill → /api/skills + dry-run disabled)"
+    - "services/web/components/layout/app-shell.tsx (uses fetchMe + LanguageSwitcher)"
+    - "services/web/lib/messages/en.ts (added Messages interface, dropped as-const so zh.ts can vary values)"
+    - "pnpm-workspace.yaml (+services/web +legacy/v0/packages/core)"
+    - "services/hub/.dev.vars (+PWA_URL — gitignored)"
+  decisions:
+    W1: "不删 v0 server route（sprint B 删全部）"
+    W2': "Next.js rewrites 代理（替代 fetch 绝对 URL）"
+    W3: "services/web 独立 deps，不向上提升"
+    W4: "hub .dev.vars dev 配置（不动 hub 源码）"
+    W5': "next-intl + cp 中文 messages（不 cp pwa Zustand）"
+    W6: "cookieDomain 推 sprint B"
+    W7: "app/page.tsx 替换为客户端 auth gate"
+    W8 → W14: "transpilePackages: @firefly-mesh/core 暂保留，sprint B 删 v0 routes 后同步删"
+    W9: "缺失端点必须 banner 禁用，禁止 silent fail"
+    W10: "next.config rewrites 数组必须保留 well-known/agent-card.json"
+    W11: "next-intl 从零 bootstrap（v0 含 dep 但未激活），without-i18n-routing 模式"
+    W12: "/api/me 路径冲突 — 选删除 v0 route（W15）"
+    W13: "legacy/v0/packages/core 加入 pnpm-workspace 让 @firefly-mesh/core 可解析"
+    W15: "AC4 例外 — 删 5 个 v0 route（auth/me/knowledge x3）"
+  test_results:
+    web_typecheck: PASS
+    hub_typecheck: PASS
+    hub_e2e_agent_mesh: "PASS (6/6 phases)"
+    hub_e2e_product_layer: "PASS"
+    hub_e2e_m5_m7: "PASS"
+    hub_e2e_m11_m12: "PASS"
+    hub_e2e_m10: "PASS (after 15s wait — earlier run hit rate limit from sequential e2e batch)"
+    hub_e2e_m8_m9: "PASS"
+    browser_smoke_test: "NOT_RUN (environment limited; sprint B alongside deploy)"
+  commits:
+    - "c1e9ac0 — docs(plans): web migration A — 8 design documents (v1)"
+    - "78536ff — docs(plans): web-migration A v2 — integrate reviewer fixes into 8 docs"
+    - "5351aa8 — docs(plans): web-migration A v2 — round 2 reviewer fixes (B → expected A)"
+    - "7287099 — feat(web): sprint A — services/web up against hub (W2' rewrites + path renames + UI disables)"
+  notes: |
+    Sprint A reviewer ran twice on design docs (verdict C → B) and once
+    on implementation code (background; result will be added when complete).
+    typecheck + 6/6 hub e2e all green. Hub source untouched (git diff
+    services/hub is empty except .dev.vars which isn't in git).
 
 # === M8+M9 sub-sprint (2026-05-18) — HUB BACKEND COMPLETE ===
 sub_sprint_m8_m9:

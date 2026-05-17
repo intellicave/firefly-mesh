@@ -27,13 +27,19 @@ export async function GET() {
     displayName: "Firefly Mesh — Org Collaboration Hub",
     description: "Bring your own agent. We bring the org.",
     url: baseUrl,
+    // Sprint A: paths advertised here are the **external contract** read by
+    // other agents performing A2A discovery. They must match the actual paths
+    // served after rewrites. v0 singular paths (/api/task, /api/skill) are
+    // gone; hub uses plural + scoped paths. `skills` omitted entirely until
+    // hub serves a tenant-wide skill catalog endpoint (M9 P26 defers skill
+    // execution to V2). `a2a` retains the v0 send path because that v0 FS
+    // route is intentionally kept (AC4) and still works.
     endpoints: {
       a2a: "/api/a2a/send",
       auth: "/api/agent/activate",
       heartbeat: "/api/agent/heartbeat",
-      tasks: "/api/task/list",
+      tasks: "/api/tasks",
       knowledge: "/api/knowledge/search",
-      skills: "/api/skill/loaded",
     },
     capabilities: ["a2a-v1.2", "agentskills-v1", "mcp-bridge"],
     messageTypes: [
