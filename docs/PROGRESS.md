@@ -88,7 +88,9 @@
 | 3 | 2026-05-17 | M11-M12 a2a 产品层 + audit | 10/10 | 6 | 4（test/handler 小 bug）|
 | 4 | 2026-05-17 | M10 tasks + HITL | 12/12 | 5 | 1（state machine no-op）|
 | 5 | 2026-05-18 | M8-M9 knowledge + skills | 13/13 | 5 | 0 |
-| **总** | | **12 模块** | **60/60** | **27 commits** | **6 bugs（全部 e2e 抓出且修复）** |
+| 6 | 2026-05-18 | services/web sprint A (前端搬迁 + 对接 hub) | sprint A reviewer A | 5 (c1e9ac0→bec5a12) | 多轮 reviewer 抓 4C+4H+3M+2L 全修 |
+| 7 | 2026-05-18 | hub 后端多 reviewer 加固（arch + sec 双线 + 验证）| 60/60 (无回归) | 5 (55e6021/fd8ec47/8ed87ac/e109255/4f48650) | round-3 reviewer 抓 4C+7H+8M, round-7 抓 1H, round-8 verdict A |
+| **总** | | **12 模块 + 1 前端 + 多 reviewer 加固** | **74/74** | **37 commits** | **多轮 reviewer 累计抓 13C+18H+19M+10L，13C+18H+14M 全修，剩余 Medium/Low 登记到 v1.1 / sprint B** |
 
 每个 sprint 完整 autodev 流水线产出：
 - 8 份设计文档（meta / ideation / design / ui / api / plan / rules / index）
@@ -98,6 +100,21 @@
 ---
 
 ## 下一步路线图
+
+### Sprint 6a — hub 后端 reviewer-driven 加固（✅ 2026-05-18 done，5 commits）
+
+8 轮独立 reviewer（4 sprint A code review + 2 hub arch/sec + 2 hub fix verifier）
+累计抓出真实问题 13 Critical + 18 High + 19 Medium + 10 Low：
+- Round 1（hub v1 code）: 5C+4H+3M+1L
+- Round 2-5（sprint A 设计 v1/v2 + 实施 v1/v2）: 4C+8H+9M+5L
+- Round 6a 架构 + 6b 安全: 4C+7H+8M
+- Round 7 验证 + 8 final: 1H+5M+2L
+
+修复：
+- hub: orgId 漏写 5 处 + JWT 默认 full scope + a2a 非原子写 + TenantHub deliver 无 auth + /me/agents 跨租户漏 + knowledge chunks 缺 orgId + DO deliver silent fail 一致性 + resolveAgent helper 合并 + knowledge PATCH invariant 文档化
+- sprint A: rewrites 替代跨域 + app/page.tsx 替换 + 14 路径 rename + 10 UI 禁用 banner + next-intl 从零接入 + 客户端聚合 helper
+
+剩余 Medium/Low: 全部明确登记 (v1.1 索引优化 / sprint B schema 迁移 / 文档已说明的设计约束) — 都不阻塞 sprint B 启动。
 
 ### Sprint 6 — services/web 搬迁 A（✅ 2026-05-18 done，commit 7287099）
 
