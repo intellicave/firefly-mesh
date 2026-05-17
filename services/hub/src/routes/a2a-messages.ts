@@ -579,26 +579,54 @@ async function handleCta(c: CtaContext, cta: CtaAction): Promise<Response> {
         msg.senderApprovalStatus as Parameters<typeof nextSenderStatus>[0],
         cfg.transitionAction as "approve" | "reject",
       )
-      await db
-        .update(schema.a2aMessages)
-        .set({
-          senderApprovalStatus: nextStatus,
-          senderApprovalBy: employee.id,
-          senderApprovalAt: now,
-        })
-        .where(
-          and(
-            eq(schema.a2aMessages.id, id),
-            eq(schema.a2aMessages.orgId, tenantId),
+      // Round-36 H fix: batch UPDATE + audit with status-WHERE concurrency
+      // guard. Without this, two concurrent admins approving the same
+      // message would both pass the state-machine check, both UPDATE
+      // (last writer wins for different decisions), and both emit
+      // audit rows — duplicate/contradictory trail. The status WHERE
+      // turns the transition into a CAS: loser gets 409.
+      // §Q4 sanctioned site (a2a-messages.ts was already registered for
+      // the POST batch; this is the 5th sanctioned use within that file).
+      const senderResult = await db.batch([
+        db
+          .update(schema.a2aMessages)
+          .set({
+            senderApprovalStatus: nextStatus,
+            senderApprovalBy: employee.id,
+            senderApprovalAt: now,
+          })
+          .where(
+            and(
+              eq(schema.a2aMessages.id, id),
+              eq(schema.a2aMessages.orgId, tenantId),
+              eq(
+                schema.a2aMessages.senderApprovalStatus,
+                msg.senderApprovalStatus,
+              ),
+            ),
           ),
+        db.insert(schema.auditLog).values(
+          auditValues({
+            tenantId,
+            actor: { type: "human", id: employee.id },
+            action: cfg.auditAction,
+            resource: { type: "a2a_message", id },
+            payload: { side: "sender", newStatus: nextStatus },
+          }),
+        ),
+      ])
+      const senderMeta = (senderResult[0]?.meta as { changes?: number } | undefined)
+      if ((senderMeta?.changes ?? 0) === 0) {
+        return c.json(
+          {
+            error: {
+              code: "INVALID_STATUS",
+              message: "Sender approval status changed concurrently; refetch and retry",
+            },
+          },
+          409,
         )
-      await writeAudit(db, {
-        tenantId,
-        actor: { type: "human", id: employee.id },
-        action: cfg.auditAction,
-        resource: { type: "a2a_message", id },
-        payload: { side: "sender", newStatus: nextStatus },
-      })
+      }
       return c.json({ data: { id, side: "sender", status: nextStatus } })
     }
 
@@ -606,26 +634,47 @@ async function handleCta(c: CtaContext, cta: CtaAction): Promise<Response> {
       msg.receiverActionStatus as Parameters<typeof nextReceiverStatus>[0],
       cfg.transitionAction as "accept" | "reject",
     )
-    await db
-      .update(schema.a2aMessages)
-      .set({
-        receiverActionStatus: nextStatus,
-        receiverActionBy: employee.id,
-        receiverActionAt: now,
-      })
-      .where(
-        and(
-          eq(schema.a2aMessages.id, id),
-          eq(schema.a2aMessages.orgId, tenantId),
+    // Round-36 H fix (receiver branch): same batch + concurrency pattern.
+    const receiverResult = await db.batch([
+      db
+        .update(schema.a2aMessages)
+        .set({
+          receiverActionStatus: nextStatus,
+          receiverActionBy: employee.id,
+          receiverActionAt: now,
+        })
+        .where(
+          and(
+            eq(schema.a2aMessages.id, id),
+            eq(schema.a2aMessages.orgId, tenantId),
+            eq(
+              schema.a2aMessages.receiverActionStatus,
+              msg.receiverActionStatus,
+            ),
+          ),
         ),
+      db.insert(schema.auditLog).values(
+        auditValues({
+          tenantId,
+          actor: { type: "human", id: employee.id },
+          action: cfg.auditAction,
+          resource: { type: "a2a_message", id },
+          payload: { side: "receiver", newStatus: nextStatus },
+        }),
+      ),
+    ])
+    const receiverMeta = (receiverResult[0]?.meta as { changes?: number } | undefined)
+    if ((receiverMeta?.changes ?? 0) === 0) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_STATUS",
+            message: "Receiver action status changed concurrently; refetch and retry",
+          },
+        },
+        409,
       )
-    await writeAudit(db, {
-      tenantId,
-      actor: { type: "human", id: employee.id },
-      action: cfg.auditAction,
-      resource: { type: "a2a_message", id },
-      payload: { side: "receiver", newStatus: nextStatus },
-    })
+    }
     return c.json({ data: { id, side: "receiver", status: nextStatus } })
   } catch (err) {
     if (err instanceof InvalidA2aTransitionError) {

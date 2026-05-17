@@ -28,7 +28,9 @@
 
 **Q4（2026-05-18 修订）**：`db.batch([...])` 路径允许使用 `auditValues({...})` 构造 row 后直接 `db.insert(schema.auditLog).values(...)`，因为 `writeAudit` 是 async-only、不适用 batch。在该位置必须留显式注释引用本规则。任何新的 batch 调用必须先在本文档登记。当前被认可的例外（已登记）：
 - `services/hub/src/routes/invitations.ts` 的 invitation-accept batch（membership + audit 原子写）。
-- `services/hub/src/routes/a2a-messages.ts` 的 a2a POST 主路径 batch（a2a_threads + messages_meta + pending_messages + a2a_messages + audit 五表协调写，round-19 H1 fix 引入）。round-25 reviewer 登记。
+- `services/hub/src/routes/a2a-messages.ts` 有两处 batch 用例：
+  - a2a POST 主路径 batch（a2a_threads + messages_meta + pending_messages + a2a_messages + audit 五表协调写，round-19 H1 fix 引入；round-25 reviewer 登记）。
+  - `handleCta` (approve / reject / accept / reject-receive) 的 sender + receiver 分支两处 batch（a2a_messages UPDATE + audit + optimistic concurrency on status WHERE，round-36 H fix 引入；防止并发 admin 双写 audit 与冲突 decision）。round-37 reviewer 登记。
 - `services/hub/src/routes/tenants.ts` 的 tenant create batch（tenants + memberships + employees + audit 四表原子写，round-32 H1 fix 引入；防止 owner employee 漏建导致租户永久 NO_EMPLOYEE_PROFILE）。round-33 reviewer 登记。
 - `services/hub/src/routes/tasks.ts` 的 task 状态迁移 batch（start / submit / review 三处都是 task UPDATE + audit 原子写 + optimistic concurrency on status WHERE，round-35 H fix 引入；防止并发 reviewer 双写 audit）。round-35 reviewer 登记。
 
