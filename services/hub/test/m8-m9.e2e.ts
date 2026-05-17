@@ -518,6 +518,34 @@ async function main() {
   )
   log("13.1", "H4 fix: cross-tenant search + chunks both blocked")
 
+  // -- Phase 13.2: round-26 H — LIKE metacharacter escape -----------------
+  // Before the fix, q=`%%` collapsed into `LIKE '%%%%'` which matches every
+  // chunk under the caller's scope (effective full-dump bypass). After the
+  // fix the `%` is escaped with `\` and SQLite's ESCAPE clause treats it
+  // as a literal — no chunk in the corpus literally contains `%`, so
+  // results must be exactly 0. URL-encode `%` as `%25`; Zod min(2) means
+  // we send 2 chars worth.
+  const wildcardDump = await carol.json<
+    Env<{ results: Array<{ documentId: string }> }>
+  >(`/api/knowledge/search?q=%25%25&tenantId=${acmeId}`)
+  assert.equal(wildcardDump.status, 200, "wildcard search 200")
+  assert.equal(
+    unwrap(wildcardDump.body, "wildcard search").results.length,
+    0,
+    `wildcard q=%% must return 0 (got ${unwrap(wildcardDump.body, "x").results.length} — LIKE injection regression)`,
+  )
+
+  // Underscore too — `_` matches any single char in LIKE. After fix it's literal.
+  const underscoreDump = await carol.json<
+    Env<{ results: Array<{ documentId: string }> }>
+  >(`/api/knowledge/search?q=__&tenantId=${acmeId}`)
+  assert.equal(
+    unwrap(underscoreDump.body, "underscore search").results.length,
+    0,
+    `q=__ must return 0 (got ${unwrap(underscoreDump.body, "x").results.length} — LIKE injection regression)`,
+  )
+  log("13.2", "round-26 H fix: LIKE metacharacters % and _ escaped (no scope-dump bypass)")
+
   // -- DONE -------------------------------------------------------------
   log("DONE", "")
   log("DONE", "M8 + M9 acceptance PASS — hub backend 12/12 modules done!")
@@ -533,6 +561,7 @@ async function main() {
   log("DONE", "  ✓ M9 assign skill to agent + unassign")
   log("DONE", "  ✓ cross-tenant injection blocked (KB + skill)")
   log("DONE", "  ✓ Test-quality round H4: cross-tenant search + chunks blocked")
+  log("DONE", "  ✓ Round-26 H fix: knowledge search LIKE metacharacter escape (no scope-dump bypass)")
 }
 
 main().catch((err) => {

@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, desc, eq, gt, inArray, like, lt, or, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -392,10 +392,17 @@ knowledgeRouter.get(
     const privileged = isPrivilegedReader(employee.role)
     const tbl = schema.knowledgeChunks
 
+    // Round-26 H fix: escape LIKE metacharacters (% _ \) in user input so
+    // a query of "%" doesn't turn into LIKE '%%' (matches everything) and
+    // dump all chunks in scope. We escape with `\` and pin SQLite's
+    // ESCAPE clause to the same char so wildcards in the user's literal
+    // input get treated as literals.
+    const escapedQ = q.q.toLowerCase().replace(/[\\%_]/g, "\\$&")
+    const pattern = `%${escapedQ}%`
     const conditions: SQL[] = [
       eq(tbl.orgId, tenantId),
-      // case-insensitive LIKE
-      like(sql`LOWER(${tbl.content})`, `%${q.q.toLowerCase()}%`),
+      // case-insensitive LIKE with explicit ESCAPE so user-supplied % / _ are literal
+      sql`LOWER(${tbl.content}) LIKE ${pattern} ESCAPE '\\'`,
     ]
 
     // Build scope filter on chunks (denormalised columns).

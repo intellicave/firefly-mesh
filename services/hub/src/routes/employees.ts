@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, desc, eq, inArray, like, or } from "drizzle-orm"
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -61,10 +61,17 @@ employeesRouter.get(
     if (role) conditions.push(eq(schema.employees.role, role))
     if (status) conditions.push(eq(schema.employees.status, status))
     if (search) {
-      const term = `%${search.toLowerCase()}%`
+      // Round-26 H sister-fix: escape LIKE metacharacters (% _ \) so a
+      // search=`%` doesn't degenerate into "match anything". The list
+      // endpoint already returns all tenant members so the bypass here
+      // isn't an access-control breach (unlike knowledge.search), but
+      // an unescaped LIKE is wrong on its own and would mask future
+      // filtering intent (e.g. an "only your department" restriction).
+      const escaped = search.toLowerCase().replace(/[\\%_]/g, "\\$&")
+      const term = `%${escaped}%`
       const orClause = or(
-        like(schema.employees.name, term),
-        like(schema.employees.email, term),
+        sql`LOWER(${schema.employees.name}) LIKE ${term} ESCAPE '\\'`,
+        sql`LOWER(${schema.employees.email}) LIKE ${term} ESCAPE '\\'`,
       )
       if (orClause) conditions.push(orClause)
     }
