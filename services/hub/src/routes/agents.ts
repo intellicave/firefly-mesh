@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { eq, and, gt, isNull, count, asc } from "drizzle-orm"
+import { eq, and, gt, lt, desc, isNull, count, asc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -8,12 +8,15 @@ import type { Bindings } from "../auth.ts"
 import { drizzleD1 } from "../db/connect.ts"
 import type { AuthVariables } from "../middleware/auth.ts"
 import { requireSession, requireAgentJwt, sessionMiddleware } from "../middleware/auth.ts"
+import { orgGuard, type OrgGuardVariables } from "../middleware/orgGuard.ts"
 import { rateLimitByIp } from "../middleware/rateLimit.ts"
 import { signAgentJwt } from "../lib/jwt.ts"
 import { defaultScopes } from "../lib/scopes.ts"
 import { writeAudit } from "../lib/audit.ts"
 
-const agents = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
+type Vars = AuthVariables & OrgGuardVariables
+
+const agents = new Hono<{ Bindings: Bindings; Variables: Vars }>()
 
 // POST /api/agents/pair-init — skill creates a pairing code (public).
 // Rate-limited by IP (RL_PAIR = 10 req / 60s) to defeat pairing-code
@@ -420,6 +423,76 @@ agents.get("/:agentId/prekey-bundle", requireAgentJwt, async (c) => {
     },
   })
 })
+
+// GET /api/agents — tenant-wide agent list (Sprint B B.0).
+// Solves: sprint A organization page was hard-coding `agents: []` with an
+// Alert banner because there was no tenant-wide list endpoint (only
+// /me/agents which is per-user). The org page needs to show every agent
+// in the tenant + which employee owns each one.
+//
+// Auth: orgGuard only. Any tenant member can read the agent roster (this
+// is product-expected — like seeing your coworkers' tools). Mutation
+// (delete) still requires owner-of-agent via /:agentId DELETE below.
+//
+// Response shape: omits ownerUserId (R42 privacy — Better Auth ID is
+// never returned), identityKey / signedPrekey (those are at
+// /a2a/agent-card/:agentId for the A2A federation discovery path).
+// Includes ownerEmployeeId so the frontend can join with /api/employees
+// to render "Bob's OpenClaw" without a second round-trip per agent.
+agents.get(
+  "/",
+  orgGuard,
+  zValidator(
+    "query",
+    z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(200).default(50),
+      tenantId: z.string().optional(), // consumed by orgGuard
+      ownerEmployeeId: z.string().optional(), // optional filter
+      runtimeKind: z.string().optional(), // optional filter
+    }),
+  ),
+  async (c) => {
+    const db = drizzleD1(c.env)
+    const tenantId = c.get("tenantId")
+    const { cursor, limit, ownerEmployeeId, runtimeKind } = c.req.valid("query")
+
+    const conditions = [eq(schema.agents.tenantId, tenantId)]
+    if (cursor) conditions.push(lt(schema.agents.createdAt, cursor))
+    if (ownerEmployeeId)
+      conditions.push(eq(schema.agents.ownerEmployeeId, ownerEmployeeId))
+    if (runtimeKind)
+      conditions.push(
+        eq(
+          schema.agents.runtimeKind,
+          runtimeKind as typeof schema.agents.runtimeKind.enumValues[number],
+        ),
+      )
+
+    const rows = await db
+      .select({
+        id: schema.agents.id,
+        displayName: schema.agents.displayName,
+        type: schema.agents.type,
+        ownerEmployeeId: schema.agents.ownerEmployeeId,
+        runtimeKind: schema.agents.runtimeKind,
+        runtimeMeta: schema.agents.runtimeMeta,
+        activatedAt: schema.agents.activatedAt,
+        createdAt: schema.agents.createdAt,
+        lastSeenAt: schema.agents.lastSeenAt,
+      })
+      .from(schema.agents)
+      .where(and(...conditions))
+      .orderBy(desc(schema.agents.createdAt))
+      .limit(limit + 1)
+
+    const hasMore = rows.length > limit
+    const data = hasMore ? rows.slice(0, limit) : rows
+    const nextCursor = hasMore ? data[data.length - 1]?.createdAt ?? null : null
+
+    return c.json({ data, nextCursor })
+  },
+)
 
 // DELETE /api/agents/:agentId — revoke an agent (session-auth, owner only)
 agents.delete("/:agentId", requireSession, async (c) => {

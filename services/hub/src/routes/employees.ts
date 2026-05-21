@@ -19,6 +19,7 @@ import {
   mapEmployeeRoleToMembership,
   syncEmployeeRole,
 } from "../lib/employees.ts"
+import { writeAudit } from "../lib/audit.ts"
 
 type Vars = AuthVariables & OrgGuardVariables
 
@@ -303,6 +304,400 @@ employeesRouter.post(
 
     // Round-42 H1: strip userId.
     return c.json({ data: rows[0] ? publicEmployeeShape(rows[0]) : null }, 201)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// POST /api/employees/bulk-import — Sprint B B.0
+// multipart/form-data with field `file` (CSV) and optional ?mode=dryRun|commit
+//
+// CSV columns: name,email,title,role
+//   - name, email: required
+//   - title: optional (empty string treated as null)
+//   - role: optional, defaults to "employee" (must be in employeeRoleEnum)
+//
+// Modes:
+//   - dryRun (default): parse + validate, no DB writes; useful for "preview"
+//   - commit: actually inserts valid rows
+//
+// Response shape:
+//   { data: { mode, total, valid, invalid, created, errors: Row[] } }
+//   - `errors` lists per-row failures with { rowNumber, email?, field?, message }
+//   - In commit mode, partial success is possible — valid rows insert, invalid
+//     rows return in errors. Use dryRun first if all-or-nothing matters.
+//
+// Limits:
+//   - Max 5000 rows per upload (CF Workers memory + per-row D1 round-trip)
+//   - Max 5MB file size (Zod-level)
+//
+// Auth: orgGuard + owner/admin. Creating an owner role via bulk-import
+// requires requester to be owner (mirrors POST /).
+// ---------------------------------------------------------------------------
+
+const BULK_IMPORT_MAX_ROWS = 5000
+const BULK_IMPORT_MAX_BYTES = 5 * 1024 * 1024 // 5MB
+
+/**
+ * RFC-4180 lite CSV parser — handles double-quoted fields with commas,
+ * escaped quotes (""), and CRLF/LF line endings. Returns array of string[].
+ * Throws on unterminated quoted field.
+ */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let field = ""
+  let inQuotes = false
+  let i = 0
+  while (i < text.length) {
+    const ch = text[i]!
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          field += '"'
+          i += 2
+          continue
+        }
+        inQuotes = false
+        i++
+        continue
+      }
+      field += ch
+      i++
+      continue
+    }
+    // not in quotes
+    if (ch === '"') {
+      inQuotes = true
+      i++
+      continue
+    }
+    if (ch === ",") {
+      row.push(field)
+      field = ""
+      i++
+      continue
+    }
+    if (ch === "\r") {
+      // swallow \r before \n; lone \r terminates row too
+      if (text[i + 1] === "\n") {
+        i++
+      }
+      row.push(field)
+      rows.push(row)
+      row = []
+      field = ""
+      i++
+      continue
+    }
+    if (ch === "\n") {
+      row.push(field)
+      rows.push(row)
+      row = []
+      field = ""
+      i++
+      continue
+    }
+    field += ch
+    i++
+  }
+  if (inQuotes) {
+    throw new Error("Unterminated quoted field in CSV")
+  }
+  // last row (if file doesn't end with newline)
+  if (field.length > 0 || row.length > 0) {
+    row.push(field)
+    rows.push(row)
+  }
+  // strip trailing empty rows (common when file has trailing newline)
+  while (rows.length > 0 && rows[rows.length - 1]!.every((c) => c === "")) {
+    rows.pop()
+  }
+  return rows
+}
+
+type BulkImportError = {
+  rowNumber: number
+  email?: string
+  field?: string
+  message: string
+}
+
+employeesRouter.post(
+  "/bulk-import",
+  orgGuard,
+  requireRole(["owner", "admin"]),
+  async (c) => {
+    const db = drizzleD1(c.env)
+    const tenantId = c.get("tenantId")
+    const requester = c.get("employee")!
+    const mode = c.req.query("mode") === "commit" ? "commit" : "dryRun"
+    const now = new Date().toISOString()
+
+    let formData: FormData
+    try {
+      formData = await c.req.formData()
+    } catch {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_REQUEST",
+            message: "Expected multipart/form-data",
+          },
+        },
+        400,
+      )
+    }
+
+    const rawFile = formData.get("file")
+    if (!rawFile || typeof rawFile === "string") {
+      return c.json(
+        {
+          error: { code: "INVALID_REQUEST", message: "Field `file` is required" },
+        },
+        400,
+      )
+    }
+    // formData.get() returns FormDataEntryValue (Blob | string | null in
+    // Workers types). After the string-check above, narrow to Blob/File.
+    const file = rawFile as Blob
+
+    if (file.size > BULK_IMPORT_MAX_BYTES) {
+      return c.json(
+        {
+          error: {
+            code: "FILE_TOO_LARGE",
+            message: `CSV exceeds ${BULK_IMPORT_MAX_BYTES} byte limit`,
+          },
+        },
+        413,
+      )
+    }
+
+    const text = await file.text()
+    let rows: string[][]
+    try {
+      rows = parseCsv(text)
+    } catch (err) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_CSV",
+            message: err instanceof Error ? err.message : "CSV parse error",
+          },
+        },
+        400,
+      )
+    }
+
+    if (rows.length === 0) {
+      return c.json(
+        { error: { code: "INVALID_CSV", message: "CSV is empty" } },
+        400,
+      )
+    }
+
+    // Header row must contain at minimum `name,email` (case-insensitive,
+    // order-agnostic). title/role optional. Other columns ignored.
+    const header = rows[0]!.map((h) => h.trim().toLowerCase())
+    const nameCol = header.indexOf("name")
+    const emailCol = header.indexOf("email")
+    const titleCol = header.indexOf("title")
+    const roleCol = header.indexOf("role")
+    if (nameCol === -1 || emailCol === -1) {
+      return c.json(
+        {
+          error: {
+            code: "INVALID_CSV",
+            message: "Header must include at least `name` and `email` columns",
+          },
+        },
+        400,
+      )
+    }
+
+    const dataRows = rows.slice(1)
+    if (dataRows.length === 0) {
+      return c.json(
+        { error: { code: "INVALID_CSV", message: "No data rows in CSV" } },
+        400,
+      )
+    }
+
+    if (dataRows.length > BULK_IMPORT_MAX_ROWS) {
+      return c.json(
+        {
+          error: {
+            code: "TOO_MANY_ROWS",
+            message: `Exceeded max ${BULK_IMPORT_MAX_ROWS} rows per import`,
+          },
+        },
+        413,
+      )
+    }
+
+    // Per-row validation. Build set of existing emails in tenant for dup check.
+    const existing = await db
+      .select({ email: schema.employees.email })
+      .from(schema.employees)
+      .where(eq(schema.employees.orgId, tenantId))
+    const existingEmails = new Set(existing.map((r) => r.email.toLowerCase()))
+
+    const rowSchema = z.object({
+      name: z.string().min(1).max(100),
+      email: z.string().email().max(254),
+      title: z.string().max(100).optional(),
+      role: employeeRoleEnum.optional(),
+    })
+
+    const errors: BulkImportError[] = []
+    const validRows: { name: string; email: string; title: string | null; role: z.infer<typeof employeeRoleEnum> }[] = []
+    const seenEmailsInBatch = new Set<string>()
+
+    for (let i = 0; i < dataRows.length; i++) {
+      const r = dataRows[i]!
+      const rowNumber = i + 2 // human row number, +1 for header, +1 for 1-indexed
+
+      const rawName = (r[nameCol] ?? "").trim()
+      const rawEmail = (r[emailCol] ?? "").trim().toLowerCase()
+      const rawTitle = titleCol >= 0 ? (r[titleCol] ?? "").trim() : ""
+      const rawRole = roleCol >= 0 ? (r[roleCol] ?? "").trim().toLowerCase() : ""
+
+      const candidate = {
+        name: rawName,
+        email: rawEmail,
+        title: rawTitle || undefined,
+        role: rawRole || undefined,
+      }
+
+      const parsed = rowSchema.safeParse(candidate)
+      if (!parsed.success) {
+        const first = parsed.error.issues[0]!
+        errors.push({
+          rowNumber,
+          email: rawEmail || undefined,
+          field: first.path.join(".") || undefined,
+          message: first.message,
+        })
+        continue
+      }
+
+      const row = parsed.data
+      const finalRole = row.role ?? "employee"
+
+      // Owner creation gate (same rule as POST /)
+      if (finalRole === "owner" && requester.role !== "owner") {
+        errors.push({
+          rowNumber,
+          email: row.email,
+          field: "role",
+          message: "Only an owner can create another owner",
+        })
+        continue
+      }
+
+      // Dup against existing employees
+      if (existingEmails.has(row.email)) {
+        errors.push({
+          rowNumber,
+          email: row.email,
+          field: "email",
+          message: "Email already exists in this tenant",
+        })
+        continue
+      }
+      // Dup within this CSV batch
+      if (seenEmailsInBatch.has(row.email)) {
+        errors.push({
+          rowNumber,
+          email: row.email,
+          field: "email",
+          message: "Duplicate email earlier in the same CSV",
+        })
+        continue
+      }
+      seenEmailsInBatch.add(row.email)
+
+      validRows.push({
+        name: row.name,
+        email: row.email,
+        title: row.title ?? null,
+        role: finalRole,
+      })
+    }
+
+    const total = dataRows.length
+    const valid = validRows.length
+    const invalid = errors.length
+
+    if (mode === "dryRun") {
+      return c.json({
+        data: {
+          mode: "dryRun",
+          total,
+          valid,
+          invalid,
+          created: 0,
+          errors,
+        },
+      })
+    }
+
+    // commit mode: insert valid rows. We don't batch insert because we want
+    // per-row resilience if one INSERT trips a race-condition email collision
+    // that the pre-check missed (two bulk imports in flight). Per-row insert
+    // with try/catch keeps partial-success semantics.
+    let created = 0
+    for (const row of validRows) {
+      const employeeId = `emp_${nanoid(16)}`
+      try {
+        await db.insert(schema.employees).values({
+          id: employeeId,
+          orgId: tenantId,
+          userId: null,
+          name: row.name,
+          email: row.email,
+          title: row.title,
+          avatarUrl: null,
+          role: row.role,
+          status: "active",
+          createdAt: now,
+        })
+        created++
+      } catch (err) {
+        // Likely race-condition email unique-index violation; report as error.
+        errors.push({
+          rowNumber: -1, // unknown post-validation
+          email: row.email,
+          field: "email",
+          message:
+            err instanceof Error
+              ? err.message
+              : "DB error inserting row",
+        })
+      }
+    }
+
+    await writeAudit(db, {
+      tenantId,
+      actor: { type: "human", id: requester.id },
+      action: "employees.bulk_imported",
+      resource: { type: "tenant", id: tenantId },
+      payload: { total, valid, invalid, created },
+    })
+
+    return c.json(
+      {
+        data: {
+          mode: "commit",
+          total,
+          valid,
+          invalid: errors.length,
+          created,
+          errors,
+        },
+      },
+      201,
+    )
   },
 )
 
