@@ -316,6 +316,11 @@ agents.post(
       c.env.JWT_SECRET,
     )
 
+    // Round-40 M fix: register response includes a 90-day agent JWT —
+    // strictly MORE sensitive than the agent-token plaintext that R39 M4
+    // capped. Same Cache-Control: no-store policy applies. Without it a
+    // downstream proxy / browser disk cache could persist the credential.
+    c.header("Cache-Control", "no-store")
     return c.json({ data: { agentId, token, tenantId: pairing.tenantId } }, 201)
   },
 )
