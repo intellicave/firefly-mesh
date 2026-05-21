@@ -204,9 +204,17 @@ tenants.get("/:id/members", async (c) => {
     return c.json({ error: { code: "NOT_FOUND", message: "Tenant not found" } }, 404)
   }
 
+  // Round-43 H fix (R42 sister miss): never emit raw Better Auth
+  // `userId` on a tenant member list. Same cross-tenant identity
+  // correlation vector as the employees H1 / tenants H2 / invitations
+  // H3 fixes — user.id is stable across every tenant a user belongs
+  // to, so listing it lets any tenant member match it against
+  // another tenant's list. Name/email/image are still surfaced
+  // because a member directory is a normal product expectation;
+  // userId has zero legit frontend use case (the caller knows their
+  // own userId from /api/auth/get-session and doesn't need others').
   const members = await db
     .select({
-      userId: schema.memberships.userId,
       role: schema.memberships.role,
       joinedAt: schema.memberships.joinedAt,
       name: schema.user.name,
