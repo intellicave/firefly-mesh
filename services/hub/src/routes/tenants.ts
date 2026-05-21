@@ -129,8 +129,19 @@ tenants.post(
       ),
     ])
 
+    // Round-42 H2 fix: project away `ownerId` (Better Auth user.id).
+    // Returning it on the tenant response leaks the owner's cross-tenant
+    // identity to every member who calls GET /api/tenants/:id — same
+    // class of leak as the employees.userId case. organizations.ts
+    // already follows this convention; aligning here.
     const [tenant] = await db
-      .select()
+      .select({
+        id: schema.tenants.id,
+        slug: schema.tenants.slug,
+        displayName: schema.tenants.displayName,
+        plan: schema.tenants.plan,
+        createdAt: schema.tenants.createdAt,
+      })
       .from(schema.tenants)
       .where(eq(schema.tenants.id, tenantId))
 
@@ -158,8 +169,15 @@ tenants.get("/:id", async (c) => {
     return c.json({ error: { code: "NOT_FOUND", message: "Tenant not found" } }, 404)
   }
 
+  // Round-42 H2 fix: same projection — no ownerId.
   const [tenant] = await db
-    .select()
+    .select({
+      id: schema.tenants.id,
+      slug: schema.tenants.slug,
+      displayName: schema.tenants.displayName,
+      plan: schema.tenants.plan,
+      createdAt: schema.tenants.createdAt,
+    })
     .from(schema.tenants)
     .where(eq(schema.tenants.id, tenantId))
 
@@ -411,8 +429,22 @@ tenants.get("/:id/invitations", async (c) => {
     return c.json({ error: { code: "FORBIDDEN", message: "Insufficient permissions" } }, 403)
   }
 
+  // Round-42 H3 fix: NEVER re-emit the invitation `token` after it was
+  // returned once at POST /invite. The token is a bearer credential —
+  // any admin (legit or compromised) listing pending invitations could
+  // otherwise extract and exfiltrate tokens to bypass the invite flow.
+  // Also project away `invitedBy` (Better Auth user.id) for the same
+  // cross-tenant identity-leak reason as the employees and tenants
+  // routes (H1 + H2 sister).
   const invs = await db
-    .select()
+    .select({
+      id: schema.invitations.id,
+      email: schema.invitations.email,
+      role: schema.invitations.role,
+      expiresAt: schema.invitations.expiresAt,
+      usedAt: schema.invitations.usedAt,
+      createdAt: schema.invitations.createdAt,
+    })
     .from(schema.invitations)
     .where(eq(schema.invitations.tenantId, tenantId))
 

@@ -35,6 +35,31 @@ const employeeRoleEnum = z.enum([
 ])
 const employeeStatusEnum = z.enum(["active", "archived"])
 
+/**
+ * Round-42 H1 fix: project away `userId` from every employee response.
+ *
+ * `userId` is the Better Auth user identifier — the same value across
+ * every tenant a user belongs to. Returning it on the employees response
+ * lets ANY tenant member (including the lowest `employee` role) collect
+ * cross-tenant identity correlations: if I'm in T1 and T2, and I see
+ * `userId=U` on a T1 employee, the same `U` on a T2 employee tells me
+ * those two are the same human — a privacy leak that bypasses the
+ * tenant boundary entirely. The frontend doesn't need raw userId
+ * exposed (current-user identification happens via `/api/employees/me`
+ * which trusts the session, not the response field).
+ *
+ * IMPORTANT: also strip the field on the bootstrap-employee creation
+ * response, the role/status PATCH responses, and the DELETE
+ * confirmation. Anywhere `schema.employees.$inferSelect` reaches the
+ * wire must go through this helper.
+ */
+function publicEmployeeShape(
+  row: typeof schema.employees.$inferSelect,
+): Omit<typeof schema.employees.$inferSelect, "userId"> {
+  const { userId: _omit, ...rest } = row
+  return rest
+}
+
 // GET /api/employees — list employees in current tenant
 //   query: ?role=&status=&dept=&search=&cursor=&limit=
 employeesRouter.get(
@@ -121,14 +146,18 @@ employeesRouter.get(
     // a createdAt-ordered column).
     const nextCursor = hasMore ? data[data.length - 1]?.createdAt ?? null : null
 
-    return c.json({ data, nextCursor })
+    // Round-42 H1 fix: strip userId from each row.
+    return c.json({ data: data.map(publicEmployeeShape), nextCursor })
   },
 )
 
 // GET /api/employees/me — current user's employee record in this tenant
 employeesRouter.get("/me", orgGuard, async (c) => {
   const employee = c.get("employee")
-  return c.json({ data: employee })
+  // Round-42 H1 fix: even on /me, strip userId. The caller already knows
+  // their own session userId from /api/auth/get-session; re-emitting it
+  // on employee responses creates inconsistency between list and detail.
+  return c.json({ data: employee ? publicEmployeeShape(employee) : null })
 })
 
 // GET /api/employees/:id — single employee
@@ -151,7 +180,7 @@ employeesRouter.get("/:id", orgGuard, async (c) => {
       404,
     )
   }
-  return c.json({ data: employee })
+  return c.json({ data: publicEmployeeShape(employee) })
 })
 
 // POST /api/employees — create employee (owner/admin only)
@@ -272,7 +301,8 @@ employeesRouter.post(
         ),
       )
 
-    return c.json({ data: rows[0] }, 201)
+    // Round-42 H1: strip userId.
+    return c.json({ data: rows[0] ? publicEmployeeShape(rows[0]) : null }, 201)
   },
 )
 
@@ -368,7 +398,7 @@ employeesRouter.patch(
     if (body.userId !== undefined) patch.userId = body.userId
 
     if (Object.keys(patch).length === 0) {
-      return c.json({ data: target })
+      return c.json({ data: publicEmployeeShape(target) })
     }
 
     await db
@@ -401,7 +431,7 @@ employeesRouter.patch(
           eq(schema.employees.orgId, tenantId),
         ),
       )
-    return c.json({ data: rows[0] })
+    return c.json({ data: rows[0] ? publicEmployeeShape(rows[0]) : null })
   },
 )
 
@@ -505,7 +535,7 @@ employeesRouter.patch(
           eq(schema.employees.orgId, tenantId),
         ),
       )
-    return c.json({ data: rows[0] })
+    return c.json({ data: rows[0] ? publicEmployeeShape(rows[0]) : null })
   },
 )
 
@@ -599,7 +629,7 @@ employeesRouter.patch(
           eq(schema.employees.orgId, tenantId),
         ),
       )
-    return c.json({ data: rows[0] })
+    return c.json({ data: rows[0] ? publicEmployeeShape(rows[0]) : null })
   },
 )
 

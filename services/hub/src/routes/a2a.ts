@@ -30,7 +30,15 @@ const A2A_TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
 const a2a = new Hono<{ Bindings: Bindings }>()
 
 // GET /api/a2a/agent-card/:agentId — public Agent Card (A2A v1.0 spec)
-a2a.get("/agent-card/:agentId", async (c) => {
+// Round-42 M2 fix: rate-limit the public agent-card endpoint. The A2A
+// spec requires this to be publicly discoverable for partner servers,
+// but without a rate limit it's an enumeration oracle — an attacker can
+// iterate nanoid IDs and the 200-vs-404 distinction reveals existence
+// of every agent across all tenants in this hub. RL_A2A keys per IP
+// (same binding used by POST /a2a/message). Legit partner servers
+// fetch the card once per agent they want to talk to, so 120 req/60s
+// is plenty.
+a2a.get("/agent-card/:agentId", rateLimitByIp("RL_A2A"), async (c) => {
   const agentId = c.req.param("agentId")
   const db = drizzleD1(c.env)
 
