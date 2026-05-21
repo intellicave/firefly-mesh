@@ -200,7 +200,18 @@ agents.post(
           "unknown",
         ])
         .optional(),
-      runtimeMeta: z.record(z.string(), z.unknown()).optional(),
+      // Round-45 M (A1) fix: cap runtimeMeta to prevent unbounded blobs
+      // landing in agents.runtime_meta. Without caps, an attacker with a
+      // compromised pairing code could spam a deeply-nested or
+      // multi-megabyte object that persists per agent row and is
+      // re-emitted on every list/get. Bounds are conservative for the
+      // M5 "runtime descriptor" use case (≤ 32 keys, ≤ 2KB-ish values).
+      runtimeMeta: z
+        .record(z.string().max(64), z.string().max(2048))
+        .refine((obj) => Object.keys(obj).length <= 32, {
+          message: "runtimeMeta must have ≤ 32 keys",
+        })
+        .optional(),
     }),
   ),
   async (c) => {

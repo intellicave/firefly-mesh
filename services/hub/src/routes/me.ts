@@ -44,14 +44,55 @@ me.get("/agents", async (c) => {
   return c.json({ data: rows })
 })
 
+/**
+ * Round-45 M (latent SSRF) fix: only accept HTTPS push endpoints to
+ * public hosts. Web Push spec requires https; rejecting localhost /
+ * loopback / RFC-1918 / link-local / private hostnames prevents a
+ * future push-delivery worker from being weaponised into an SSRF
+ * tool that fetches internal infra by reading a malicious row out
+ * of pushSubscriptions.
+ *
+ * Currently no push-delivery worker exists in this codebase, but the
+ * stored value WILL be fetched the moment one ships; sanitizing at
+ * write-time is the right preventive place.
+ */
+function isSafePushEndpoint(u: string): boolean {
+  let parsed: URL
+  try {
+    parsed = new URL(u)
+  } catch {
+    return false
+  }
+  if (parsed.protocol !== "https:") return false
+  const host = parsed.hostname.toLowerCase()
+  if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") return false
+  if (host === "::1" || host === "[::1]") return false
+  // RFC-1918 + link-local
+  if (host.startsWith("10.")) return false
+  if (host.startsWith("192.168.")) return false
+  if (host.startsWith("169.254.")) return false
+  // 172.16.0.0 - 172.31.255.255
+  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)) return false
+  return true
+}
+
 // POST /api/me/push-subscription — register Web Push subscription
 me.post(
   "/push-subscription",
   zValidator(
     "json",
     z.object({
-      endpoint: z.string().url(),
-      keys: z.object({ p256dh: z.string(), auth: z.string() }),
+      endpoint: z
+        .string()
+        .url()
+        .max(2048)
+        .refine(isSafePushEndpoint, {
+          message: "endpoint must be an https URL to a public host",
+        }),
+      keys: z.object({
+        p256dh: z.string().max(256),
+        auth: z.string().max(64),
+      }),
     }),
   ),
   async (c) => {

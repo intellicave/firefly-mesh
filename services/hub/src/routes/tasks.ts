@@ -398,7 +398,33 @@ tasksRouter.post(
   zValidator(
     "json",
     z.object({
-      output: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+      // Round-45 M (A1) fix: cap output size. String branch capped to
+      // 64KB (matches the ciphertext envelope cap from R38). Object
+      // branch: bounded record (32 keys, 4KB values) — beyond that the
+      // submitter should store a reference (URL/blob id) instead of an
+      // inline payload. Without caps, a compromised agent JWT could
+      // spam multi-MB outputs that persist per task row and are
+      // re-emitted on every list/get.
+      output: z
+        .union([
+          z.string().max(64 * 1024),
+          z
+            .record(z.string().max(64), z.unknown())
+            .refine((obj) => Object.keys(obj).length <= 32, {
+              message: "output object must have ≤ 32 keys",
+            })
+            .refine(
+              (obj) => {
+                try {
+                  return JSON.stringify(obj).length <= 64 * 1024
+                } catch {
+                  return false
+                }
+              },
+              { message: "output object must serialise to ≤ 64KB" },
+            ),
+        ])
+        .optional(),
     }),
   ),
   async (c) => {
