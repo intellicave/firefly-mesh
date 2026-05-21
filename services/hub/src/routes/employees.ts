@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -55,12 +55,16 @@ employeesRouter.get(
   async (c) => {
     const db = drizzleD1(c.env)
     const tenantId = c.get("tenantId")
-    const { role, status, dept, search, limit } = c.req.valid("query")
+    const { role, status, dept, search, cursor, limit } = c.req.valid("query")
 
     // Build conditions
     const conditions = [eq(schema.employees.orgId, tenantId)]
     if (role) conditions.push(eq(schema.employees.role, role))
     if (status) conditions.push(eq(schema.employees.status, status))
+    // Round-39 M2 fix: cursor was destructured but never applied to
+    // WHERE — every page returned from row 1. Apply now matching the
+    // orderBy column (createdAt desc).
+    if (cursor) conditions.push(lt(schema.employees.createdAt, cursor))
     if (search) {
       // Round-26 H sister-fix: escape LIKE metacharacters (% _ \) so a
       // search=`%` doesn't degenerate into "match anything". The list
@@ -111,7 +115,11 @@ employeesRouter.get(
 
     const hasMore = rows.length > limit
     const data = hasMore ? rows.slice(0, limit) : rows
-    const nextCursor = hasMore ? data[data.length - 1]?.id ?? null : null
+    // Round-39 M2 fix: nextCursor must be the createdAt of the last row
+    // to match the cursor predicate AND orderBy column (was incorrectly
+    // emitting .id, which the cursor WHERE would never compare against
+    // a createdAt-ordered column).
+    const nextCursor = hasMore ? data[data.length - 1]?.createdAt ?? null : null
 
     return c.json({ data, nextCursor })
   },

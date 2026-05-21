@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, lt } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -138,6 +138,11 @@ agentTokensRouter.post(
       payload: { employeeId, expiresIn },
     })
 
+    // Round-39 M4 fix: plain token must never be cached. CF Workers
+    // responses don't get edge-cached by default, but a downstream
+    // reverse proxy / browser disk cache could. Stamp no-store so the
+    // credential disappears immediately after the client uses it.
+    c.header("Cache-Control", "no-store")
     return c.json(
       {
         data: {
@@ -153,19 +158,47 @@ agentTokensRouter.post(
 )
 
 // GET /api/agent-tokens — list current tenant's tokens (no plain values)
-agentTokensRouter.get("/", orgGuard, async (c) => {
-  const db = drizzleD1(c.env)
-  const tenantId = c.get("tenantId")
-  const now = new Date()
+agentTokensRouter.get(
+  "/",
+  orgGuard,
+  zValidator(
+    "query",
+    z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(200).default(50),
+      tenantId: z.string().optional(),
+    }),
+  ),
+  async (c) => {
+    const db = drizzleD1(c.env)
+    const tenantId = c.get("tenantId")
+    const now = new Date()
+    const { cursor, limit } = c.req.valid("query")
 
-  const rows = await db
-    .select()
-    .from(schema.agentTokens)
-    .where(eq(schema.agentTokens.orgId, tenantId))
-    .orderBy(desc(schema.agentTokens.createdAt))
+    // Round-39 M1 fix: list had no .limit() and no cursor → unbounded
+    // scan returning every token a tenant has ever issued (employees ×
+    // rotation cadence × time). Added cursor/limit matching the
+    // projects/tasks/employees pattern.
+    const conditions = [eq(schema.agentTokens.orgId, tenantId)]
+    if (cursor) conditions.push(lt(schema.agentTokens.createdAt, cursor))
 
-  return c.json({ data: rows.map((r) => publicShape(r, now)) })
-})
+    const rows = await db
+      .select()
+      .from(schema.agentTokens)
+      .where(and(...conditions))
+      .orderBy(desc(schema.agentTokens.createdAt))
+      .limit(limit + 1)
+
+    const hasMore = rows.length > limit
+    const data = hasMore ? rows.slice(0, limit) : rows
+    const nextCursor = hasMore ? data[data.length - 1]?.createdAt ?? null : null
+
+    return c.json({
+      data: data.map((r) => publicShape(r, now)),
+      nextCursor,
+    })
+  },
+)
 
 // POST /api/agent-tokens/:id/regenerate
 // Revokes the old token and issues a new pending token for the same employee,
@@ -243,6 +276,9 @@ agentTokensRouter.post(
       payload: { oldId: existing.id, employeeId: existing.employeeId },
     })
 
+    // Round-39 M4 fix: regenerate also returns a plain token; mirror the
+    // POST handler's Cache-Control: no-store to prevent credential cache.
+    c.header("Cache-Control", "no-store")
     return c.json(
       {
         data: {

@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, asc, eq, inArray, lt, or, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, inArray, lt, or, sql, type SQL } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -107,11 +107,17 @@ skillsRouter.get(
     }
     if (filter) conditions.push(filter)
 
+    // Round-39 H fix: cursor was on createdAt but orderBy was on
+    // manifestId — cursor-based pagination is only correct when the
+    // cursor column matches the sort column, otherwise page 2 can
+    // return rows that already appeared on page 1 (or skip rows).
+    // Aligning sort with the cursor column (createdAt desc) matches
+    // the projects/tasks/knowledge convention across this codebase.
     const rows = await db
       .select()
       .from(schema.skills)
       .where(and(...conditions))
-      .orderBy(asc(schema.skills.manifestId))
+      .orderBy(desc(schema.skills.createdAt))
       .limit(q.limit + 1)
 
     const hasMore = rows.length > q.limit

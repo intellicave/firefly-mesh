@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { and, asc, desc, eq, or } from "drizzle-orm"
+import { and, asc, desc, eq, gt, lt, or } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import * as schema from "../db/schema.ts"
@@ -185,6 +185,18 @@ tasksRouter.get(
         eq(schema.tasks.creatorEmployeeId, requester.id),
       )
       if (ownClause) conditions.push(ownClause)
+    }
+
+    // Round-39 M3 fix: cursor was accepted but never applied → page 2
+    // always scanned from row 1 (sister bug of R38 projects + R39
+    // employees). Apply now using direction-aware predicate to match
+    // the orderBy direction.
+    if (q.cursor) {
+      conditions.push(
+        q.sort === "desc"
+          ? lt(schema.tasks.createdAt, q.cursor)
+          : gt(schema.tasks.createdAt, q.cursor),
+      )
     }
 
     const rows = await db
