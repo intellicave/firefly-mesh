@@ -27,17 +27,18 @@ export async function GET() {
     displayName: "Firefly Mesh — Org Collaboration Hub",
     description: "Bring your own agent. We bring the org.",
     url: baseUrl,
-    // Sprint A: paths advertised here are the **external contract** read by
-    // other agents performing A2A discovery. They must match the actual paths
-    // served after rewrites. v0 singular paths (/api/task, /api/skill) are
-    // gone; hub uses plural + scoped paths. `skills` omitted entirely until
-    // hub serves a tenant-wide skill catalog endpoint (M9 P26 defers skill
-    // execution to V2). `a2a` retains the v0 send path because that v0 FS
-    // route is intentionally kept (AC4) and still works.
+    // Sprint B B.1: paths advertised here are the **external contract**
+    // read by other agents performing A2A discovery. Updated to hub's
+    // real V1 paths after the v0 FS routes were deleted in B.1:
+    //   - a2a: hub partner-receive endpoint (POST /api/a2a/message)
+    //   - auth: agent registration / pairing (POST /api/agents/register)
+    //   - heartbeat removed — hub has no explicit heartbeat; lastSeenAt
+    //     is updated server-side when an agent posts to /api/messages
+    //   - tasks: hub task list (GET /api/tasks)
+    //   - knowledge: hub search (GET /api/knowledge/search)
     endpoints: {
-      a2a: "/api/a2a/send",
-      auth: "/api/agent/activate",
-      heartbeat: "/api/agent/heartbeat",
+      a2a: "/api/a2a/message",
+      auth: "/api/agents/register",
       tasks: "/api/tasks",
       knowledge: "/api/knowledge/search",
     },
@@ -53,7 +54,7 @@ export async function GET() {
     ],
     auth: {
       scheme: "Bearer",
-      tokenEndpoint: "/api/agent/activate",
+      tokenEndpoint: "/api/agents/register",
     },
     signaturePublicKey,
   };
