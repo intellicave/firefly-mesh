@@ -7,7 +7,10 @@ packages:
   - "packages/proto"
   - "packages/shared"
   - "services/hub"
-  - "services/pwa"
+  # Sprint B B.5 (done): services/pwa dropped — Option B has services/web
+  # serve both marketing landing (`/`) and the full dashboard. The Astro
+  # pwa's content was a sprint A stopgap; the marketing copy + i18n
+  # strings were ported into services/web before deletion.
   - "services/web"
   # Sprint B B.1 (done): legacy/v0/packages/core dropped — v0 server routes
   # that imported it are deleted, services/web no longer needs the dep.

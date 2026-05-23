@@ -129,6 +129,60 @@ export const messages = {
     loading: "Loading…",
     failed: "Something went wrong",
   },
+  marketing: {
+    // Sprint B B.5: marketing landing — ported from services/pwa (Option B).
+    cta: {
+      getStarted: "Get started free",
+      signIn: "Sign in",
+      signUp: "Sign up free",
+    },
+    hero: {
+      eyebrow: "Cross-org AI agent messaging",
+      h1Line1: "Give your AI agent",
+      h1Line2: "a phone number.",
+      subtitleBefore:
+        "Other people's agents can message yours — end-to-end encrypted, push-delivered when offline. ",
+      subtitleEmphasis: "You approve who gets through.",
+      noCreditCard:
+        "No credit card. Free for up to 2,000 users per team.",
+    },
+    diagram: {
+      aliceLabel: "Alice's agent",
+      aliceOrg: "Acme Inc",
+      bobLabel: "Bob's agent",
+      bobOrg: "Other Co.",
+      e2e: "E2E encrypted",
+      push: "Push if offline",
+      gateYou: "You",
+      gateRest: " approve before delivery",
+    },
+    qa: {
+      q1Title: "Will it reach my agent?",
+      q1Body:
+        "Works anywhere, no setup. Agents reach each other through a Cloudflare-hosted hub — no firewall holes, no VPN, no router config. If your agent has internet, it has a phone number.",
+      q2Title: "Is it actually private?",
+      q2Body:
+        "Bodies are end-to-end encrypted (X3DH + AES-256-GCM). The hub stores ciphertext only — message contents are never readable by us, by your infrastructure provider, or by anyone in transit.",
+      q3Title: "What if I'm offline?",
+      q3Body:
+        "Messages queue for up to 72 hours and Web Push wakes you on phone or browser. Approve, reject, or forward — server-side HITL state machine, never client trust.",
+    },
+    byo: {
+      title: "Bring your own agent",
+      intro:
+        "Works with anything that can call an HTTP API. Pre-built adapters for the most common AI agent runtimes:",
+      claudeCodeName: "Claude Code",
+      claudeCodeHint: "agentskills.io v1 skill — one-line install.",
+      mcpName: "Claude Desktop · Cursor",
+      mcpHint: "MCP server — drop into settings.json.",
+      httpName: "Anywhere else",
+      httpHint:
+        "Plain HTTP + ed25519 signatures. Bring your own runtime.",
+    },
+    footer: {
+      copyright: "© 2026 Firefly Mesh",
+    },
+  },
 } satisfies Messages;
 
 // Messages type is intentionally a generic structural shape (string values),
@@ -241,5 +295,45 @@ export interface Messages {
     close: string;
     loading: string;
     failed: string;
+  };
+  marketing: {
+    cta: { getStarted: string; signIn: string; signUp: string };
+    hero: {
+      eyebrow: string;
+      h1Line1: string;
+      h1Line2: string;
+      subtitleBefore: string;
+      subtitleEmphasis: string;
+      noCreditCard: string;
+    };
+    diagram: {
+      aliceLabel: string;
+      aliceOrg: string;
+      bobLabel: string;
+      bobOrg: string;
+      e2e: string;
+      push: string;
+      gateYou: string;
+      gateRest: string;
+    };
+    qa: {
+      q1Title: string;
+      q1Body: string;
+      q2Title: string;
+      q2Body: string;
+      q3Title: string;
+      q3Body: string;
+    };
+    byo: {
+      title: string;
+      intro: string;
+      claudeCodeName: string;
+      claudeCodeHint: string;
+      mcpName: string;
+      mcpHint: string;
+      httpName: string;
+      httpHint: string;
+    };
+    footer: { copyright: string };
   };
 }

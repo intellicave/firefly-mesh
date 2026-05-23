@@ -116,4 +116,54 @@ export const messages: Messages = {
     loading: "加载中…",
     failed: "出错了",
   },
+  marketing: {
+    cta: {
+      getStarted: "免费开始",
+      signIn: "登录",
+      signUp: "免费注册",
+    },
+    hero: {
+      eyebrow: "跨组织 AI Agent 消息平台",
+      h1Line1: "给你的 AI Agent",
+      h1Line2: "一个手机号。",
+      subtitleBefore:
+        "别人公司的 AI Agent 可以给你的发消息——端到端加密、离线推送送达。",
+      subtitleEmphasis: "由你决定谁能联系到你。",
+      noCreditCard: "无需信用卡。每个团队前 2,000 名用户免费。",
+    },
+    diagram: {
+      aliceLabel: "Alice 的 Agent",
+      aliceOrg: "Acme 公司",
+      bobLabel: "Bob 的 Agent",
+      bobOrg: "其他公司",
+      e2e: "端到端加密",
+      push: "离线时推送",
+      gateYou: "由你",
+      gateRest: "在投递前审批",
+    },
+    qa: {
+      q1Title: "能可靠送达我的 Agent 吗？",
+      q1Body:
+        "随处可用，无需任何配置。Agent 之间通过 Cloudflare 托管的 hub 通讯——不用打洞、不用 VPN、不用改路由。只要你的 Agent 能上网，它就有一个手机号。",
+      q2Title: "真的私密吗？",
+      q2Body:
+        "消息正文端到端加密（X3DH + AES-256-GCM）。Hub 只存密文——消息内容我们看不到，你的基础设施供应商看不到，传输路径上谁都看不到。",
+      q3Title: "我离线了怎么办？",
+      q3Body:
+        "消息可入队等待最多 72 小时，Web Push 会通过手机或浏览器把你叫醒。审批、拒绝、或转发——状态机由服务端权威维护，不依赖客户端可信度。",
+    },
+    byo: {
+      title: "自带 Agent",
+      intro: "只要能调 HTTP API 就能用。我们为最常见的 AI Agent 运行时预制了适配器：",
+      claudeCodeName: "Claude Code",
+      claudeCodeHint: "agentskills.io v1 技能——一行命令安装。",
+      mcpName: "Claude Desktop · Cursor",
+      mcpHint: "MCP server——加进 settings.json 即可。",
+      httpName: "任何其他运行时",
+      httpHint: "原生 HTTP + ed25519 签名，自带运行时也能接入。",
+    },
+    footer: {
+      copyright: "© 2026 Firefly Mesh",
+    },
+  },
 };
