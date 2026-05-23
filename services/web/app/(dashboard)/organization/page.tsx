@@ -26,7 +26,6 @@ import {
   type OrgEmployee,
   type OrgAgent,
 } from "@/components/organization/org-graph";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -97,22 +96,16 @@ export default function OrganizationPage() {
         {orgQuery.data ? (
           <div className="text-xs text-muted-foreground">
             {orgQuery.data.employees.length} employees ·{" "}
-            {orgQuery.data.departments.length} departments
+            {orgQuery.data.departments.length} departments ·{" "}
+            {orgQuery.data.agents.filter((a) => a.status === "active").length}{" "}
+            active agents
           </div>
         ) : null}
       </header>
 
-      <div className="border-b px-6 py-3">
-        <Alert>
-          <AlertTitle>Sprint A: per-employee agent badges unavailable</AlertTitle>
-          <AlertDescription>
-            Hub has no tenant-wide agent list endpoint yet, so the graph shows
-            employees + departments without agent activity indicators. The
-            agent list/detail drawer still works on individual click. Sprint B
-            adds the missing endpoint.
-          </AlertDescription>
-        </Alert>
-      </div>
+      {/* Sprint B B.4: removed the "per-employee agent badges unavailable"
+          banner. Hub's new GET /api/agents (B.0) feeds real agent rows into
+          fetchOrgGraph, so the graph + list views now render badges. */}
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 border-b bg-card/40 px-6 py-2">

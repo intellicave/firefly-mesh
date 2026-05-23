@@ -1,21 +1,19 @@
-// Sprint A client-side aggregation for the legacy /api/org/graph response.
-// Hub has no equivalent aggregate endpoint; we compose it from several paths
-// in parallel and rebuild the v0 shape so /organization/page.tsx + the graph
-// view component keep their existing data contract.
+// Client-side aggregation for the org-graph page. Hub has no single-call
+// /api/org/graph aggregate endpoint, so we compose it from several paths
+// in parallel and rebuild the shape /organization/page.tsx + the graph
+// view component expect.
 //
-// Known sprint A gaps (sprint B fills these):
-//   - Agents: hub has no list-all-agents-in-tenant endpoint, only
-//     /api/me/agents (current user only). We fan out N+1 GET
-//     /api/employees/:id/agents calls — but that endpoint also doesn't
-//     exist on hub. Result: sprint A returns agents=[]; the graph shows
-//     employees + departments without per-employee agent badges. The page
-//     surfaces a banner so users know agent indicators are coming.
+// Sprint B B.4 update: agents are now real. Hub's new GET /api/agents
+// (added in B.0, commit d0e6630) returns the full tenant-wide agent
+// roster in one call. Previously sprint A had to return agents=[] and
+// surface a banner; the banner is now removed at organization/page.tsx.
+//
 //   - Department / project memberships: hub serves these via per-resource
 //     endpoints (GET /api/departments/:id/members). We fan out one fetch
 //     per department + per project; acceptable for V1 orgs (<10 each).
 //
-// Tradeoff: more round trips than v0's single aggregate. V1 orgs are small;
-// sprint B may add a hub /api/org/graph aggregator if real load shows pain.
+// Tradeoff: a few round trips vs v0's single aggregate. V1 orgs are small;
+// if real load shows pain we'll add a hub /api/org/graph aggregator later.
 
 import { api } from "@/lib/api-client";
 import type {
@@ -74,18 +72,67 @@ interface MemberRow {
   memberRole: string | null;
 }
 
+// Hub agent row (subset of GET /api/agents response — see services/hub
+// /src/routes/agents.ts, projection at the route level).
+interface HubAgentRow {
+  id: string;
+  displayName: string;
+  type: string;
+  ownerEmployeeId: string | null;
+  runtimeKind: string;
+  runtimeMeta: string | null; // JSON-stringified by hub schema
+  activatedAt: string | null;
+  createdAt: string;
+  lastSeenAt: string | null;
+}
+
+function parseRuntimeMeta(
+  raw: string | null,
+): OrgAgent["runtimeMeta"] {
+  if (!raw) return null;
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      version: typeof obj.version === "string" ? obj.version : undefined,
+      protocolVersion:
+        typeof obj.protocolVersion === "string"
+          ? obj.protocolVersion
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function mapAgent(row: HubAgentRow): OrgAgent {
+  // V1 has no "archived" agent state — hub deletes agents via DELETE /:id.
+  // activatedAt null = paired but not yet registered (rare transient).
+  // Anything else = active until the row vanishes.
+  const status: OrgAgent["status"] = row.activatedAt ? "active" : "inactive";
+  return {
+    id: row.id,
+    ownerEmployeeId: row.ownerEmployeeId ?? "",
+    runtimeKind: row.runtimeKind,
+    runtimeMeta: parseRuntimeMeta(row.runtimeMeta),
+    status,
+    lastSeenAt: row.lastSeenAt,
+  };
+}
+
 /**
- * Fan out to hub endpoints, fan in to v0-shaped payload. See file header for
- * the known sprint A gaps that surface as empty arrays here.
+ * Fan out to hub endpoints, fan in to the org-graph payload shape.
+ * Sprint B B.4: agents now a real list via the new GET /api/agents endpoint.
  */
 export async function fetchOrgGraph(): Promise<OrgGraphPayload> {
-  const [employeeRows, departments, projects] = await Promise.all([
+  const [employeeRows, departments, projects, agentRows] = await Promise.all([
     api<HubEmployeeRow[]>("/api/employees?limit=500"),
     api<OrgDepartment[]>("/api/departments"),
     api<OrgProject[]>("/api/projects?limit=200"),
+    api<HubAgentRow[]>("/api/agents?limit=500"),
   ]);
 
   const employees = employeeRows.map(mapEmployee);
+  const agents = agentRows.map(mapAgent);
 
   // N+1 fan-out for memberships. For V1 (<10 depts / projects) this is fine;
   // sprint B may collapse to a single aggregate if needed.
@@ -131,7 +178,6 @@ export async function fetchOrgGraph(): Promise<OrgGraphPayload> {
     departmentMembers,
     projects,
     projectMembers,
-    // sprint A gap: no hub endpoint for tenant-wide agent list. See file header.
-    agents: [],
+    agents,
   };
 }
