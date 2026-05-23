@@ -7,22 +7,24 @@ packages:
   - "packages/proto"
   - "packages/shared"
   - "services/hub"
-  # Sprint B B.5 (done): services/pwa dropped — Option B has services/web
+  # Sprint B B.5 (done): services/pwa dropped — Option B has the web app
   # serve both marketing landing (`/`) and the full dashboard. The Astro
   # pwa's content was a sprint A stopgap; the marketing copy + i18n
-  # strings were ported into services/web before deletion.
+  # strings were ported into the web app before deletion.
   #
-  # Sprint B B.3.f (option B chosen): services/web removed from workspace.
-  # Reason: @opennextjs/cloudflare 1.19 + pnpm workspace child triggers a
-  # path-mangling bug — the bundle ends up at
-  # `.open-next/server-functions/default/services/web/.next/...` but the
-  # Workers runtime resolver looks for `/.next/...` (no subpath), causing
-  # "Dynamic require of /.next/server/middleware-manifest.json is not
-  # supported" on every prod request. Treating services/web as its own
-  # standalone project with its own lockfile + node_modules sidesteps the
-  # workspace-root detection. services/web no longer shares any
-  # workspace deps after B.1 (no @firefly-mesh/core), so going standalone
-  # is a no-op for dependency resolution.
+  # Sprint B B.3 (done): services/web removed, web app lives at /app and
+  # deploys to Vercel. Reason chain:
+  #   1. @opennextjs/cloudflare 1.19 has an unfixable Windows path-handling
+  #      bug — bundle ends up at `.open-next/server-functions/default/
+  #      services/web/.next/...` but the Workers resolver looks for
+  #      `/.next/...`, causing "Dynamic require of /.next/server/
+  #      middleware-manifest.json is not supported" on every request.
+  #   2. Standalone-at-/app attempt persisted the bug on Windows.
+  #   3. Switched platform: hub stays on Cloudflare Workers
+  #      (hub.firefly-mesh.com); web on Vercel proxies /api/* to hub.
+  # /app has its own lockfile + node_modules (Vercel needs a self-contained
+  # build root). It shares no workspace deps after B.1 (no @firefly-mesh/
+  # core), so leaving the workspace is a no-op for dep resolution.
   # Sprint B B.1 (done): legacy/v0/packages/core dropped — v0 server routes
-  # that imported it are deleted, services/web no longer needs the dep.
+  # that imported it are deleted, the web app no longer needs the dep.
   - "scripts/scene"

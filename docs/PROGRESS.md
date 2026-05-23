@@ -1,6 +1,6 @@
 # Firefly Mesh — 项目进度仪表盘
 
-> **最后更新**：2026-05-18（web 搬迁 sprint A 实施 + 2 轮 reviewer 通过）
+> **最后更新**：2026-05-24（sprint B B.0–B.6 全部 done — Vercel prod 上线,待 1 次 DNS handover）
 > **真实状态来源**：[`docs/pipeline/state.yaml`](pipeline/state.yaml) + git log
 > 这一份是给人 5 秒看清现状的总览。任何冲突以 state.yaml + 代码为准。
 
@@ -8,15 +8,16 @@
 
 ## TL;DR
 
-**hub 后端 12/12 done + dashboard 已搬到 services/web（typecheck + 6/6 e2e 全绿）**，未上线。
+**hub 12/12 + web 已部署到 Vercel(hub 6 e2e + web 7 e2e + typecheck 全绿)，1 步 DNS 即上线。**
 
 ```
 后端骨架 ████████████████  12/12 模块 done 🎉
-前端搬迁 ████████░░░░░░░░  sprint A done（W2' rewrites + 14 路径 rename + 10 UI 禁用 + i18n bootstrap） · sprint B 待
-上线准备 ░░░░░░░░░░░░░░░░  完全未动
+前端搬迁 ████████████████  sprint A + B(B.0-B.6) 全 done — Vercel prod READY
+DNS 切换 ████████████░░░░  Vercel 已 verify 域名 firefly-mesh.com，A 记录待改 → 1 次手工(~15 分钟)
+上线准备 ░░░░░░░░░░░░░░░░  Stripe + 法律 + 监控 + soft launch 待
 ```
 
-**剩余 ~10 工作日（2 周）到 V1.0 GA**：web 搬迁 B（部署 Cloudflare Pages + 删 v0 server route + 删 pwa）→ Stripe + 法律 + 监控 + soft launch。
+**下一步**：[一次性 DNS handover](ops/DNS_VERCEL_HANDOVER.md) → Stripe + 法律 + 监控 + soft launch。
 
 ---
 
@@ -24,9 +25,10 @@
 
 | 域名 | 是什么 | 状态 |
 |---|---|---|
-| `hub.firefly-mesh.com` | API 后端（Hono + D1 + DO + WS + E2E 加密） | ✅ 上线，**待应用最新 7 个 migration 到 remote D1** |
-| `firefly-mesh.com` | Astro 营销页 + 临时 PWA 极简 dashboard（5-12 i18n 改造后） | ✅ 上线，**待替换为新 dashboard** |
-| `app.firefly-mesh.com` | 完整 Next.js dashboard | ❌ 尚未部署（sprint A 本地能跑，sprint B 部署 Cloudflare Pages）|
+| `hub.firefly-mesh.com` | API 后端(Hono + D1 + DO + WS + E2E 加密) | ✅ 上线,22 张表全 prod,INTERNAL_SECRET 已轮换 |
+| `firefly-mesh-8mi0c8a0m-ohbabytriples-projects.vercel.app` | 完整 Next.js dashboard + marketing landing | ✅ 上线 READY,7/7 e2e 绿,SSO 已关 |
+| `firefly-mesh.com` | (将合并营销页 + dashboard) | ⏳ Vercel project 已 verify 域名;DNS A 记录还指 CF 旧 IP → [docs/ops/DNS_VERCEL_HANDOVER.md](ops/DNS_VERCEL_HANDOVER.md) |
+| `app.firefly-mesh.com` | (已弃用 — option B 合并到 firefly-mesh.com root) | — |
 
 ---
 

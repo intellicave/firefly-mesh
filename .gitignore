@@ -65,3 +65,7 @@ temp_*.txt
 # personal scratch (sprint B leftover)
 /sop_example.md
 /sop_example.pdf
+
+# playwright
+/test-results/
+/playwright-report/

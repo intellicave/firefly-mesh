@@ -761,3 +761,73 @@ next_sprints:
     scope: "Stripe billing + legal pages + monitoring + soft launch"
     estimated_duration: "5 days"
     depends_on: ["web-migration-b"]
+
+# === Sprint B B.0-B.6 (2026-05-23 ~ 2026-05-24) — WEB DEPLOY ===
+sub_sprint_web_deploy:
+  topic_slug: "firefly-mesh-web-deploy-sprint-b"
+  status: completed
+  started_at: "2026-05-23T00:00:00Z"
+  completed_at: "2026-05-24T01:30:00Z"
+  trigger: "CEO 'I can actually use it' — finish dev + deploy + tests autonomously"
+  decisions:
+    - "Option B chosen (delete pwa, web takes over firefly-mesh.com root)"
+    - "Option A chosen (Vercel) — after @opennextjs/cloudflare 1.19 path-handling bug on Windows blocked Cloudflare Workers path"
+    - "Deployment Protection (team SSO) disabled — needed for non-customdomain smoke + hides PII behind login anyway"
+  rounds:
+    B_0:
+      title: "hub: GET /api/agents + POST /api/employees/bulk-import"
+      commit: "d0e6630"
+      tests: "b0-endpoints.e2e.ts (12 phases)"
+    B_1:
+      title: "delete 41 v0 routes + 7 middleware + drop @firefly-mesh/core"
+      commit: "4b0141c"
+    B_2:
+      title: "adopt @opennextjs/cloudflare (next-on-pages deprecated)"
+      commit: "7fd7a98"
+      outcome: "build OK, runtime broken on Windows — Dynamic require / .next/server/middleware-manifest.json"
+    B_3:
+      title: "platform pivot — move services/web → /app, deploy to Vercel (Option A)"
+      commit: "dc9682a"
+      vercel:
+        project_id: "prj_KQ0KtmmlRyT7O68ju7JbXxmfdNLW"
+        team: "ohbabytriples (team_mlqX99EeLU4CjQU4N4gY10RL)"
+        url: "https://firefly-mesh-8mi0c8a0m-ohbabytriples-projects.vercel.app"
+        status: "READY"
+        deployment_protection: "DISABLED"
+      changes:
+        - "services/hub/src/auth.ts: crossSubDomainCookies enabled when origin is *.firefly-mesh.com"
+        - "app/next.config.ts: plain Next + same-origin /api/* rewrite to NEXT_PUBLIC_HUB_URL"
+        - "Drop OpenNext/wrangler/CF artifacts from web codebase"
+        - "pnpm-workspace.yaml: services/web removed; /app is self-contained"
+      pending_step: "1x DNS handover — see docs/ops/DNS_VERCEL_HANDOVER.md"
+    B_4:
+      title: "un-ban the 2 UIs that B.0 hub endpoints unlocked"
+      commit: "4e92bb2"
+    B_5:
+      title: "delete services/pwa, web takes over firefly-mesh.com (Option B)"
+      commit: "efb5617"
+    B_6:
+      title: "playwright e2e against Vercel prod"
+      tests:
+        - "tests/e2e/smoke.spec.ts: 7/7 PASS"
+        - "must-pass (5/5): marketing landing, /signup, /login, /api/health, /api/agents → 401"
+        - "informational (2/2): /.well-known/agent-card.json, language switcher"
+      script: "pnpm test:e2e:web"
+      target_url: "FIREFLY_BASE_URL=<vercel-or-prod>"
+  verification:
+    hub_prod:
+      url: "https://hub.firefly-mesh.com"
+      tables: "22 (0001-0015 migrations applied to remote D1)"
+      auth: "INTERNAL_SECRET rotated (32-byte random)"
+      smoke: "/api/agents → 401 (auth required, endpoint exists)"
+    web_prod:
+      url: "https://firefly-mesh-8mi0c8a0m-ohbabytriples-projects.vercel.app"
+      build: "vercel deploy --prod → READY"
+      smoke_curl_codes: [200, 200, 200, 200, 200] # / /login /signup /api/health /.well-known
+      playwright: "7/7 PASS"
+  blockers_at_end:
+    - id: "DNS-HANDOVER"
+      what: "Cloudflare DNS records for firefly-mesh.com still point to old CF Worker anycast (172.67.x.x / 104.21.x.x). Need to flip A records to Vercel anycast (216.198.79.1, 64.29.17.1) and turn off orange-cloud proxy."
+      blocked_by: "Need a Cloudflare API token with Zone:DNS:Edit scope on firefly-mesh.com — wrangler OAuth has zone:read only."
+      mitigation: "docs/ops/DNS_VERCEL_HANDOVER.md has exact curl recipe + manual dashboard steps."
+      eta_after_unblock: "15 minutes + DNS propagation (~60s)"
