@@ -57,16 +57,39 @@ export function createAuth(env: Bindings, requestOrigin?: string) {
     }
   }
 
+  // Sprint B B.3.e: in production (Option B) the dashboard lives at
+  // firefly-mesh.com and the hub at hub.firefly-mesh.com. Without
+  // cross-subdomain cookies, browser would reject a Set-Cookie sent by
+  // hub.firefly-mesh.com when the browser is on firefly-mesh.com,
+  // breaking sign-in. Detection: enable only when the actual request
+  // origin is a *.firefly-mesh.com host. In wrangler dev (localhost)
+  // we keep host-only cookies, which work fine for same-origin.
+  const effectiveOrigin = requestOrigin ?? env.APP_URL
+  const isFireflyMeshHost = /^https:\/\/([a-z0-9-]+\.)*firefly-mesh\.com(\/|$)/.test(effectiveOrigin)
+  const advanced = isFireflyMeshHost
+    ? {
+        crossSubDomainCookies: {
+          enabled: true,
+          domain: ".firefly-mesh.com",
+        },
+        defaultCookieAttributes: {
+          sameSite: "lax" as const,
+          secure: true,
+        },
+      }
+    : undefined
+
   return betterAuth({
     database: drizzleAdapter(db, { provider: "sqlite" }),
     // baseURL must match the incoming request's origin so Better Auth resolves
     // the basePath correctly. In wrangler dev we pass http://localhost:8787;
     // in production we fall back to the configured hub URL.
-    baseURL: requestOrigin ?? env.APP_URL,
+    baseURL: effectiveOrigin,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
     socialProviders,
+    advanced,
     // In production: only the configured hub + PWA origins are trusted (CSRF).
     // In wrangler dev: also trust the localhost origin we're actually serving on,
     // otherwise Better Auth's CSRF check 403s sign-up calls.

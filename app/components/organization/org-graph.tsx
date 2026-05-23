@@ -9,7 +9,7 @@
 //   - Department members (role !== 'head') connect to their dept head
 //   - Unassigned employees connect to root
 
-import { useMemo } from "react";
+import { useMemo, type MouseEvent } from "react";
 import {
   ReactFlow,
   Background,
@@ -105,7 +105,7 @@ export function OrgGraph({
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
-        onNodeClick={(_e, n) => onSelect(n.id)}
+        onNodeClick={(_e: MouseEvent, n: { id: string }) => onSelect(n.id)}
         defaultEdgeOptions={{
           style: { stroke: "var(--color-muted-foreground)", strokeWidth: 1, opacity: 0.5 },
         }}

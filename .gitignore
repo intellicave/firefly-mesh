@@ -61,3 +61,7 @@ secrets-bulk.json
 # Subagent scratch files
 temp_*.html
 temp_*.txt
+
+# personal scratch (sprint B leftover)
+/sop_example.md
+/sop_example.pdf

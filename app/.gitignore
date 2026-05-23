@@ -39,6 +39,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+# Note on prod env: Next loads .env.local BEFORE .env.production in env
+# precedence, so .env.production is unreliable when .env.local exists
+# (every dev has one with localhost values). The `deploy` script in
+# package.json sets NEXT_PUBLIC_HUB_URL / NEXT_PUBLIC_APP_URL inline
+# instead — single source of truth, no .env.production needed.
 
 # vercel
 .vercel
