@@ -17,6 +17,12 @@
 /.next/
 /out/
 
+# OpenNext + Cloudflare Workers build output (sprint B B.2)
+/.open-next/
+.wrangler/
+# cf-typegen output — regenerated on every `pnpm cf-typegen`
+cloudflare-env.d.ts
+
 # production
 /build
 

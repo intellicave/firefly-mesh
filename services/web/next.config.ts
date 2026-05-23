@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 import createNextIntlPlugin from "next-intl/plugin";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
+// Sprint B B.2: enable Cloudflare resource bindings (env vars, R2, KV, etc.)
+// during `next dev`. No-op in production (where the wrangler worker handles
+// bindings natively). Must run before nextConfig is exported.
+initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   output: "standalone",
